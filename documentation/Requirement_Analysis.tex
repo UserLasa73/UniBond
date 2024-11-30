@@ -1,0 +1,237 @@
+\documentclass[a4paper,12pt]{article}
+
+% Required packages
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{longtable}
+
+% Page setup
+\geometry{top=1in, bottom=1in, left=1in, right=1in}
+
+\begin{document}
+
+% Front Page
+\begin{titlepage}
+    \begin{center}
+        % University Logo
+        \includegraphics[width=0.2\textwidth]{uni_logo.jpeg} \\[1cm]
+        
+        % Title
+        \textbf{\LARGE University of Vavuniya} \\[0.5cm]
+        \textbf{\Large Department of Physical Science} \\[1.5cm]
+        
+        % Project Title
+        \centering
+        \vspace*{2cm} % Add some vertical space before the title
+        {\Huge \textbf{Project Title:}}\\[1cm] % Larger font size and bold for "Project Title"
+        {\huge \textbf{UniBond - Alumni Networking Application}}\\[1cm] % Larger font size and bold for the actual title
+        {\Large \textbf{Requiremnet Analysis Report}}\\[1cm]
+        \vspace*{1cm} % Add vertical space if needed
+        
+        
+        % Submitted by
+        \textbf{\Large Prepared by:} \\[0.5cm]
+        \item{\large 2020/ICT/01} \\[0.1cm]
+        \item{\large 2020/ICT/06} \\[0.1cm]
+        \item{\large 2020/ICT/16} \\[0.1cm]
+        \item{\large 2020/ICT/21} \\[0.1cm]
+        \item{\large 2020/ICT/27} \\[0.1cm]
+        \item{\large 2020/ICT/73} \\[0.1cm]
+        \item{\large 2020/ICT/107} \\[0.5cm]
+
+        \vfill % Push content to the bottom
+        % Date
+        \textbf{\large Date: 22.11.2024} \\
+    \end{center}
+\end{titlepage}
+
+\section{Introduction}
+The UniBond app is an innovative platform connecting university students and alumni. It bridges the gap between current students seeking internships, mentorship, and career opportunities and alumni offering guidance, sponsorship, and job postings.
+
+\section{Objectives}
+\begin{itemize}
+    \item Facilitate effective communication and networking among students, alumni, and university administration.
+    \item Provide a platform for alumni to post job opportunities and projects.
+    \item Support university fundraising through alumni engagement.
+    \item Enhance student employability by connecting them with alumni mentors.
+\end{itemize}
+
+\section{Stakeholder Analysis}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Stakeholder} & \textbf{Role/Responsibility} \\ \hline
+Students & Access the platform for mentorship, internships, job opportunities, and networking. \\ \hline
+Alumni & Provide guidance, post projects/jobs, and sponsor university events. \\ \hline
+University Admin & Manage user credentials, and post university events. \\ \hline
+\end{longtable}
+
+\section{Functional Requirements}
+\begin{itemize}
+    \item LinkedIn integration for user registration and login.
+    \item Profile creation and management for students, alumni, and administrators.
+    \item Job postings by alumni, accessible to students.
+    \item Project postings by alumni for collaboration with students.
+    \item Event updates posted by university administrators.
+    \item Notifications for updates on posts, projects, and events.
+    \item Search functionality to find alumni and students.
+    \item Verification process for LinkedIn-based registration to ensure users are associated with the university.
+\end{itemize}
+
+
+\newpage
+\subsection{Functional Tabs}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Tab} & \textbf{Functionality} \\ \hline
+Profile & Manage personal and professional details. \\ \hline
+Search & Directory to find students, alumni, or university events. \\ \hline
+Posts & General posts and discussions by all users. \\ \hline
+Notifications & Alerts for new posts, comments, or selections. \\ \hline
+Home & Dashboard for announcements and updates. \\ \hline
+Projects & Alumni post projects; students express interest and can be shortlisted. \\ \hline
+Jobs & Alumni post job opportunities; students can apply. \\ \hline
+Network & Collaboration space for selected students and alumni. \\ \hline
+\end{longtable}
+
+\section{Non-Functional Requirements}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Category} & \textbf{Requirement} \\ \hline
+Performance & Ensure fast response times for LinkedIn login and data processing. \\ \hline
+Usability &Simple and intuitive interface for all user categories. \\ \hline
+Security & Protect user data during LinkedIn authentication and communication. \\ \hline
+Scalability & Handle increasing users and database growth as the platform grows. \\ \hline
+Availability & Ensure 99.9\% uptime for critical features like login and notifications. \\ \hline
+\end{longtable}
+
+\section{Use Case Descriptions}
+\subsection{Use Case: Login with LinkedIn Integration}
+\begin{longtable}{|p{3cm}|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Login with LinkedIn Integration \\ \hline
+\textbf{Actor} & Student, Alumni \\ \hline
+\textbf{Goal} & Allow users to authenticate themselves securely via LinkedIn. \\ \hline
+\textbf{Overview} & Users log in using their LinkedIn accounts. The system retrieves education details to verify their university association. \\ \hline
+\textbf{Pre-condition} & The user must have a LinkedIn account with updated education details reflecting the university. \\ \hline
+\textbf{Post-condition} & Successfully verified users gain access to UniBond's features. \\ \hline
+\textbf{Path} & 
+1. User selects "Login with LinkedIn". \newline
+2. The system redirects the user to LinkedIn's OAuth page. \newline
+3. User grants permission to access their profile. \newline
+4. System retrieves profile data, including education details. \newline
+5. System verifies the user's university association. \newline
+6. Access is granted to the user. \\ \hline
+\textbf{NFR (Non-functional Requirements)} & 
+- Ensure security through encrypted communication during authentication. \newline
+- Usability: Provide clear guidance for users during login. \\ \hline
+\textbf{Technology Requirements} & 
+- OAuth 2.0 for LinkedIn authentication. \newline
+- LinkedIn API for fetching profile details. \\ \hline
+\end{longtable}
+
+\subsection{Use Case 2: Profile Management}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Profile Management \\ \hline
+\textbf{Actor} & All Users \\ \hline
+\textbf{Goal} & Allow users to update their profile details. \\ \hline
+\textbf{Overview} & Users can add or edit details in their profiles, including experience, skills, and contact information. \\ \hline
+\textbf{Pre-condition} & User must be logged in. \\ \hline
+\textbf{Post-condition} & Profile details are updated in the system. \\ \hline
+\textbf{Basic Path} & 
+01. User logs into the system. \newline
+02. Navigates to the 'Profile' tab. \newline
+03. Edits personal and professional details. \newline
+04. Saves the changes. \\ \hline
+\textbf{NFR} & Usability, Data Consistency \\ \hline
+\textbf{TR} & MERN Stack \\ \hline
+\end{longtable}
+
+\subsection{Use Case 3: Post Creation}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Post Creation \\ \hline
+\textbf{Actor} & Alumni/Students \\ \hline
+\textbf{Goal} & Allow users to create posts on various topics. \\ \hline
+\textbf{Overview} & Users can share general updates, job opportunities, or events by posting content. \\ \hline
+\textbf{Pre-condition} & User must be logged in. \\ \hline
+\textbf{Post-condition} & Post is displayed in the 'Posts' section. \\ \hline
+\textbf{Basic Path} & 
+01. Navigate to the 'Posts' tab. \newline
+02. Click on 'Create Post.' \newline
+03. Enter content and optionally attach files or links. \newline
+04. Submit the post. \\ \hline
+\textbf{NFR} & Usability \\ \hline
+\textbf{TR} & MERN Stack \\ \hline
+\end{longtable}
+
+\subsection{Use Case 4: Alumni Verification}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Alumni Verification \\ \hline
+\textbf{Actor} & Alumni Engagement Society \\ \hline
+\textbf{Goal} & Verify that a registered user is a university alumnus. \\ \hline
+\textbf{Overview} & Student in charge verifies alumni credentials (e.g., student ID, graduation year). \\ \hline
+\textbf{Pre-condition} & Alumni registration request is pending. \\ \hline
+\textbf{Post-condition} & Alumni status is verified and account activated. \\ \hline
+\textbf{Basic Path} & 
+01. Open pending alumni registration requests. \newline
+02. Cross-check provided information with university records. \newline
+03. Approve or reject the request. \\ \hline
+\textbf{NFR} & Security, Data Integrity \\ \hline
+\textbf{TR} & MERN Stack \\ \hline
+\end{longtable}
+
+\subsection{Use Case 5: Job Opportunity Posting}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Job Opportunity Posting \\ \hline
+\textbf{Actor} & Alumni \\ \hline
+\textbf{Goal} & Allow alumni to post job opportunities. \\ \hline
+\textbf{Overview} & Alumni can share job openings at their companies for students. \\ \hline
+\textbf{Pre-condition} & Alumni account must be verified. \\ \hline
+\textbf{Post-condition} & Job post is visible to students in the 'Jobs' tab. \\ \hline
+\textbf{Basic Path} & 
+01. Navigate to the 'Jobs' tab. \newline
+02. Click on 'Post Job.' \newline
+03. Enter job details and submit. \\ \hline
+\textbf{NFR} & Usability, Data Consistency \\ \hline
+\textbf{TR} & MERN Stack \\ \hline
+\end{longtable}
+
+\subsection{Use Case 6: Project Management}
+\begin{longtable}{|l|p{12cm}|}
+\hline
+\textbf{Use Case Name} & Project Management \\ \hline
+\textbf{Actor} & Alumni/Students \\ \hline
+\textbf{Goal} & Facilitate collaboration between alumni and students for projects. \\ \hline
+\textbf{Overview} & Alumni can post projects, and students can express interest by commenting. \\ \hline
+\textbf{Pre-condition} & Alumni account must be verified. \\ \hline
+\textbf{Post-condition} & Students are notified of their selection status. \\ \hline
+\textbf{Basic Path} & 
+01. Alumni posts a project. \newline
+02. Students comment on the project expressing interest. \newline
+03. Alumni reviews profiles and selects students. \newline
+04. Selected students are added to the 'Network' tab for collaboration. \\ \hline
+\textbf{NFR} & Scalability, Collaboration \\ \hline
+\textbf{TR} & MERN Stack \\ \hline
+\end{longtable}
+
+\newpage
+\section{Technology Requirements}
+\begin{itemize}
+    \item \textbf{Frontend:} React Native for building the user interface.
+    \item \textbf{Backend:} Node.js and Express for server-side development, GraphQL for chat application.
+    \item \textbf{Database:} MongoDB for storing user profiles, posts, and interactions.
+    \item \textbf{API Integration:} LinkedIn API for authentication and profile data retrieval.
+    \item \textbf{Hosting:} AWS or Azure for scalable hosting and deployment.
+    \item \textbf{Authentication:} OAuth 2.0 for secure LinkedIn login.
+\end{itemize}
+
+
+\section{Conclusion}
+UniBond is designed to strengthen the university ecosystem by fostering meaningful connections between alumni, students, and administration. This report ensures alignment with project goals and provides a detailed roadmap for implementation.
+
+\end{document}
