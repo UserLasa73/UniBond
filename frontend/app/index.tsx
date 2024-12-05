@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import ChatList from "./Components/ChatList";
+import { Link } from "expo-router";
 
 const index = () => {
   return (
@@ -14,7 +15,7 @@ const index = () => {
       <Text style={{ fontSize: 32, fontWeight: "bold", color: "#0078D7" }}>
         UniBond
       </Text>
-      <ChatList></ChatList>
+      <Link href="/Home">Home</Link>
     </View>
   );
 };
