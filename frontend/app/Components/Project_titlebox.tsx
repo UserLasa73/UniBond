@@ -11,7 +11,7 @@ export default function Project_titlebox(){
       {/* User Info */}
       <View style={styles.userInfo}>
         <Image
-          source={{ uri: "https://via.placeholder.com/40" }} // Replace with actual image URL
+          source={{ uri: "https://via.placeholder.com/40" }}
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
@@ -28,7 +28,7 @@ export default function Project_titlebox(){
           <Text style={styles.detailText}>Time • Next week</Text>
         </View>
         <View style={styles.row}>
-          <MaterialIcons name="check-box-outline" size={20} color="gray" />
+          <MaterialIcons name="article" size={20} color="gray" />
           <Text style={styles.detailText}>
             Skills: Communication, Consultative Selling, +8 more
           </Text>
