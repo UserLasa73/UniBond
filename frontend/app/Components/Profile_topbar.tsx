@@ -5,9 +5,9 @@ export default function Profile_topbar() {
   return (
     <View style={styles.container}>
       {/* Back Button */}
-      <TouchableOpacity style={styles.button} onPress={() => alert('Back Button Pressed')}>
+      {/* <TouchableOpacity style={styles.button} onPress={() => alert('Back Button Pressed')}>
         <Ionicons name="chevron-back" size={24} color="black" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {/* Title */}
       <Text style={styles.title}>Aathif Ahamed</Text> {/*name have to change dynamically*/}
