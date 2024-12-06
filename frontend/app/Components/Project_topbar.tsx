@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     height: 60,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
   },
   button: {
     width: 40,
