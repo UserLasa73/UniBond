@@ -1,24 +1,24 @@
 import { Redirect, Tabs } from "expo-router";
 import React from "react";
 import { View } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // Import the Ionicons icon library
+import { Ionicons } from "@expo/vector-icons";
 
 const Layout = () => {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#2C3036", // Active icon color
-        tabBarInactiveTintColor: "#8E8E93", // Inactive icon color
+        tabBarActiveTintColor: "#2C3036",
+        tabBarInactiveTintColor: "#8E8E93",
       }}
     >
       <Tabs.Screen
         name="Home"
         options={{
           title: "Home",
-          headerShown: false,
+          headerShown: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "home" : "home-outline"} // Filled for active, outline for inactive
+              name={focused ? "home" : "home-outline"}
               size={24}
               color={color}
             />
@@ -32,7 +32,7 @@ const Layout = () => {
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "briefcase" : "briefcase-outline"} // Filled for active, outline for inactive
+              name={focused ? "briefcase" : "briefcase-outline"}
               size={24}
               color={color}
             />
@@ -57,9 +57,9 @@ const Layout = () => {
               }}
             >
               <Ionicons
-                name={focused ? "search" : "search-outline"} // Filled for active, outline for inactive
+                name={focused ? "search" : "search-outline"}
                 size={24}
-                color={"#fff"} // White icon when active
+                color={"#fff"}
               />
             </View>
           ),
@@ -72,7 +72,7 @@ const Layout = () => {
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "add-circle" : "add-circle-outline"} // Filled for active, outline for inactive
+              name={focused ? "add-circle" : "add-circle-outline"}
               size={24}
               color={color}
             />
@@ -86,7 +86,7 @@ const Layout = () => {
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "folder" : "folder-outline"} // Filled for active, outline for inactive
+              name={focused ? "folder" : "folder-outline"}
               size={24}
               color={color}
             />

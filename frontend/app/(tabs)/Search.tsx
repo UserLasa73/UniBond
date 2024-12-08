@@ -1,10 +1,11 @@
 import * as React from "react";
 import { Text, View, StyleSheet } from "react-native";
+import SearchInput from "../Components/SearchInput";
 
 const Search = () => {
   return (
     <View style={styles.container}>
-      <Text>Search</Text>
+      <SearchInput />
     </View>
   );
 };

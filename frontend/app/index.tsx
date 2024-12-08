@@ -15,6 +15,7 @@ const index = () => {
       <Text style={{ fontSize: 32, fontWeight: "bold", color: "#0078D7" }}>
         UniBond
       </Text>
+
       <Link href="/Home">Home</Link>
     </View>
   );
