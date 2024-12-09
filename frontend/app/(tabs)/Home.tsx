@@ -10,6 +10,9 @@ const HomeScreen = () => {
   const handleNotificationPress = () => {
     router.push("../screens/NotificationScreen"); // Navigate to NotificationScreen
   };
+  const handleSendPress = () => {
+    router.push("../Components/ChatList"); // Navigate to NotificationScreen
+  };
 
   return (
     <>
@@ -17,7 +20,8 @@ const HomeScreen = () => {
       <TopNavigationBar
         userName="John Doe" // Display the user's name
         onProfilePress={() => console.log("Profile pressed")} // Profile button logic
-        onNotificationPress={handleNotificationPress} // Notification button logic
+        onNotificationPress={handleNotificationPress}
+        onSendPress={handleSendPress} // Notification button logic
       />
 
       {/* Main content for Home screen */}
