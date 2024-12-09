@@ -59,6 +59,7 @@ const NotificationScreen = () => {
           onPress={() => handleNavigate(item.path)} // Navigate to the relevant tab
         >
           <Text>{item.message}</Text>
+          
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleRemoveNotification(item.id)}>
           <MaterialIcons name="delete" size={24} color="red" /> {/* Delete Icon */}

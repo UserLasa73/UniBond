@@ -22,7 +22,7 @@ const Search = () => {
   };
 
   return (
-    <SearchScreen onExitSearch={handleExitSearch} />
+    <SearchScreen />
   );
 };
 
