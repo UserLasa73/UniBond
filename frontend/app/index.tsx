@@ -1,8 +1,8 @@
+import React from "react";
 import { View, Text } from "react-native";
-import ChatList from "./Components/ChatList";
-import { Link } from "expo-router";
+import { Link } from "expo-router"; // Used for navigation
 
-const index = () => {
+const Index = () => {
   return (
     <View
       style={{
@@ -15,9 +15,9 @@ const index = () => {
       <Text style={{ fontSize: 32, fontWeight: "bold", color: "#0078D7" }}>
         UniBond
       </Text>
-      <Link href="/Home">Home</Link>
+      <Link href="/Home">Home</Link> {/* This will navigate to the Home page */}
     </View>
   );
 };
 
-export default index;
+export default Index;
