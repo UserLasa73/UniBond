@@ -10,10 +10,9 @@ export const config = {
   storageId: "6756a0d800310a13634e",
 };
 
-// Init your React Native SDK
 const client = new Client();
 
 client
-  .setEndpoint(config.endpoint) // Your Appwrite Endpoint
-  .setProject(config.projectId) // Your project ID
-  .setPlatform(config.platform); // Your application ID or bundle ID.
+  .setEndpoint(config.endpoint)
+  .setProject(config.projectId)
+  .setPlatform(config.platform);
