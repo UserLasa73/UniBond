@@ -1,17 +1,17 @@
 // components/TopNavigationBar.tsx
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 
 interface TopNavigationBarProps {
+  userName: string;
   onProfilePress?: () => void;
-  onSearchPress?: () => void;
   onNotificationPress?: () => void;
 }
 
 const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
+  userName,
   onProfilePress,
-  onSearchPress,
   onNotificationPress,
 }) => {
   return (
@@ -21,11 +21,8 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
         <FontAwesome name="user" size={24} color="#000" />
       </TouchableOpacity>
 
-      {/* Search Bar */}
-      <TouchableOpacity style={styles.searchContainer} onPress={onSearchPress}>
-        <MaterialIcons name="search" size={24} color="#555" />
-        <Text style={styles.searchText}>Search</Text>
-      </TouchableOpacity>
+      {/* User Name */}
+      <Text style={styles.userName}>{userName}</Text>
 
       {/* Notification Icon */}
       <TouchableOpacity onPress={onNotificationPress}>
@@ -45,20 +42,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  searchText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: "#555",
+  userName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
   },
 });
 
