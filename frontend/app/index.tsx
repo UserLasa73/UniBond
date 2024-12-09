@@ -1,7 +1,8 @@
+import React from "react";
 import { View, Text } from "react-native";
 import ChatList from "./Components/ChatList";
 import { Link } from "expo-router";
-import "react-native-url-polyfill/auto";
+
 const index = () => {
   return (
     <View
@@ -15,7 +16,6 @@ const index = () => {
       <Text style={{ fontSize: 32, fontWeight: "bold", color: "#0078D7" }}>
         UniBond
       </Text>
-
       <Link href="/Home">Home</Link>
     </View>
   );
