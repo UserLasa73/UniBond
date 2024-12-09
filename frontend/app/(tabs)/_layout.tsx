@@ -15,7 +15,7 @@ const Layout = () => {
         name="Home"
         options={{
           title: "Home",
-          headerShown: true,
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}

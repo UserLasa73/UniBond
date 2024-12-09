@@ -22,7 +22,7 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
         onPress={onProfilePress}
         style={styles.profileContainer}
       >
-        <FontAwesome name="user" size={24} color="#000" />
+        <MaterialIcons name="person" size={24} color="#2C3036" />
       </TouchableOpacity>
 
       {/* User Name */}
@@ -31,10 +31,10 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
       {/* Notification and Send Icons */}
       <View style={styles.iconGroup}>
         <TouchableOpacity onPress={onNotificationPress} style={styles.icon}>
-          <MaterialIcons name="notifications" size={24} color="#000" />
+          <MaterialIcons name="notifications" size={24} color="#2C3036" />
         </TouchableOpacity>
         <TouchableOpacity onPress={onSendPress} style={styles.icon}>
-          <MaterialIcons name="send" size={24} color="#000" />
+          <MaterialIcons name="send" size={24} color="#2C3036" />
         </TouchableOpacity>
       </View>
     </View>
