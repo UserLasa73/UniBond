@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text } from "react-native";
-import ChatList from "./Components/ChatList";
 import { Link } from "expo-router";
 
 const index = () => {
