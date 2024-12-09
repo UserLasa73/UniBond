@@ -1,6 +1,12 @@
 import React from "react";
-import { Text, View, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 // Import renamed components
 import AvailableJobs from "../Components/JobComponents/AvailableJobs";
@@ -19,7 +25,9 @@ interface JobListing {
 }
 
 const Jobs: React.FC = () => {
-  const [selectedTab, setSelectedTab] = React.useState<"Available" | "Saved" | "Status">("Available");
+  const [selectedTab, setSelectedTab] = React.useState<
+    "Available" | "Saved" | "Status"
+  >("Available");
   const [jobListings, setJobListings] = React.useState<JobListing[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
 
@@ -70,11 +78,10 @@ const Jobs: React.FC = () => {
         ].map((tab) => (
           <TouchableOpacity
             key={tab.name}
-            style={[
-              styles.tab,
-              selectedTab === tab.name && styles.selectedTab,
-            ]}
-            onPress={() => setSelectedTab(tab.name as "Available" | "Saved" | "Status")}
+            style={[styles.tab, selectedTab === tab.name && styles.selectedTab]}
+            onPress={() =>
+              setSelectedTab(tab.name as "Available" | "Saved" | "Status")
+            }
           >
             <Ionicons
               name={tab.icon}
