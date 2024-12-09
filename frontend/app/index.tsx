@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 import ChatList from "./Components/ChatList";
 import { Link } from "expo-router";
-
+import "react-native-url-polyfill/auto";
 const index = () => {
   return (
     <View
