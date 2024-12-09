@@ -1,15 +1,10 @@
-import { SafeAreaView, Text, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-
+import React from "react";
+import { GiftedChat } from "react-native-gifted-chat";
 const ChatList = () => {
   return (
-    <SafeAreaProvider>
-      <SafeAreaView>
-        <View style={{}}>
-          <Text>Aathif</Text>
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <>
+      <GiftedChat />
+    </>
   );
 };
 export default ChatList;
