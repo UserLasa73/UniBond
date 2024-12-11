@@ -3,6 +3,8 @@ import React from "react";
 import { View, Text } from "react-native";
 import TopNavigationBar from "../Components/TopNavigationBar"; // Import the top nav component
 import { useRouter } from "expo-router"; // For navigation
+import HomeLayout from "../Chat/message/_layout";
+import ChannelStack from "../Chat/channel/_layout";
 
 const HomeScreen = () => {
   const router = useRouter(); // Router hook to navigate programmatically
@@ -11,7 +13,7 @@ const HomeScreen = () => {
     router.push("../screens/NotificationScreen"); // Navigate to NotificationScreen
   };
   const handleSendPress = () => {
-    router.push("../Components/ChatList"); // Navigate to NotificationScreen
+    router.push("../Chat/channel/_layout.tsx");
   };
 
   return (
@@ -23,8 +25,6 @@ const HomeScreen = () => {
         onNotificationPress={handleNotificationPress}
         onSendPress={handleSendPress} // Notification button logic
       />
-
-      {/* Main content for Home screen */}
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Welcome to UniBond!</Text>
       </View>
