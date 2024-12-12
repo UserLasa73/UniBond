@@ -6,7 +6,6 @@ import { ActivityIndicator, View } from "react-native";
 
 export default function ChatProvider({ children }: PropsWithChildren) {
   const [isReady, SetIsReady] = React.useState(false);
-  // Ensure API key is defined
   if (!process.env.EXPO_PUBLIC_STREAM_API_KEY) {
     console.error(
       "Stream API key is missing. Check your environment variables."
@@ -15,7 +14,6 @@ export default function ChatProvider({ children }: PropsWithChildren) {
   }
   const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY);
 
-  // Initialize StreamChat client
   useEffect(() => {
     const connect = async () => {
       try {
@@ -28,11 +26,11 @@ export default function ChatProvider({ children }: PropsWithChildren) {
           client.devToken("jlahey")
         );
         SetIsReady(true);
-        // Optionally create a channel if necessary
-        // const channel = client.channel("messaging", "the_park", {
-        //   name: "The Park",
-        // });
-        // await channel.create();
+
+        const channel = client.channel("messaging", "the_park", {
+          name: "The Park",
+        });
+        await channel.create();
       } catch (error) {
         console.error("Error connecting user to Stream Chat:", error);
       }

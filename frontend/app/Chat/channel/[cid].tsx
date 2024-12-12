@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import {
   Channel,
   MessageInput,
@@ -18,14 +18,14 @@ export default function ChannelScreen() {
   useEffect(() => {
     const fetchChannel = async () => {
       try {
-        const channels = await client.queryChannels({ id: cid }); // Ensure `id` matches your backend setup
+        const channels = await client.queryChannels({ id: cid });
         if (channels.length > 0) {
           setChannel(channels[0]);
         } else {
-          console.error("No channel found with the specified ID.");
+          console.log("No channel found with the specified ID.");
         }
       } catch (error) {
-        console.error("Error fetching channel:", error);
+        console.log("Error fetching channel:", error);
       }
     };
 
