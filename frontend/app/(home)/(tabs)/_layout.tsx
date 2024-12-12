@@ -66,13 +66,13 @@ const Layout = () => {
         }}
       />
       <Tabs.Screen
-        name="Addpost"
+        name="index"
         options={{
-          title: "Add",
+          title: "Chat",
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "add-circle" : "add-circle-outline"}
+              name={focused ? "chatbubbles" : "chatbubbles"}
               size={24}
               color={color}
             />

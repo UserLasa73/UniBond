@@ -1,19 +1,19 @@
 // /screens/Home.tsx
 import React from "react";
 import { View, Text } from "react-native";
-import TopNavigationBar from "../Components/TopNavigationBar"; // Import the top nav component
+import TopNavigationBar from "../../Components/TopNavigationBar"; // Import the top nav component
 import { useRouter } from "expo-router"; // For navigation
+import NotificationScreen from "@/app/screens/NotificationScreen";
 
 const HomeScreen = () => {
   const router = useRouter(); // Router hook to navigate programmatically
 
   const handleNotificationPress = () => {
-    router.push("../screens/NotificationScreen"); // Navigate to NotificationScreen
+    router.push("/screens/NotificationScreen"); // Navigate to NotificationScreen
   };
   const handleSendPress = () => {
-    router.push("../Components/ChatList"); // Navigate to NotificationScreen
+    router.push("/screens/NotificationScreen");
   };
-
   return (
     <>
       {/* Top Navigation Bar */}
@@ -23,8 +23,6 @@ const HomeScreen = () => {
         onNotificationPress={handleNotificationPress}
         onSendPress={handleSendPress} // Notification button logic
       />
-
-      {/* Main content for Home screen */}
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Welcome to UniBond!</Text>
       </View>

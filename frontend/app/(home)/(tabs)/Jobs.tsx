@@ -9,9 +9,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 // Import renamed components
-import AvailableJobs from "../Components/JobComponents/AvailableJobs";
-import SavedJobs from "../Components/JobComponents/SavedJobs";
-import StatusJobs from "../Components/JobComponents/StatusJobs";
+import AvailableJobs from "../../Components/JobComponents/AvailableJobs";
+import SavedJobs from "../../Components/JobComponents/SavedJobs";
+import StatusJobs from "../../Components/JobComponents/StatusJobs";
 
 interface JobListing {
   id: string;

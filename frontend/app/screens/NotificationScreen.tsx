@@ -1,16 +1,58 @@
 import React, { useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router"; // For navigation
 //import hekko from '../(tabs)/Home'
 
 const notifications = [
-  { id: "1", type: "message", message: "You have a new message.", read: false, path: "../(tabs)/Home" },
-  { id: "2", type: "profile", message: "Your profile has been updated.", read: false, path: "../(tabs)/Home" },
-  { id: "3", type: "job", message: "New job opportunity available.", read: false, path: "../(tabs)/Jobs" },
-  { id: "4", type: "comment", message: "Someone commented on your post.", read: false, path: "../(tabs)/Home" },
-  { id: "5", type: "like", message: "Your post got a new like.", read: false, path: "/tabs/home" },
-  { id: "6", type: "project", message: "A new project has been assigned to you.", read: false, path: "../(tabs)/Projects" },
+  {
+    id: "1",
+    type: "message",
+    message: "You have a new message.",
+    read: false,
+    path: "../(tabs)/Home",
+  },
+  {
+    id: "2",
+    type: "profile",
+    message: "Your profile has been updated.",
+    read: false,
+    path: "../(tabs)/Home",
+  },
+  {
+    id: "3",
+    type: "job",
+    message: "New job opportunity available.",
+    read: false,
+    path: "../(tabs)/Jobs",
+  },
+  {
+    id: "4",
+    type: "comment",
+    message: "Someone commented on your post.",
+    read: false,
+    path: "../(tabs)/Home",
+  },
+  {
+    id: "5",
+    type: "like",
+    message: "Your post got a new like.",
+    read: false,
+    path: "/tabs/home",
+  },
+  {
+    id: "6",
+    type: "project",
+    message: "A new project has been assigned to you.",
+    read: false,
+    path: "../(tabs)/Projects",
+  },
 ];
 
 const NotificationScreen = () => {
@@ -23,11 +65,15 @@ const NotificationScreen = () => {
     );
   };
 
-  const handleNavigate = (path:any ) => {
+  const handleNavigate = (path: any) => {
     router.push(path); // Navigate to the corresponding path
   };
 
-  const renderNotification = ({ item }: { item: typeof notifications[0] }) => {
+  const renderNotification = ({
+    item,
+  }: {
+    item: (typeof notifications)[0];
+  }) => {
     let backgroundColor;
     switch (item.type) {
       case "message":
@@ -59,10 +105,10 @@ const NotificationScreen = () => {
           onPress={() => handleNavigate(item.path)} // Navigate to the relevant tab
         >
           <Text>{item.message}</Text>
-          
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleRemoveNotification(item.id)}>
-          <MaterialIcons name="delete" size={24} color="red" /> {/* Delete Icon */}
+          <MaterialIcons name="delete" size={24} color="red" />{" "}
+          {/* Delete Icon */}
         </TouchableOpacity>
       </View>
     );
