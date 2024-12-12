@@ -3,17 +3,17 @@ import React from "react";
 import { View, Text } from "react-native";
 import TopNavigationBar from "../../Components/TopNavigationBar"; // Import the top nav component
 import { useRouter } from "expo-router"; // For navigation
+import NotificationScreen from "@/app/screens/NotificationScreen";
 
 const HomeScreen = () => {
   const router = useRouter(); // Router hook to navigate programmatically
 
   const handleNotificationPress = () => {
-    router.push("../screens/NotificationScreen"); // Navigate to NotificationScreen
+    router.push("/screens/NotificationScreen"); // Navigate to NotificationScreen
   };
   const handleSendPress = () => {
-    router.push("../screens/NotificationScreen");
+    router.push("/screens/NotificationScreen");
   };
-
   return (
     <>
       {/* Top Navigation Bar */}

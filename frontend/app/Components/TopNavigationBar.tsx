@@ -34,7 +34,7 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
           <MaterialIcons name="notifications" size={24} color="#2C3036" />
         </TouchableOpacity>
         <TouchableOpacity onPress={onSendPress} style={styles.icon}>
-          <MaterialIcons name="send" size={24} color="#2C3036" />
+          <MaterialIcons name="add-circle" size={24} color="#2C3036" />
         </TouchableOpacity>
       </View>
     </View>
