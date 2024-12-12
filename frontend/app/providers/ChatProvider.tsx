@@ -1,6 +1,6 @@
 import * as React from "react";
 import { StreamChat } from "stream-chat";
-import { Chat, OverlayProvider } from "stream-chat-react-native";
+import { Chat, OverlayProvider } from "stream-chat-expo";
 import { PropsWithChildren, useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 

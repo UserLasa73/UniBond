@@ -1,7 +1,7 @@
 // /screens/Home.tsx
 import React from "react";
 import { View, Text } from "react-native";
-import TopNavigationBar from "../Components/TopNavigationBar"; // Import the top nav component
+import TopNavigationBar from "../../Components/TopNavigationBar"; // Import the top nav component
 import { useRouter } from "expo-router"; // For navigation
 
 const HomeScreen = () => {
@@ -11,7 +11,7 @@ const HomeScreen = () => {
     router.push("../screens/NotificationScreen"); // Navigate to NotificationScreen
   };
   const handleSendPress = () => {
-    router.push("../Chat/channel");
+    router.push("../screens/NotificationScreen");
   };
 
   return (
