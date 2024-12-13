@@ -1,14 +1,8 @@
 import React from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-// Import renamed components
+// Import components
 import AvailableJobs from "../Components/JobComponents/AvailableJobs";
 import SavedJobs from "../Components/JobComponents/SavedJobs";
 import StatusJobs from "../Components/JobComponents/StatusJobs";
@@ -25,10 +19,9 @@ interface JobListing {
 }
 
 const Jobs: React.FC = () => {
-  const [selectedTab, setSelectedTab] = React.useState<
-    "Available" | "Saved" | "Status"
-  >("Available");
+  const [selectedTab, setSelectedTab] = React.useState<"Available" | "Saved" | "Status">("Available");
   const [jobListings, setJobListings] = React.useState<JobListing[]>([]);
+  const [savedJobs, setSavedJobs] = React.useState<string[]>([]); // Manage saved jobs here
   const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
@@ -47,11 +40,22 @@ const Jobs: React.FC = () => {
     fetchJobs();
   }, []);
 
+  // Function to handle saving or unsaving jobs
+  const onSaveJob = (jobId: string) => {
+    setSavedJobs((prevSavedJobs) => {
+      if (prevSavedJobs.includes(jobId)) {
+        return prevSavedJobs.filter((id) => id !== jobId); // Remove job from saved jobs
+      } else {
+        return [...prevSavedJobs, jobId]; // Add job to saved jobs
+      }
+    });
+  };
+
   const renderContent = () => {
     if (selectedTab === "Available") {
-      return <AvailableJobs jobListings={jobListings} />;
+      return <AvailableJobs jobListings={jobListings} savedJobs={savedJobs} onSaveJob={onSaveJob} />;
     } else if (selectedTab === "Saved") {
-      return <SavedJobs />;
+      return <SavedJobs savedJobs={savedJobs} jobListings={jobListings} />;
     } else if (selectedTab === "Status") {
       return <StatusJobs />;
     }
@@ -79,9 +83,7 @@ const Jobs: React.FC = () => {
           <TouchableOpacity
             key={tab.name}
             style={[styles.tab, selectedTab === tab.name && styles.selectedTab]}
-            onPress={() =>
-              setSelectedTab(tab.name as "Available" | "Saved" | "Status")
-            }
+            onPress={() => setSelectedTab(tab.name as "Available" | "Saved" | "Status")}
           >
             <Ionicons
               name={tab.icon}
