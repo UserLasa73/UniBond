@@ -1,7 +1,17 @@
 import React from "react";
 import { TouchableOpacity, Text, StyleSheet, View } from "react-native";
 
-const PostOptionItem = ({ label, icon, onPress }: any) => {
+interface PostOptionItemProps {
+  label: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+}
+
+const PostOptionItem: React.FC<PostOptionItemProps> = ({
+  label,
+  icon,
+  onPress,
+}) => {
   return (
     <TouchableOpacity style={styles.item} onPress={onPress}>
       <View style={styles.icon}>{icon}</View>
