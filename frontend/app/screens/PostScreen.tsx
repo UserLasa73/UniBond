@@ -31,7 +31,7 @@ const PostScreen = () => {
           <MaterialIcons name="person" size={40} color="#fff" />
         </View>
         <View style={styles.userDetails}>
-          <Text style={styles.userName}>Rebecca Max</Text>
+          <Text style={styles.userName}>John Doe</Text>
           <TouchableOpacity style={styles.visibilitySelector}>
             <MaterialIcons name="public" size={16} color="#000" />
             <Text style={styles.visibilityText}>Anyone</Text>
