@@ -6,35 +6,32 @@ interface TopNavigationBarProps {
   userName: string;
   onProfilePress?: () => void;
   onNotificationPress?: () => void;
-  onSendPress?: () => void;
+  onPostPress?: () => void;
 }
 
 const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
   userName,
   onProfilePress,
   onNotificationPress,
-  onSendPress,
+  onPostPress,
 }) => {
   return (
     <View style={styles.container}>
       {/* Profile Icon */}
-      <TouchableOpacity
-        onPress={onProfilePress}
-        style={styles.profileContainer}
-      >
+      <TouchableOpacity onPress={onProfilePress} style={styles.profileImage}>
         <MaterialIcons name="person" size={24} color="#2C3036" />
       </TouchableOpacity>
 
-      {/* User Name */}
+      {/*User Name */}
       <Text style={styles.userName}>{userName}</Text>
 
-      {/* Notification and Send Icons */}
-      <View style={styles.iconGroup}>
+      {/*Notification and Post Icons */}
+      <View style={styles.iconContainer}>
         <TouchableOpacity onPress={onNotificationPress} style={styles.icon}>
-          <MaterialIcons name="notifications" size={24} color="#2C3036" />
+          <MaterialIcons name="notifications" size={24} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={onSendPress} style={styles.icon}>
-          <MaterialIcons name="add-circle" size={24} color="#2C3036" />
+        <TouchableOpacity onPress={onPostPress} style={styles.icon}>
+          <MaterialIcons name="add-circle" size={24} color="#000" />
         </TouchableOpacity>
       </View>
     </View>
@@ -44,31 +41,30 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: 10,
+    alignItems: "center",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: "#ccc",
   },
-  profileContainer: {
-    flex: 1,
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   userName: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#000",
-    flex: 3,
-    textAlign: "center",
   },
-  iconGroup: {
+  iconContainer: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    justifyContent: "flex-end",
   },
   icon: {
-    marginLeft: 10,
+    marginLeft: 15,
   },
 });
 
