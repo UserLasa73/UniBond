@@ -11,8 +11,9 @@ const HomeScreen = () => {
   const handleNotificationPress = () => {
     router.push("/screens/NotificationScreen"); // Navigate to NotificationScreen
   };
-  const handleSendPress = () => {
-    router.push("/screens/NotificationScreen");
+
+  const handlePostPress = () => {
+    router.push("/screens/PostScreen"); // Navigate to PostScreen
   };
   return (
     <>
@@ -21,7 +22,7 @@ const HomeScreen = () => {
         userName="John Doe" // Display the user's name
         onProfilePress={() => console.log("Profile pressed")} // Profile button logic
         onNotificationPress={handleNotificationPress}
-        onSendPress={handleSendPress} // Notification button logic
+        onPostPress={handlePostPress}
       />
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Welcome to UniBond!</Text>
