@@ -4,10 +4,12 @@ import { Chat, OverlayProvider } from "stream-chat-expo";
 import { PropsWithChildren, useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "./AuthProvider";
+import { supabase } from "../lib/supabse";
 
 export default function ChatProvider({ children }: PropsWithChildren) {
   const [isReady, SetIsReady] = React.useState(false);
   const { profile } = useAuth();
+
   if (!process.env.EXPO_PUBLIC_STREAM_API_KEY) {
     console.error(
       "Stream API key is missing. Check your environment variables."
@@ -24,7 +26,9 @@ export default function ChatProvider({ children }: PropsWithChildren) {
           {
             id: profile?.id,
             name: profile?.full_name,
-            image: "https://i.imgur.com/fR9Jz14.png",
+            image: supabase.storage
+              .from("avatars")
+              .getPublicUrl(profile.avatar_url).data.publicUrl,
           },
           client.devToken(profile?.id)
         );
