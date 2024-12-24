@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const AddProjectScreen = () => {
   const [projectTitle, setProjectTitle] = useState("");
@@ -19,8 +27,17 @@ const AddProjectScreen = () => {
     // Add logic to send project details to the server
   };
 
+  const handleCancel = () => {
+    setProjectTitle("");
+    setProjectDescription("");
+    setTechnologies("");
+  };
+
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+        <Ionicons name="close" size={24} color="black" />
+      </TouchableOpacity>
       <Text style={styles.label}>Post a Project</Text>
       <TextInput
         style={styles.input}
@@ -53,6 +70,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
+  },
+  cancelButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
   label: {
     fontSize: 18,
