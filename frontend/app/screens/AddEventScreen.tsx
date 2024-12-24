@@ -6,40 +6,50 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Platform,
+  Button,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const AddEventPost = () => {
   const router = useRouter();
 
   const [eventName, setEventName] = useState("");
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState<Date | null>(null);
   const [eventLocation, setEventLocation] = useState("");
   const [eventDescription, setEventDescription] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handlePost = () => {
     console.log("Event Posted:");
     console.log({
       eventName,
-      eventDate,
+      eventDate: eventDate?.toISOString().split("T")[0], // Format the date
       eventLocation,
       eventDescription,
     });
-    // logic to save or post the event here
     router.back();
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setEventDate(selectedDate);
+    }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Event</Text>
-        <TouchableOpacity onPress={handlePost}>
-          <Text style={styles.postButton}>Post</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.cancelButton}
+        >
+          <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
@@ -56,12 +66,30 @@ const AddEventPost = () => {
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Date</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter event date (e.g., 2024-12-25)"
-          value={eventDate}
-          onChangeText={setEventDate}
-        />
+        <TouchableOpacity
+          style={styles.dateInput}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Ionicons
+            name="calendar"
+            size={20}
+            color="#333"
+            style={styles.dateIcon}
+          />
+          <Text style={styles.dateText}>
+            {eventDate
+              ? eventDate.toISOString().split("T")[0] // Format date to YYYY-MM-DD
+              : "Select a date"}
+          </Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={eventDate || new Date()}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onDateChange}
+          />
+        )}
       </View>
 
       <View style={styles.inputContainer}>
@@ -85,6 +113,9 @@ const AddEventPost = () => {
           numberOfLines={4}
         />
       </View>
+
+      {/* Post Button */}
+      <Button title="Post" onPress={handlePost} color="#007BFF" />
     </ScrollView>
   );
 };
@@ -108,10 +139,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
   },
-  postButton: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#007BFF",
+  cancelButton: {
+    padding: 8,
   },
   inputContainer: {
     marginBottom: 20,
@@ -128,6 +157,21 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: "#333",
+  },
+  dateInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 12,
+  },
+  dateIcon: {
+    marginRight: 8,
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#999",
   },
   textArea: {
     textAlignVertical: "top",
