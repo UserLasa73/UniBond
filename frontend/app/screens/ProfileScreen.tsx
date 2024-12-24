@@ -131,7 +131,7 @@ export default function ProfileScreen() {
         <Input
           label="Website"
           value={website || ""}
-          onChangeText={(text) => setWebsite(text)}
+          onChangeText={(text) => text}
         />
       </View>
 
