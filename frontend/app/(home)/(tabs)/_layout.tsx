@@ -2,6 +2,7 @@ import { Redirect, Tabs } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 const Layout = () => {
   return (
