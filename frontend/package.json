@@ -59,7 +59,8 @@
     "react-native-web": "~0.19.13",
     "react-native-webview": "^13.12.2",
     "stream-chat-expo": "^5.44.2",
-    "stream-chat-react-native": "^5.44.2"
+    "stream-chat-react-native": "^5.44.2",
+    "@react-native-community/datetimepicker": "8.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
