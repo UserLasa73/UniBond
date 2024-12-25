@@ -15,12 +15,15 @@ const HomeScreen = () => {
   const handlePostPress = () => {
     router.push("/screens/PostScreen"); // Navigate to PostScreen
   };
+  const handleProfilePress = () => {
+    router.push("/screens/ProfileScreen"); // Navigate to
+  };
   return (
     <>
       {/* Top Navigation Bar */}
       <TopNavigationBar
         userName="John Doe" // Display the user's name
-        onProfilePress={() => console.log("Profile pressed")} // Profile button logic
+        onProfilePress={handleProfilePress} // Profile button logic
         onNotificationPress={handleNotificationPress}
         onPostPress={handlePostPress}
       />
