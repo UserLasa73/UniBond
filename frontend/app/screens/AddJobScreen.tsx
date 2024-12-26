@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 
 type Media = {
   uri: string;
@@ -17,6 +18,7 @@ type Media = {
 };
 
 const AddJobScreen = () => {
+  const router = useRouter();
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -41,6 +43,7 @@ const AddJobScreen = () => {
     setJobDescription("");
     setLocation("");
     setMedia(null);
+    router.back();
   };
 
   const handleMediaPicker = async () => {

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 type Media = {
   uri: string;
@@ -17,6 +18,7 @@ type Media = {
 };
 
 const AddPostScreen = () => {
+  const router = useRouter();
   const [content, setContent] = useState<string>("");
   const [media, setMedia] = useState<Media | null>(null);
 
@@ -32,6 +34,7 @@ const AddPostScreen = () => {
   const handleCancel = () => {
     setContent("");
     setMedia(null);
+    router.back();
   };
 
   const handleMediaPicker = async () => {

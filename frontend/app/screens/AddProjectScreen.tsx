@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 const AddProjectScreen = () => {
+  const router = useRouter();
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [technologies, setTechnologies] = useState("");
@@ -31,6 +33,7 @@ const AddProjectScreen = () => {
     setProjectTitle("");
     setProjectDescription("");
     setTechnologies("");
+    router.back();
   };
 
   return (
