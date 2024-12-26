@@ -16,25 +16,16 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
-
-    "@react-native-async-storage/async-storage": "^2.1.0",
-
     "@react-native-async-storage/async-storage": "1.23.1",
-
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
     "@rneui/themed": "^4.0.0-rc.8",
     "@stream-io/flat-list-mvcp": "^0.10.3",
-
     "@supabase/realtime-js": "^2.11.3",
     "@supabase/supabase-js": "^2.47.10",
     "expo": "~52.0.11",
-
-    "@supabase/supabase-js": "^2.47.10",
-    "expo": "~52.0.11",
     "expo-auth-session": "~6.0.1",
-
     "expo-av": "~15.0.1",
     "expo-blur": "~14.0.1",
     "expo-clipboard": "~7.0.0",
@@ -49,16 +40,16 @@
     "expo-media-library": "~17.0.3",
     "expo-notifications": "^0.29.11",
     "expo-random": "^14.0.1",
-    "expo-router": "~4.0.9",
+    "expo-router": "^4.0.15",
     "expo-sharing": "~13.0.0",
-    "expo-splash-screen": "~0.29.13",
+    "expo-splash-screen": "^0.29.18",
     "expo-status-bar": "~2.0.0",
     "expo-symbols": "~0.2.0",
     "expo-system-ui": "~4.0.4",
     "expo-web-browser": "~14.0.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-native": "0.76.3",
+    "react-native": "^0.76.3",
     "react-native-appwrite": "^0.5.0",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "~2.20.2",
@@ -71,7 +62,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.19.13",
-    "react-native-webview": "13.12.2",
+    "react-native-webview": "^13.12.2",
     "stream-chat-expo": "^5.44.2",
     "stream-chat-react-native": "^5.44.2"
   },

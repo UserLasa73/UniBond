@@ -3,12 +3,13 @@ import { supabase } from "../lib/supabse";
 import { StyleSheet, View, Alert, ScrollView } from "react-native";
 import { Button, Input } from "@rneui/themed";
 import { useAuth } from "../providers/AuthProvider";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams  } from "expo-router";
 import Avatar from "../Components/Avatar";
 
 export default function ProfileScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const { userId } = useLocalSearchParams(); // Get userId from route params
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [fullname, setFullname] = useState("");
@@ -16,23 +17,21 @@ export default function ProfileScreen() {
   const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
-    if (session) getProfile();
-  }, [session]);
+    if (userId || session) getProfile(); // Fetch profile based on userId or session
+  }, [userId, session]);
 
   async function getProfile() {
-    const { user } = useAuth();
-    if (!user) {
-      return router.push("../(auth)/login");
-    }
     try {
       setLoading(true);
-      if (!session?.user) throw new Error("No user on the session!");
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user or session available!");
 
       const { data, error, status } = await supabase
         .from("profiles")
-        .select(`username, website, avatar_url,full_name`)
-        .eq("id", session?.user.id)
+        .select(`username, website, avatar_url, full_name`)
+        .eq("id", profileId)
         .single();
+
       if (error && status !== 406) {
         throw error;
       }
@@ -106,8 +105,6 @@ export default function ProfileScreen() {
             });
           }}
         />
-
-        {/* ... */}
       </View>
 
       <View style={[styles.verticallySpaced, styles.mt20]}>
@@ -118,6 +115,7 @@ export default function ProfileScreen() {
           label="Username"
           value={username || ""}
           onChangeText={(text) => setUsername(text)}
+          disabled={!!userId} // Disable editing if viewing another user's profile
         />
       </View>
       <View style={styles.verticallySpaced}>
@@ -125,47 +123,53 @@ export default function ProfileScreen() {
           label="Fullname"
           value={fullname || ""}
           onChangeText={(text) => setFullname(text)}
+          disabled={!!userId} // Disable editing if viewing another user's profile
         />
       </View>
       <View style={styles.verticallySpaced}>
         <Input
           label="Website"
           value={website || ""}
-          onChangeText={(text) => text}
+          onChangeText={(text) => setWebsite(text)}
+          disabled={!!userId} // Disable editing if viewing another user's profile
         />
       </View>
 
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button
-          title={loading ? "Loading ..." : "Update"}
-          onPress={() =>
-            updateProfile({
-              username: username,
-              website: website,
-              avatar_url: avatarUrl,
-              full_name: fullname,
-            })
-          }
-          disabled={loading}
-        />
-      </View>
-
-      <View style={styles.verticallySpaced}>
-        <Button
-          title="Sign Out"
-          onPress={async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) throw error;
-              router.push("../(auth)/login");
-            } catch (error) {
-              if (error instanceof Error) {
-                Alert.alert("Error", error.message);
-              }
+      {!userId && (
+        <View style={[styles.verticallySpaced, styles.mt20]}>
+          <Button
+            title={loading ? "Loading ..." : "Update"}
+            onPress={() =>
+              updateProfile({
+                username: username,
+                website: website,
+                avatar_url: avatarUrl,
+                full_name: fullname,
+              })
             }
-          }}
-        />
-      </View>
+            disabled={loading}
+          />
+        </View>
+      )}
+
+      {!userId && (
+        <View style={styles.verticallySpaced}>
+          <Button
+            title="Sign Out"
+            onPress={async () => {
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                router.push("../(auth)/login");
+              } catch (error) {
+                if (error instanceof Error) {
+                  Alert.alert("Error", error.message);
+                }
+              }
+            }}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 }
