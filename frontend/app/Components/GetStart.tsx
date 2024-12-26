@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
+import Auth from "../(auth)/login";
 
 const GetStartedPage = () => {
   return (
@@ -12,7 +13,7 @@ const GetStartedPage = () => {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push("./(tabs)")}
+        onPress={() => router.push("../(auth)/login")}
       >
         <Text style={styles.buttonText}>Get Started</Text>
       </TouchableOpacity>
