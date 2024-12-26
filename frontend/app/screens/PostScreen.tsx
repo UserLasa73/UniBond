@@ -7,9 +7,17 @@ import PostOptionItem from "../Components/PostOptionItem";
 const PostScreen = () => {
   const router = useRouter();
 
-  const handleOptionPress = (option: string) => {
-    console.log(`${option} selected`);
-    //navigation or functionality for the selected option
+  const handleOptionPress = (screen: string) => {
+    console.log("Navigating to:", screen);
+    try {
+      router.push(`/screens/${screen}`);
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
+  };
+
+  const handlePostPress = () => {
+    console.log("Post submitted!"); // Placeholder logic for post submission
   };
 
   return (
@@ -20,7 +28,7 @@ const PostScreen = () => {
           <MaterialIcons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
-        <TouchableOpacity onPress={() => console.log("Post pressed")}>
+        <TouchableOpacity onPress={handlePostPress}>
           <Text style={styles.postButton}>Post</Text>
         </TouchableOpacity>
       </View>
@@ -48,22 +56,22 @@ const PostScreen = () => {
         <PostOptionItem
           label="Add a Post"
           icon={<Ionicons name="image-outline" size={24} color="#000" />}
-          onPress={() => handleOptionPress("Add a Post")}
+          onPress={() => handleOptionPress("AddPostScreen")}
         />
         <PostOptionItem
           label="Add a Project"
           icon={<Ionicons name="folder" size={24} color="#000" />}
-          onPress={() => handleOptionPress("Add a Project")}
+          onPress={() => handleOptionPress("AddProjectScreen")}
         />
         <PostOptionItem
           label="Share a Job"
           icon={<MaterialIcons name="work-outline" size={24} color="#000" />}
-          onPress={() => handleOptionPress("Share a Job")}
+          onPress={() => handleOptionPress("AddJobScreen")}
         />
         <PostOptionItem
           label="Share an Event"
           icon={<MaterialIcons name="event" size={24} color="#000" />}
-          onPress={() => handleOptionPress("Share an Event")}
+          onPress={() => handleOptionPress("AddEventScreen")}
         />
       </View>
     </View>
