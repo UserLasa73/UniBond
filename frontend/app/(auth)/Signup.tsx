@@ -26,6 +26,8 @@ AppState.addEventListener("change", (state) => {
 
 export default function Signup() {
   const [email, setEmail] = useState("");
+  const [fullname, setFullname] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +49,30 @@ export default function Signup() {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.verticallySpaced, styles.mt20]}>
+        <Input
+          label="Full Name"
+          leftIcon={
+            <Ionicons name="person-outline" size={20} color="#7B6F72" />
+          }
+          onChangeText={(text) => setFullname(text)}
+          value={fullname}
+          placeholder="Full Name"
+          autoCapitalize={"none"}
+        />
+      </View>
+      <View style={[styles.verticallySpaced, styles.mt20]}>
+        <Input
+          label="Username"
+          leftIcon={
+            <Ionicons name="person-circle-outline" size={24} color="#7B6F72" />
+          }
+          onChangeText={(text) => setUsername(text)}
+          value={username}
+          placeholder="User Name"
+          autoCapitalize={"none"}
+        />
+      </View>
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Input
           label="Email"
@@ -73,6 +99,19 @@ export default function Signup() {
           value={password}
           secureTextEntry={true}
           placeholder="Password"
+          autoCapitalize={"none"}
+        />
+      </View>
+      <View style={styles.verticallySpaced}>
+        <Input
+          label="Confirm Password"
+          leftIcon={
+            <Ionicons name="lock-closed-outline" size={20} color="#7B6F72" />
+          }
+          onChangeText={(text) => setPassword(text)}
+          value={password}
+          secureTextEntry={true}
+          placeholder="Re-enter Password"
           autoCapitalize={"none"}
         />
       </View>
