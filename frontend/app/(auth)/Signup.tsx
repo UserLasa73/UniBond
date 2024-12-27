@@ -12,10 +12,6 @@ import { supabase } from "@/lib/supabse";
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 
-// Tells Supabase Auth to continuously refresh the session automatically if
-// the app is in the foreground. When this is added, you will continue to receive
-// `onAuthStateChange` events with the `TOKEN_REFRESHED` or `SIGNED_OUT` event
-// if the user's session is terminated. This should only be registered once.
 AppState.addEventListener("change", (state) => {
   if (state === "active") {
     supabase.auth.startAutoRefresh();
@@ -26,24 +22,48 @@ AppState.addEventListener("change", (state) => {
 
 export default function Signup() {
   const [email, setEmail] = useState("");
-  const [fullname, setFullname] = useState("");
+  const [fullName, setFullName] = useState(""); // Updated to 'fullName'
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function signUpWithEmail() {
+    if (password !== confirmPassword) {
+      Alert.alert("Passwords do not match!");
+      return;
+    }
+
     setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signUp({
-      email: email,
-      password: password,
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
     });
 
-    if (error) Alert.alert(error.message);
-    if (!session)
+    if (error) {
+      Alert.alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data?.user) {
       Alert.alert("Please check your inbox for email verification!");
+    } else {
+      // Update user metadata
+      const { error: updateError } = await supabase
+        .from("profiles") // Replace "profiles" with your actual table name
+        .insert({
+          id: data.user.id, // Use the user ID from Supabase
+          full_name: fullName, // Use 'full_name' for the field
+          username,
+        });
+
+      if (updateError) {
+        Alert.alert("Failed to save user details:", updateError.message);
+      } else {
+        Alert.alert("Signup successful! Please verify your email.");
+      }
+    }
     setLoading(false);
   }
 
@@ -55,8 +75,8 @@ export default function Signup() {
           leftIcon={
             <Ionicons name="person-outline" size={20} color="#7B6F72" />
           }
-          onChangeText={(text) => setFullname(text)}
-          value={fullname}
+          onChangeText={(text) => setFullName(text)} // Updated to 'setFullName'
+          value={fullName} // Updated to 'fullName'
           placeholder="Full Name"
           autoCapitalize={"none"}
         />
@@ -88,7 +108,6 @@ export default function Signup() {
           autoCapitalize={"none"}
         />
       </View>
-
       <View style={styles.verticallySpaced}>
         <Input
           label="Password"
@@ -108,8 +127,8 @@ export default function Signup() {
           leftIcon={
             <Ionicons name="lock-closed-outline" size={20} color="#7B6F72" />
           }
-          onChangeText={(text) => setPassword(text)}
-          value={password}
+          onChangeText={(text) => setConfirmPassword(text)}
+          value={confirmPassword}
           secureTextEntry={true}
           placeholder="Re-enter Password"
           autoCapitalize={"none"}
@@ -122,7 +141,7 @@ export default function Signup() {
       </View>
       <TouchableOpacity
         disabled={loading}
-        onPress={() => signUpWithEmail()}
+        onPress={signUpWithEmail}
         style={[
           styles.button,
           { backgroundColor: loading ? "#555" : "#2C3036" },
@@ -136,7 +155,7 @@ export default function Signup() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Ensures the container takes up the entire screen
+    flex: 1,
     alignItems: "center",
     padding: 12,
   },
@@ -159,14 +178,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     height: 60,
-    width: "90%", // Makes the button slightly smaller than the screen width
+    width: "90%",
     borderRadius: 99,
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
-    bottom: 20, // Places the button 20px above the bottom edge
-    alignSelf: "center", // Centers the button horizontally
-    backgroundColor: "#2C3036", // Default button color
+    bottom: 20,
+    alignSelf: "center",
+    backgroundColor: "#2C3036",
   },
   title: {
     color: "#fff",

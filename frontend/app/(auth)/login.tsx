@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Text,
 } from "react-native";
+import { supabase } from "../lib/supabse";
 import { Input } from "@rneui/themed";
-import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabse";
+import { Link } from "expo-router";
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -70,13 +70,6 @@ export default function Auth() {
           autoCapitalize={"none"}
         />
       </View>
-
-      <View style={styles.verticallySpaced}>
-        <Link style={styles.Link} href="/(auth)/Signup">
-          Don't have an account? Sign up
-        </Link>
-      </View>
-
       <TouchableOpacity
         disabled={loading}
         onPress={() => signInWithEmail()}
@@ -87,6 +80,11 @@ export default function Auth() {
       >
         <Text style={styles.title}>Sign in</Text>
       </TouchableOpacity>
+      <View style={styles.verticallySpaced}>
+        <Link style={styles.Link} href="/(auth)/Signup">
+          Don't have an account? Sign up
+        </Link>
+      </View>
     </View>
   );
 }
@@ -97,24 +95,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
   },
-  verticallySpacedButton: {
-    width: "100%",
-    justifyContent: "center",
-  },
   verticallySpaced: {
     paddingTop: 4,
-    paddingBottom: 2,
+    paddingBottom: 4,
     alignSelf: "stretch",
-  },
-  mt20: {
-    marginTop: 20,
-  },
-  Link: {
-    color: "#7B6F72",
-    textAlign: "center",
-    fontFamily: "poppins",
-    fontSize: 14,
-    textDecorationLine: "underline",
   },
   button: {
     paddingVertical: 12,
@@ -134,5 +118,15 @@ const styles = StyleSheet.create({
     fontFamily: "poppins",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  mt20: {
+    marginTop: 20,
+  },
+  Link: {
+    color: "#7B6F72",
+    textAlign: "center",
+    fontFamily: "poppins",
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });
