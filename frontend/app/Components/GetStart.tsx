@@ -15,7 +15,7 @@ const GetStartedPage = () => {
         style={styles.button}
         onPress={() => router.push("../(auth)/login")}
       >
-        <Text style={styles.buttonText}>Get Started</Text>
+        <Text style={styles.title}>Get Started</Text>
       </TouchableOpacity>
     </View>
   );
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFF",
+    backgroundColor: "#E9EDF0",
     padding: 20,
   },
   logo: {
@@ -37,21 +37,23 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     resizeMode: "contain",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 20,
-  },
   button: {
-    backgroundColor: "#000",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    height: 60,
+    width: "90%",
+    borderRadius: 99,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    bottom: 20,
+    alignSelf: "center",
+    backgroundColor: "#2C3036",
   },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
+  title: {
+    color: "#fff",
+    fontFamily: "poppins",
+    fontSize: 18,
     fontWeight: "bold",
   },
 });
