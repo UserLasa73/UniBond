@@ -61,7 +61,7 @@ export default function Signup() {
           autoCapitalize={"none"}
         />
       </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
+      <View style={[styles.verticallySpaced]}>
         <Input
           label="Username"
           leftIcon={
@@ -73,7 +73,7 @@ export default function Signup() {
           autoCapitalize={"none"}
         />
       </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
+      <View style={[styles.verticallySpaced]}>
         <Input
           label="Email"
           leftIcon={{
@@ -116,7 +116,7 @@ export default function Signup() {
         />
       </View>
       <View style={styles.verticallySpaced}>
-        <Link style={styles.Link} href="/(auth)/Signup">
+        <Link style={styles.Link} href="/(auth)/login">
           Already have an account? Sign in
         </Link>
       </View>
