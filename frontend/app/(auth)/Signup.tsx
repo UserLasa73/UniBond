@@ -8,9 +8,9 @@ import {
   Text,
 } from "react-native";
 import { Input } from "@rneui/themed";
-import { Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabse";
+import { Ionicons } from "@expo/vector-icons";
+import { Link } from "expo-router";
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -24,19 +24,24 @@ AppState.addEventListener("change", (state) => {
   }
 });
 
-export default function Auth() {
+export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function signInWithEmail() {
+  async function signUpWithEmail() {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signUp({
       email: email,
       password: password,
     });
 
     if (error) Alert.alert(error.message);
+    if (!session)
+      Alert.alert("Please check your inbox for email verification!");
     setLoading(false);
   }
 
@@ -57,6 +62,7 @@ export default function Auth() {
           autoCapitalize={"none"}
         />
       </View>
+
       <View style={styles.verticallySpaced}>
         <Input
           label="Password"
@@ -70,22 +76,20 @@ export default function Auth() {
           autoCapitalize={"none"}
         />
       </View>
-
       <View style={styles.verticallySpaced}>
         <Link style={styles.Link} href="/(auth)/Signup">
-          Don't have an account? Sign up
+          Already have an account? Sign in
         </Link>
       </View>
-
       <TouchableOpacity
         disabled={loading}
-        onPress={() => signInWithEmail()}
+        onPress={() => signUpWithEmail()}
         style={[
           styles.button,
           { backgroundColor: loading ? "#555" : "#2C3036" },
         ]}
       >
-        <Text style={styles.title}>Sign in</Text>
+        <Text style={styles.title}>Sign up</Text>
       </TouchableOpacity>
     </View>
   );
@@ -96,10 +100,6 @@ const styles = StyleSheet.create({
     flex: 1, // Ensures the container takes up the entire screen
     alignItems: "center",
     padding: 12,
-  },
-  verticallySpacedButton: {
-    width: "100%",
-    justifyContent: "center",
   },
   verticallySpaced: {
     paddingTop: 4,
