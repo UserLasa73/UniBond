@@ -6,5 +6,9 @@ export default function AuthLayout() {
   if (user) {
     return <Redirect href="../(home)" />;
   }
-  return <Stack />;
+  return (
+    <Stack>
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
