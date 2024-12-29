@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabse";
-import { StyleSheet, View, Alert, Image, Button } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Alert,
+  Image,
+  Button,
+  TouchableOpacity,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 interface Props {
@@ -94,6 +101,7 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
 
   return (
     <View>
+      <TouchableOpacity onPress={uploadAvatar}></TouchableOpacity>
       {avatarUrl ? (
         <Image
           source={{ uri: avatarUrl }}
@@ -110,6 +118,7 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
           disabled={uploading}
         />
       </View>
+      <TouchableOpacity />
     </View>
   );
 }
