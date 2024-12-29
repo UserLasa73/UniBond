@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabse";
-import { StyleSheet, View, Alert, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  Text,
+} from "react-native";
 import { Button, Input } from "@rneui/themed";
 import { useAuth } from "../providers/AuthProvider";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -129,8 +136,7 @@ export default function ProfileScreen() {
 
       {!userId && (
         <View style={[styles.verticallySpaced, styles.mt20]}>
-          <Button
-            title={loading ? "Loading ..." : "Update"}
+          <TouchableOpacity
             onPress={() =>
               updateProfile({
                 username: username,
@@ -139,15 +145,24 @@ export default function ProfileScreen() {
                 full_name: fullname,
               })
             }
+            style={{
+              backgroundColor: "#2C3036",
+              padding: 10,
+              borderRadius: 5,
+              alignItems: "center",
+            }}
             disabled={loading}
-          />
+          >
+            <Text style={{ color: "#fff" }}>
+              {loading ? "Loading ..." : "Update"}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {!userId && (
         <View style={styles.verticallySpaced}>
-          <Button
-            title="Sign Out"
+          <TouchableOpacity
             onPress={async () => {
               try {
                 const { error } = await supabase.auth.signOut();
@@ -159,7 +174,15 @@ export default function ProfileScreen() {
                 }
               }
             }}
-          />
+            style={{
+              backgroundColor: "#2C3036",
+              padding: 10,
+              borderRadius: 5,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>

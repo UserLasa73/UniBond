@@ -7,6 +7,7 @@ import {
   Image,
   Button,
   TouchableOpacity,
+  Text,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -112,11 +113,20 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
         <View style={[avatarSize, styles.avatar, styles.noImage]} />
       )}
       <View>
-        <Button
-          title={uploading ? "Uploading ..." : "Upload"}
+        <TouchableOpacity
           onPress={uploadAvatar}
           disabled={uploading}
-        />
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 5,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 16 }}>
+            {uploading ? "Uploading ..." : "Upload"}
+          </Text>
+        </TouchableOpacity>
       </View>
       <TouchableOpacity />
     </View>
