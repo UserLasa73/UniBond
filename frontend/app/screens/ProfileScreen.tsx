@@ -113,7 +113,9 @@ export default function ProfileScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={{ fontSize: 24, fontWeight: "bold" }}>Profile</Text>
+        <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+          {fullname || "Profile"}
+        </Text>
       </View>
       <ScrollView style={styles.container}>
         <View style={{ alignItems: "center" }}>
