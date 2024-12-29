@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabse";
 import { StyleSheet, View, Alert, ScrollView } from "react-native";
 import { Button, Input } from "@rneui/themed";
 import { useAuth } from "../providers/AuthProvider";
-import { useRouter, useLocalSearchParams  } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Avatar from "../Components/Avatar";
 
 export default function ProfileScreen() {
@@ -13,7 +13,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [fullname, setFullname] = useState("");
-  const [website, setWebsite] = useState("");
+
   const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function ProfileScreen() {
 
       const { data, error, status } = await supabase
         .from("profiles")
-        .select(`username, website, avatar_url, full_name`)
+        .select(`username, avatar_url, full_name`)
         .eq("id", profileId)
         .single();
 
@@ -38,7 +38,7 @@ export default function ProfileScreen() {
 
       if (data) {
         setUsername(data.username);
-        setWebsite(data.website);
+
         setAvatarUrl(data.avatar_url);
         setFullname(data.full_name);
       }
@@ -53,12 +53,12 @@ export default function ProfileScreen() {
 
   async function updateProfile({
     username,
-    website,
+
     avatar_url,
     full_name,
   }: {
     username: string;
-    website: string;
+
     avatar_url: string;
     full_name: string;
   }) {
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
       const updates = {
         id: session?.user.id,
         username,
-        website,
+
         avatar_url,
         full_name,
         updated_at: new Date(),
@@ -99,7 +99,7 @@ export default function ProfileScreen() {
             setAvatarUrl(url);
             updateProfile({
               username,
-              website,
+
               avatar_url: url,
               full_name: fullname,
             });
@@ -126,14 +126,6 @@ export default function ProfileScreen() {
           disabled={!!userId} // Disable editing if viewing another user's profile
         />
       </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Website"
-          value={website || ""}
-          onChangeText={(text) => setWebsite(text)}
-          disabled={!!userId} // Disable editing if viewing another user's profile
-        />
-      </View>
 
       {!userId && (
         <View style={[styles.verticallySpaced, styles.mt20]}>
@@ -142,7 +134,7 @@ export default function ProfileScreen() {
             onPress={() =>
               updateProfile({
                 username: username,
-                website: website,
+
                 avatar_url: avatarUrl,
                 full_name: fullname,
               })

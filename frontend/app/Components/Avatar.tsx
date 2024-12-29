@@ -119,10 +119,15 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     overflow: "hidden",
     maxWidth: "100%",
+    resizeMode: "contain",
+    height: 150,
+    width: 150,
+    marginBottom: 20,
   },
   image: {
     objectFit: "cover",
     paddingTop: 0,
+    borderRadius: 999,
   },
   noImage: {
     backgroundColor: "#333",
