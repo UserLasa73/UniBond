@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabse";
-import { StyleSheet, View, Alert, Image, Button } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Alert,
+  Image,
+  Button,
+  TouchableOpacity,
+  Text,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 interface Props {
@@ -94,6 +102,7 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
 
   return (
     <View>
+      <TouchableOpacity onPress={uploadAvatar}></TouchableOpacity>
       {avatarUrl ? (
         <Image
           source={{ uri: avatarUrl }}
@@ -104,12 +113,22 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
         <View style={[avatarSize, styles.avatar, styles.noImage]} />
       )}
       <View>
-        <Button
-          title={uploading ? "Uploading ..." : "Upload"}
+        <TouchableOpacity
           onPress={uploadAvatar}
           disabled={uploading}
-        />
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 5,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 16 }}>
+            {uploading ? "Uploading ..." : "Upload"}
+          </Text>
+        </TouchableOpacity>
       </View>
+      <TouchableOpacity />
     </View>
   );
 }
@@ -119,10 +138,15 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     overflow: "hidden",
     maxWidth: "100%",
+    resizeMode: "contain",
+    height: 150,
+    width: 150,
+    marginBottom: 20,
   },
   image: {
     objectFit: "cover",
     paddingTop: 0,
+    borderRadius: 999,
   },
   noImage: {
     backgroundColor: "#333",

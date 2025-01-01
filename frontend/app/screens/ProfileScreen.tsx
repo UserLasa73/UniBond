@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabse";
-import { StyleSheet, View, Alert, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  View,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  Text,
+  SafeAreaView,
+} from "react-native";
 import { Button, Input } from "@rneui/themed";
 import { useAuth } from "../providers/AuthProvider";
-import { useRouter, useLocalSearchParams  } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Avatar from "../Components/Avatar";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
   const { session } = useAuth();
@@ -13,7 +22,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [fullname, setFullname] = useState("");
-  const [website, setWebsite] = useState("");
+
   const [avatarUrl, setAvatarUrl] = useState("");
 
   useEffect(() => {
@@ -28,7 +37,7 @@ export default function ProfileScreen() {
 
       const { data, error, status } = await supabase
         .from("profiles")
-        .select(`username, website, avatar_url, full_name`)
+        .select(`username, avatar_url, full_name`)
         .eq("id", profileId)
         .single();
 
@@ -38,7 +47,7 @@ export default function ProfileScreen() {
 
       if (data) {
         setUsername(data.username);
-        setWebsite(data.website);
+
         setAvatarUrl(data.avatar_url);
         setFullname(data.full_name);
       }
@@ -53,12 +62,12 @@ export default function ProfileScreen() {
 
   async function updateProfile({
     username,
-    website,
+
     avatar_url,
     full_name,
   }: {
     username: string;
-    website: string;
+
     avatar_url: string;
     full_name: string;
   }) {
@@ -69,7 +78,7 @@ export default function ProfileScreen() {
       const updates = {
         id: session?.user.id,
         username,
-        website,
+
         avatar_url,
         full_name,
         updated_at: new Date(),
@@ -90,87 +99,114 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={{ alignItems: "center" }}>
-        <Avatar
-          size={200}
-          url={avatarUrl}
-          onUpload={(url: string) => {
-            setAvatarUrl(url);
-            updateProfile({
-              username,
-              website,
-              avatar_url: url,
-              full_name: fullname,
-            });
-          }}
-        />
+    <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          marginHorizontal: 0,
+        }}
+      >
+        <TouchableOpacity
+          style={{ position: "absolute", left: 0 }}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+          {fullname || "Profile"}
+        </Text>
       </View>
-
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Input label="Email" value={session?.user?.email} disabled />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Username"
-          value={username || ""}
-          onChangeText={(text) => setUsername(text)}
-          disabled={!!userId} // Disable editing if viewing another user's profile
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Fullname"
-          value={fullname || ""}
-          onChangeText={(text) => setFullname(text)}
-          disabled={!!userId} // Disable editing if viewing another user's profile
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Website"
-          value={website || ""}
-          onChangeText={(text) => setWebsite(text)}
-          disabled={!!userId} // Disable editing if viewing another user's profile
-        />
-      </View>
-
-      {!userId && (
-        <View style={[styles.verticallySpaced, styles.mt20]}>
-          <Button
-            title={loading ? "Loading ..." : "Update"}
-            onPress={() =>
+      <ScrollView style={styles.container}>
+        <View style={{ alignItems: "center" }}>
+          <Avatar
+            size={200}
+            url={avatarUrl}
+            onUpload={(url: string) => {
+              setAvatarUrl(url);
               updateProfile({
-                username: username,
-                website: website,
-                avatar_url: avatarUrl,
-                full_name: fullname,
-              })
-            }
-            disabled={loading}
-          />
-        </View>
-      )}
+                username,
 
-      {!userId && (
-        <View style={styles.verticallySpaced}>
-          <Button
-            title="Sign Out"
-            onPress={async () => {
-              try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
-                router.push("../(auth)/login");
-              } catch (error) {
-                if (error instanceof Error) {
-                  Alert.alert("Error", error.message);
-                }
-              }
+                avatar_url: url,
+                full_name: fullname,
+              });
             }}
           />
         </View>
-      )}
-    </ScrollView>
+
+        <View style={[styles.verticallySpaced, styles.mt20]}>
+          <Input label="Email" value={session?.user?.email} disabled />
+        </View>
+        <View style={styles.verticallySpaced}>
+          <Input
+            label="Username"
+            value={username || ""}
+            onChangeText={(text) => setUsername(text)}
+            disabled={!!userId} // Disable editing if viewing another user's profile
+          />
+        </View>
+        <View style={styles.verticallySpaced}>
+          <Input
+            label="Fullname"
+            value={fullname || ""}
+            onChangeText={(text) => setFullname(text)}
+            disabled={!!userId} // Disable editing if viewing another user's profile
+          />
+        </View>
+
+        {!userId && (
+          <View style={[styles.verticallySpaced, styles.mt20]}>
+            <TouchableOpacity
+              onPress={() =>
+                updateProfile({
+                  username: username,
+
+                  avatar_url: avatarUrl,
+                  full_name: fullname,
+                })
+              }
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 5,
+                alignItems: "center",
+              }}
+              disabled={loading}
+            >
+              <Text style={{ color: "#fff" }}>
+                {loading ? "Loading ..." : "Update"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!userId && (
+          <View style={styles.verticallySpaced}>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) throw error;
+                  router.push("../(auth)/login");
+                } catch (error) {
+                  if (error instanceof Error) {
+                    Alert.alert("Error", error.message);
+                  }
+                }
+              }}
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 5,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff" }}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
