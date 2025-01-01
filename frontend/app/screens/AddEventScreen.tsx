@@ -115,7 +115,7 @@ const AddEventPost = () => {
       </View>
 
       {/* Post Button */}
-      <Button title="Post" onPress={handlePost} color="#007BFF" />
+      <Button title="Post" onPress={handlePost} color="#2C3036" />
     </ScrollView>
   );
 };
