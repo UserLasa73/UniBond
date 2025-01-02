@@ -60,8 +60,21 @@ const AddProjectScreen = () => {
         value={technologies}
         onChangeText={setTechnologies}
       />
+
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#2C3036",
+          padding: 10,
+          borderRadius: 5,
+          alignItems: "center",
+        }}
+        onPress={handleProjectSubmit}
+      >
+        <Text style={{ color: "#fff" }}>Post Project</Text>
+
       <TouchableOpacity style={styles.postButton} onPress={handleProjectSubmit}>
         <Text style={styles.postButtonText}>Post</Text>
+
       </TouchableOpacity>
     </View>
   );
@@ -74,6 +87,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
+  },
+  button: {
+    color: "#fff",
   },
   cancelButton: {
     position: "absolute",
