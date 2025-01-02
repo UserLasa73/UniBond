@@ -1,0 +1,660 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\begin{quote}
+\textbf{UNIBOND Mobile Platform to foster Alumni and Student Engagement}
+
+DESIGN REPORT\\
+\emph{Unibond -- A mobile platform to foster Alumni andStudent
+engagement}\\
+\textbf{Group 13}\\
+University of Vavuniya
+\end{quote}
+
+Contents
+
+Title Page
+.................................................................................................................................................
+2 Project Overview
+.....................................................................................................................................
+3 Design Goals
+............................................................................................................................................
+3 Research
+..................................................................................................................................................
+3 Wireframes
+.............................................................................................................................................
+4 Visual Design
+...........................................................................................................................................
+7 User Interface (UI) Components
+.............................................................................................................
+8 Home Screen:
+..................................................................................................................................
+8 Profile Screen:
+.................................................................................................................................
+8 Jobs
+Screen:.....................................................................................................................................
+8 Projects Screen:
+..............................................................................................................................
+8 Donation
+Screen:.............................................................................................................................
+8 User Experience (UX)
+Design...................................................................................................................
+9 Accessibility
+.............................................................................................................................................
+9 Prototyping
+.............................................................................................................................................
+9 Challenges
+...............................................................................................................................................
+9 Tools Used
+.............................................................................................................................................
+10 Future Considerations
+...........................................................................................................................
+10 Conclusion
+.............................................................................................................................................
+10
+
+\textbf{Title Page}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+\textbf{Project Title:} Unibond - University of Vavuniya Alumni
+Engagement Mobile App \textbf{Team Members:}
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+W.H.I.Udisha
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+2020ICT01
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+C.L.Jellorine
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT06
+\end{quote}
+\end{minipage} \\
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+M.I.A.Ahamed
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT16
+\end{quote}
+\end{minipage} \\
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+K.H.S.Dilakshana
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT21
+\end{quote}
+\end{minipage} \\
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+D.M.T.L.Disanayaka
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT107
+\end{quote}
+\end{minipage} \\
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+P.Sujani
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT27
+\end{quote}
+\end{minipage} \\
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+K.V.L.Kumara
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+2020ICT73
+\end{quote}
+\end{minipage} \\
+\bottomrule()
+\end{longtable}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+\textbf{Date:} 25th November 2024\\
+\textbf{Supervisor/Instructor Name:} Mrs. Yasotha Ram Ramanan (Senior
+Lecturer)
+\end{quote}\strut
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\textbf{Project Overview}
+
+\begin{quote}
+• \textbf{App Name:} Unibond -- a Mobile Platform to Foster Alumni and
+Student Engagement
+
+• \textbf{Purpose:} To foster strong relationships between alumni and
+current students while
+
+offering networking opportunities and resources.
+
+• \textbf{Audience:} Alumni, current students, university staff, and
+faculty members.
+
+• \textbf{Scope:}
+
+oAlumni profiles and directories.
+
+oEvent notifications, Donations and registrations.
+
+oMessaging system for networking.
+
+oCareer and mentoring features.
+\end{quote}
+
+\textbf{Design Goals}
+
+\begin{quote}
+• \textbf{Usability:} Easy navigation for alumni of all age groups.
+
+• \textbf{Aesthetics:} A professional and modern look aligned with the
+university\textquotesingle s branding.
+
+• \textbf{Accessibility:} Features suitable for differently-abled users,
+including scalable text and
+
+high contrast.
+
+• \textbf{Engagement:} Interactive elements to keep users connected and
+returning to the
+
+app.
+\end{quote}
+
+\textbf{Research}
+
+\begin{quote}
+• \textbf{Market Analysis:} Studied existing alumni engagement apps like
+Graduway and
+
+Alumni Spaces.
+
+• \textbf{User Research:} Conducted surveys to understand alumni needs
+(networking, career
+
+advice, events).
+
+• \textbf{Inspiration:}
+
+oSimple and clear navigation from apps like LinkedIn.
+
+oModern UI trends (e.g., cards for displaying user profiles and events).
+\end{quote}
+
+\textbf{Wireframes}\\
+\textbf{Home Screen} \textbf{Profile}
+
+\begin{quote}
+\includegraphics[width=1.93472in,height=3.49722in]{unibond_design_report/media/image1.png}
+
+\textbf{Jobs}
+
+\includegraphics[width=1.86944in,height=3.49722in]{unibond_design_report/media/image2.png}
+\end{quote}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Available Jobs
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Saved Jobs
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Job Status
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+\includegraphics[width=1.79167in,height=3.45417in]{unibond_design_report/media/image3.png}
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+\includegraphics[width=1.76528in,height=3.45417in]{unibond_design_report/media/image4.png}
+\end{quote}
+\end{minipage} & \begin{minipage}[t]{\linewidth}\raggedright
+\begin{quote}
+\includegraphics[width=1.81806in,height=3.40278in]{unibond_design_report/media/image5.png}
+\end{quote}
+\end{minipage} \\
+\bottomrule()
+\end{longtable}
+
+\begin{quote}
+\textbf{Projects}
+\end{quote}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Available Projects
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Saved Projects
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Project Status
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\includegraphics[width=1.93472in,height=3.78333in]{unibond_design_report/media/image6.png}
+&
+\includegraphics[width=2.00139in,height=3.76528in]{unibond_design_report/media/image7.png}
+&
+\includegraphics[width=1.91528in,height=3.76528in]{unibond_design_report/media/image8.png} \\
+\bottomrule()
+\end{longtable}
+
+\begin{quote}
+\textbf{Donations}
+\end{quote}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2500}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+\includegraphics[width=1.49306in,height=2.88472in]{unibond_design_report/media/image9.png}
+\end{quote}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\includegraphics[width=1.45417in,height=2.84306in]{unibond_design_report/media/image10.png}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\includegraphics[width=1.44028in,height=2.88333in]{unibond_design_report/media/image11.png}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+\includegraphics[width=1.46805in,height=2.88333in]{unibond_design_report/media/image12.png}
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\begin{quote}
+\textbf{Create/ Post}
+
+\includegraphics[width=1.73472in,height=3.44861in]{unibond_design_report/media/image13.png}
+
+\textbf{Messages}
+
+\textbf{ChatList Chat}
+
+\includegraphics[width=1.94583in,height=3.70833in]{unibond_design_report/media/image14.png}
+
+\includegraphics[width=1.94722in,height=3.65833in]{unibond_design_report/media/image15.png}
+\end{quote}
+
+\textbf{Visual Design}
+
+\begin{quote}
+• \textbf{Color Palette:}\\
+oLight Mode\\
+ Text -- \#000000 (Black)\\
+ Background fill -- \#FFFFFF (White)\\
+\\
+Input fields/ Highlights -- \#E0E0E0 (Muted gray)  Buttons - \#000000
+(Black)\\
+oDark Mode\\
+ Text -- \#FFFFFF (White)\\
+ Background fill -- \#2C2C2C (Charcoal)\\
+ Input fields/ Highlights -- \#E0E0E0 (Muted gray)  Buttons - \#000000
+(Black)\\
+o
+
+\includegraphics[width=2.41667in,height=1.12917in]{unibond_design_report/media/image16.png}
+
+• \textbf{Typography:}\\
+oHeadings: Poppins, Bold\\
+oBody Text: Roboto, Regular\\
+• \textbf{Icons and Imagery:}\\
+oMinimalist icons for intuitive navigation.
+\end{quote}
+
+\textbf{User Interface (UI) Components}
+
+Home Screen:
+
+\begin{quote}
+• Quick links to \textbf{Profile}, \textbf{Jobs}, \textbf{Projects}, and
+\textbf{Donations}.
+
+• A central card displaying the latest university announcement or news.
+\end{quote}
+
+Profile Screen:
+
+\begin{quote}
+• Displays the user\textquotesingle s profile picture, name, and alumni
+batch details.
+
+• Editable text fields for:\\
+o Personal Information (e.g., name, contact, location).
+
+o Academic History (e.g., graduation year, degree).
+
+o Achievements (e.g., career milestones, awards).
+\end{quote}
+
+Jobs Screen:
+
+\begin{quote}
+• Three tabs:\\
+1.\textbf{Suggested Jobs:} List of jobs tailored to the user's profile
+and preferences. 2.\textbf{Saved Jobs:} Jobs the user has bookmarked.
+
+3.\textbf{Application Status:} Tracks the progress of jobs the user
+applied for.
+\end{quote}
+
+Projects Screen:
+
+\begin{quote}
+• Displays available projects for collaboration with alumni or current
+students.
+
+• Each project is shown as a card with:\\
+o Title.
+
+o Brief description.
+
+o A "Join Project" button for participation.
+\end{quote}
+
+Donation Screen:
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Options to contribute to university funds (e.g., scholarships,
+infrastructure). Donation history for transparency and tracking.
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\textbf{User Experience (UX) Design}
+
+\begin{quote}
+• \textbf{Navigation Flow:}
+
+1.User logs in.
+
+2.Home screen shows personalized content.
+
+3.Profile completion prompts ensure engagement.
+
+4.Event notifications encourage participation.
+
+• \textbf{Behavioral Scenarios:}
+
+o\emph{If a user forgets their password, a recovery email is sent
+instantly.}
+\end{quote}
+
+o\emph{After attending an event, users can rate it to improve future
+events.}
+
+\textbf{Accessibility}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Contrast meets WCAG AA standards for readability. Screen reader-friendly
+labels for all interactive elements. Adjustable font sizes for
+readability.
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\textbf{Prototyping}
+
+\begin{quote}
+• A clickable prototype created in \textbf{Figma} demonstrating:
+
+oTransitions between Home, Profile, and Events screens.
+\end{quote}
+
+oSmooth animations for interactive elements like buttons and tabs.
+
+\textbf{Challenges}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+Ensuring older alumni are comfortable with app navigation.
+
+Balancing modern design with the university\textquotesingle s
+traditional branding.
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\textbf{Tools Used}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5000}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+•\\
+•
+\end{quote}\strut
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\begin{quote}
+\textbf{Design Tools:} Figma for mockups and prototypes.
+
+\textbf{Collaboration Tools:} Notion for task management, Slack for team
+communication.
+\end{quote}
+\end{minipage} \\
+\midrule()
+\endhead
+\bottomrule()
+\end{longtable}
+
+\textbf{Future Considerations}
+
+\begin{quote}
+• \textbf{Feature Expansion:}
+
+oAlumni donation management system.
+
+oReal-time mentoring sessions through video calls.
+
+• \textbf{Gamification:}
+
+oAwarding badges for active participation in events or mentoring.
+
+• \textbf{Data Analytics:}
+
+oInsights on user engagement to improve features.
+\end{quote}
+
+\textbf{Conclusion}
+
+This design report outlines a user-friendly and visually appealing
+mobile app tailored to the
+
+needs of Unibond. By prioritizing usability, accessibility, and
+engagement, the app aims to
+
+strengthen alumni relationships and foster university pride.
+
+\end{document}
