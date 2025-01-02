@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  Button,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -114,8 +113,9 @@ const AddEventPost = () => {
         />
       </View>
 
-      {/* Post Button */}
-      <Button title="Post" onPress={handlePost} color="#2C3036" />
+      <TouchableOpacity style={styles.postButton} onPress={handlePost}>
+        <Text style={styles.postButtonText}>Post</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -176,5 +176,16 @@ const styles = StyleSheet.create({
   textArea: {
     textAlignVertical: "top",
     height: 100,
+  },
+  postButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  postButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

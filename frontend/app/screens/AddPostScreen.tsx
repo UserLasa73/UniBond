@@ -149,13 +149,15 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   postButton: {
+
     backgroundColor: "#2C3036",
+
     padding: 10,
     borderRadius: 5,
     alignItems: "center",
   },
   postButtonText: {
-    color: "#fff",
+    color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
   },
