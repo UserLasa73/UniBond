@@ -39,15 +39,20 @@ const AddEventPost = () => {
     }
   };
 
+  const handleCancel = () => {
+    setEventName("");
+    setEventDate(null);
+    setEventLocation("");
+    setEventDescription("");
+    router.push("/screens/PostScreen");
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Create Event</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.cancelButton}
-        >
+        <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
           <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
       </View>
