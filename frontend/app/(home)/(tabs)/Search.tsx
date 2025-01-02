@@ -1,18 +1,18 @@
 import * as React from "react";
-import { Text, View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import SearchBar from "../../Components/SearchBar";
 import { supabase } from "../../../lib/supabse"; // Import your Supabase client
 import { useRouter } from "expo-router";
 
 // Define the type for the profiles table
 interface Profile {
-  id: string; // Replace with the actual type of the ID field
-  username: string; // Replace with the actual username field
+  id: string;
+  username: string;
   // Add other fields as needed
 }
 
 const Search = () => {
-  const [searchResults, setSearchResults] = React.useState<Profile[]>([]); // Ensure the state is typed
+  const [searchResults, setSearchResults] = React.useState<Profile[]>([]);
   const router = useRouter();
 
   const handleSearch = async (query: string) => {
@@ -22,15 +22,15 @@ const Search = () => {
     }
 
     try {
-      // Query Supabase profile table
+      // Modify query to match usernames starting with the search query
       const { data, error } = await supabase
-      .from<"profiles", Profile>("profiles") // Specify the type for the table
-        .select("*") // Adjust fields as needed
-        .ilike("username", `%${query}%`); // Replace 'username' with your actual column for user names
+        .from<"profiles", Profile>("profiles")
+        .select("*")
+        .ilike("username", `${query}%`); // Matches usernames that start with the query
 
       if (error) throw error;
 
-      setSearchResults(data || []); // Safely set results
+      setSearchResults(data || []);
     } catch (error) {
       console.error("Error fetching profiles:", error);
       setSearchResults([]);
@@ -38,18 +38,22 @@ const Search = () => {
   };
 
   const handleUserPress = (user: Profile) => {
+    Keyboard.dismiss(); // Dismiss the keyboard when a user is selected
     router.push({
       pathname: "/screens/ProfileScreen",
-      params: { userId: user.id }, // Pass user ID or other relevant data
+      params: { userId: user.id },
     });
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <SearchBar placeholder="Search here..." onSearch={handleSearch} />
       <FlatList
         data={searchResults}
-        keyExtractor={(item) => item.id} // Replace 'id' with your table's primary key
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.resultItem}
@@ -59,8 +63,9 @@ const Search = () => {
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text>No results found</Text>}
+        keyboardShouldPersistTaps="handled"
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
