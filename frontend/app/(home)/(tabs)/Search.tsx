@@ -55,7 +55,7 @@ const Search = () => {
             style={styles.resultItem}
             onPress={() => handleUserPress(item)}
           >
-            <Text>{item.username}</Text> {/* Replace 'username' with the relevant field */}
+            <Text>{item.username}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text>No results found</Text>}
