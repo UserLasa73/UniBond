@@ -7,40 +7,14 @@ import AvailableJobs from "../../Components/JobComponents/AvailableJobs";
 import SavedJobs from "../../Components/JobComponents/SavedJobs";
 import StatusJobs from "../../Components/JobComponents/StatusJobs";
 
-interface JobListing {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  level: string;
-  time: string;
-  skills: string[];
-}
-
 const Jobs: React.FC = () => {
   const [selectedTab, setSelectedTab] = React.useState<
     "Available" | "Saved" | "Status"
   >("Available");
-  const [jobListings, setJobListings] = React.useState<JobListing[]>([]);
-
-  React.useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const response = await fetch("https://yourapi.com/jobs");
-        const data: JobListing[] = await response.json();
-        setJobListings(data);
-      } catch (error) {
-        console.error("Error fetching job listings", error);
-      }
-    };
-
-    fetchJobs();
-  }, []);
 
   const renderContent = () => {
     if (selectedTab === "Available") {
-      return <AvailableJobs jobListings={jobListings} />;
+      return <AvailableJobs />;
     } else if (selectedTab === "Saved") {
       return <SavedJobs />;
     } else if (selectedTab === "Status") {
@@ -54,7 +28,7 @@ const Jobs: React.FC = () => {
         <Text style={styles.headerTitle}>Jobs</Text>
       </View>
       <View style={styles.tabsContainer}>
-        {[ 
+        {[
           { name: "Available", icon: "briefcase-outline" },
           { name: "Saved", icon: "bookmark-outline" },
           { name: "Status", icon: "information-circle-outline" },
