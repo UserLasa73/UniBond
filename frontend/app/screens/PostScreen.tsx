@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import PostOptionItem from "../Components/PostOptionItem";
@@ -11,6 +18,9 @@ const PostScreen = () => {
   const [content, setContent] = useState(initialContent || "");
   const [media, setMedia] = useState(initialMedia || null);
 
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
+
   const handleOptionPress = (screen: string) => {
     router.push(`/screens/${screen}`);
   };
@@ -19,6 +29,15 @@ const PostScreen = () => {
     console.log("Post submitted with content:", content, "and media:", media);
     setContent("");
     setMedia(null);
+  };
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
+  };
+
+  const handleOptionSelect = (option: string) => {
+    setSelectedVisibility(option);
+    setModalVisible(false);
   };
 
   return (
@@ -39,12 +58,42 @@ const PostScreen = () => {
         </View>
         <View style={styles.userDetails}>
           <Text style={styles.userName}>John Doe</Text>
-          <TouchableOpacity style={styles.visibilitySelector}>
+          <TouchableOpacity
+            style={styles.visibilitySelector}
+            onPress={toggleModal} // Toggle modal visibility when clicked
+          >
             <MaterialIcons name="public" size={16} color="#000" />
-            <Text style={styles.visibilityText}>Anyone</Text>
+            <Text style={styles.visibilityText}>{selectedVisibility}</Text>
             <MaterialIcons name="arrow-drop-down" size={16} color="#000" />
           </TouchableOpacity>
         </View>
+        {/* Modal for dropdown */}
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={toggleModal} // Close modal when clicking outside
+        >
+          <TouchableOpacity
+            style={styles.modalBackground}
+            onPress={toggleModal} // Close modal when clicking outside
+          >
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleOptionSelect("Anyone")}
+              >
+                <Text style={styles.optionText}>Anyone</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleOptionSelect("My Network")}
+              >
+                <Text style={styles.optionText}>My Network</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
 
       <Text style={styles.promptText}>What do you want to talk about?</Text>
@@ -180,5 +229,27 @@ const styles = StyleSheet.create({
     height: 200,
     marginTop: 8,
     borderRadius: 8,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 16,
+    width: 200,
+  },
+  option: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#000",
+    textAlign: "center",
   },
 });
