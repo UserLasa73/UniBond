@@ -113,13 +113,9 @@ const AddEventPost = () => {
         />
       </View>
 
-      {/* Post Button */}
-      <Button title="Post" onPress={handlePost} color="#2C3036" />
-
       <TouchableOpacity style={styles.postButton} onPress={handlePost}>
         <Text style={styles.postButtonText}>Post</Text>
       </TouchableOpacity>
-
     </ScrollView>
   );
 };
