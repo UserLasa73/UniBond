@@ -109,7 +109,7 @@ const AddJobScreen = () => {
         onChangeText={setLocation}
       />
       <TouchableOpacity style={styles.postButton} onPress={handleJobSubmit}>
-        <Text style={styles.postButtonText}>Post Job</Text>
+        <Text style={styles.postButtonText}>Post</Text>
       </TouchableOpacity>
     </View>
   );
@@ -174,7 +174,9 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   postButton: {
+
     backgroundColor: "#2C3036",
+
     padding: 10,
     borderRadius: 5,
     alignItems: "center",

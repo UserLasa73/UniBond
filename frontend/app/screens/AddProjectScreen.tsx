@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
@@ -26,7 +25,7 @@ const AddProjectScreen = () => {
       projectDescription,
       technologies,
     });
-    // Add logic to send project details to the server
+    // logic to send project details to the server
   };
 
   const handleCancel = () => {
@@ -61,6 +60,7 @@ const AddProjectScreen = () => {
         value={technologies}
         onChangeText={setTechnologies}
       />
+
       <TouchableOpacity
         style={{
           backgroundColor: "#2C3036",
@@ -71,6 +71,10 @@ const AddProjectScreen = () => {
         onPress={handleProjectSubmit}
       >
         <Text style={{ color: "#fff" }}>Post Project</Text>
+
+      <TouchableOpacity style={styles.postButton} onPress={handleProjectSubmit}>
+        <Text style={styles.postButtonText}>Post</Text>
+
       </TouchableOpacity>
     </View>
   );
@@ -104,5 +108,16 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginBottom: 20,
+  },
+  postButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  postButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
