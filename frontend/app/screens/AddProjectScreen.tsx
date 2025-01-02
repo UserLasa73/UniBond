@@ -71,10 +71,6 @@ const AddProjectScreen = () => {
         onPress={handleProjectSubmit}
       >
         <Text style={{ color: "#fff" }}>Post Project</Text>
-
-      <TouchableOpacity style={styles.postButton} onPress={handleProjectSubmit}>
-        <Text style={styles.postButtonText}>Post</Text>
-
       </TouchableOpacity>
     </View>
   );
