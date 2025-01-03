@@ -107,8 +107,7 @@ const NotificationScreen = () => {
           <Text>{item.message}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleRemoveNotification(item.id)}>
-          <MaterialIcons name="delete" size={24} color="red" />{" "}
-          {/* Delete Icon */}
+          <MaterialIcons name="delete" size={24} color="red" />
         </TouchableOpacity>
       </View>
     );
