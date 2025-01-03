@@ -32,7 +32,7 @@ const AddProjectScreen = () => {
     setProjectTitle("");
     setProjectDescription("");
     setTechnologies("");
-    router.back();
+    router.push("/screens/PostScreen");
   };
 
   return (

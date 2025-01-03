@@ -27,8 +27,12 @@ const AddPostScreen = () => {
       Alert.alert("Error", "Post content cannot be empty!");
       return;
     }
-    console.log("Post submitted:", content, media);
-    // Add logic to send post and media to the server
+    const mediaUri = media?.uri ?? null;
+
+    router.push({
+      pathname: "/screens/PostScreen",
+      params: { content, media: mediaUri },
+    });
   };
 
   const handleCancel = () => {
@@ -49,7 +53,7 @@ const AddPostScreen = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow all media types
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       quality: 1,
     });
@@ -133,7 +137,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     textAlignVertical: "top",
-    minHeight: 150, // Increased input box height
+    minHeight: 150,
   },
   mediaPreview: {
     marginBottom: 20,
@@ -149,9 +153,7 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   postButton: {
-
     backgroundColor: "#2C3036",
-
     padding: 10,
     borderRadius: 5,
     alignItems: "center",

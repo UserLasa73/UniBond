@@ -1,30 +1,49 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import PostOptionItem from "../Components/PostOptionItem";
 
 const PostScreen = () => {
   const router = useRouter();
+  const { content: initialContent, media: initialMedia } =
+    useLocalSearchParams();
+  const [content, setContent] = useState(initialContent || "");
+  const [media, setMedia] = useState(initialMedia || null);
+
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
 
   const handleOptionPress = (screen: string) => {
-    console.log("Navigating to:", screen);
-    try {
-      router.push(`/screens/${screen}`);
-    } catch (error) {
-      console.error("Navigation error:", error);
-    }
+    router.push(`/screens/${screen}`);
   };
 
   const handlePostPress = () => {
-    console.log("Post submitted!"); // Placeholder logic for post submission
+    console.log("Post submitted with content:", content, "and media:", media);
+    setContent("");
+    setMedia(null);
+  };
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
+  };
+
+  const handleOptionSelect = (option: string) => {
+    setSelectedVisibility(option);
+    setModalVisible(false);
   };
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.push("../(home)/(tabs)/Home")}>
           <MaterialIcons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
@@ -33,25 +52,64 @@ const PostScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
           <MaterialIcons name="person" size={40} color="#fff" />
         </View>
         <View style={styles.userDetails}>
           <Text style={styles.userName}>John Doe</Text>
-          <TouchableOpacity style={styles.visibilitySelector}>
+          <TouchableOpacity
+            style={styles.visibilitySelector}
+            onPress={toggleModal} // Toggle modal visibility when clicked
+          >
             <MaterialIcons name="public" size={16} color="#000" />
-            <Text style={styles.visibilityText}>Anyone</Text>
+            <Text style={styles.visibilityText}>{selectedVisibility}</Text>
             <MaterialIcons name="arrow-drop-down" size={16} color="#000" />
           </TouchableOpacity>
         </View>
+        {/* Modal for dropdown */}
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={toggleModal} // Close modal when clicking outside
+        >
+          <TouchableOpacity
+            style={styles.modalBackground}
+            onPress={toggleModal} // Close modal when clicking outside
+          >
+            <View style={styles.modalContainer}>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleOptionSelect("Anyone")}
+              >
+                <Text style={styles.optionText}>Anyone</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.option}
+                onPress={() => handleOptionSelect("My Network")}
+              >
+                <Text style={styles.optionText}>My Network</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
 
-      {/* Prompt Section */}
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
-      {/* Post Options */}
+      {content || media ? (
+        <View style={styles.postPreview}>
+          <Text style={styles.previewTitle}>Post Preview:</Text>
+          <Text>{content}</Text>
+          {media && typeof media === "string" && (
+            <Image source={{ uri: media }} style={styles.imagePreview} />
+          )}
+        </View>
+      ) : (
+        <Text style={styles.placeholderText}>No post details yet.</Text>
+      )}
+
       <View style={styles.options}>
         <PostOptionItem
           label="Add a Post"
@@ -144,9 +202,54 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 16,
   },
+  placeholderText: {
+    marginTop: 20,
+    fontSize: 14,
+    color: "#aaa",
+  },
   options: {
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingTop: 20,
+  },
+  postPreview: {
+    marginTop: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  imagePreview: {
+    width: 200,
+    height: 200,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 16,
+    width: 200,
+  },
+  option: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#000",
+    textAlign: "center",
   },
 });

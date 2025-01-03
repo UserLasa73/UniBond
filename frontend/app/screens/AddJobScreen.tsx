@@ -43,7 +43,7 @@ const AddJobScreen = () => {
     setJobDescription("");
     setLocation("");
     setMedia(null);
-    router.back();
+    router.push("/screens/PostScreen");
   };
 
   const handleMediaPicker = async () => {
@@ -174,7 +174,6 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   postButton: {
-
     backgroundColor: "#2C3036",
 
     padding: 10,
