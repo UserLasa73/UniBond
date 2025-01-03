@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 // Import renamed components
@@ -29,7 +23,6 @@ const Jobs: React.FC = () => {
     "Available" | "Saved" | "Status"
   >("Available");
   const [jobListings, setJobListings] = React.useState<JobListing[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
 
   React.useEffect(() => {
     const fetchJobs = async () => {
@@ -39,8 +32,6 @@ const Jobs: React.FC = () => {
         setJobListings(data);
       } catch (error) {
         console.error("Error fetching job listings", error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -57,21 +48,13 @@ const Jobs: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7F00FF" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Jobs</Text>
       </View>
       <View style={styles.tabsContainer}>
-        {[
+        {[ 
           { name: "Available", icon: "briefcase-outline" },
           { name: "Saved", icon: "bookmark-outline" },
           { name: "Status", icon: "information-circle-outline" },
@@ -147,11 +130,5 @@ const styles = StyleSheet.create({
   selectedTabText: {
     color: "#2C3036",
     fontWeight: "bold",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
   },
 });

@@ -1,7 +1,6 @@
-// components/SearchBar.tsx
-import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useEffect } from "react";
+import { View, TextInput, StyleSheet, BackHandler } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface SearchBarProps {
   placeholder?: string;
@@ -13,15 +12,33 @@ export default function SearchBar({ placeholder = "Search...", onSearch }: Searc
 
   const handleSearch = (text: string) => {
     setQuery(text);
-    onSearch(text); // Call the provided search function
+    onSearch(text);
   };
+
+  // Clear search bar on back press
+  useEffect(() => {
+    const handleBackPress = () => {
+      setQuery(""); // Clear the search text
+      return false; // Allow default back navigation
+    };
+
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+
+    return () => {
+      backHandler.remove(); // Cleanup
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
-      <MaterialIcons name="search" size={24} color="gray" />
+      {MaterialIcons ? (
+        <MaterialIcons name="search" size={24} color="gray" />
+      ) : (
+        <View style={{ width: 24, height: 24, backgroundColor: "gray" }} />
+      )}
       <TextInput
         style={styles.input}
-        placeholder={placeholder}
+        placeholder={placeholder || "Search..."}
         value={query}
         onChangeText={handleSearch}
       />
