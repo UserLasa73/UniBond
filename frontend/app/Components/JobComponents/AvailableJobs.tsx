@@ -11,7 +11,9 @@ interface JobListing {
   type: string;
   level: string;
   time: string;
-  skills: string[];
+  skills: string;
+  is_active: boolean;
+
 }
 
 const AvailableJobs: React.FC = () => {
@@ -24,7 +26,7 @@ const AvailableJobs: React.FC = () => {
         setLoading(true);
         // Fetch data from the 'jobs' table in Supabase
         const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true); // Adjust the query as per your table
-
+        
         if (error) {
           console.error("Error fetching jobs:", error.message);
         } else {
@@ -78,7 +80,7 @@ const AvailableJobs: React.FC = () => {
               <View style={styles.row}>
                 <MaterialIcons name="article" size={20} color="gray" />
                 <Text style={styles.detailText}>
-                  Skills: {job.skills.join(", ")} {/* Display skills as comma-separated */}
+                  Skills: {job.skills} {/* Display skills as comma-separated */}
                 </Text>
               </View>
             </View>
