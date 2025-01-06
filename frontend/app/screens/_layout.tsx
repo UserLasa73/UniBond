@@ -1,37 +1,31 @@
-// _layout.tsx
-import React from "react";
-import { createStackNavigator } from "@react-navigation/stack";
-import { NavigationContainer } from "@react-navigation/native";
+import { Stack } from "expo-router";
 
-// Import your screen components
-import PostScreen from "./PostScreen";
-import AddPostScreen from "./AddPostScreen";
-import AddProjectScreen from "./AddProjectScreen";
-import AddJobScreen from "./AddJobScreen";
-import AddEventScreen from "./AddEventScreen";
-
-export type PostStackParamList = {
-  PostScreen: undefined;
-  AddPostScreen: undefined;
-  AddProjectScreen: undefined;
-  AddJobScreen: undefined;
-  AddEventScreen: undefined;
-};
-
-const Stack = createStackNavigator<PostStackParamList>();
-
-const PostLayout = () => {
+const Layout = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="PostScreen">
-        <Stack.Screen name="PostScreen" component={PostScreen} />
-        <Stack.Screen name="AddPostScreen" component={AddPostScreen} />
-        <Stack.Screen name="AddProjectScreen" component={AddProjectScreen} />
-        <Stack.Screen name="AddJobScreen" component={AddJobScreen} />
-        <Stack.Screen name="AddEventScreen" component={AddEventScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack>
+      <Stack.Screen name="index" options={{ title: "Home" }} />
+      <Stack.Screen
+        name="screens/PostScreen"
+        options={{ title: "Share Post" }}
+      />
+      <Stack.Screen
+        name="screens/AddPostScreen"
+        options={{ title: "Add a Post" }}
+      />
+      <Stack.Screen
+        name="screens/AddProjectScreen"
+        options={{ title: "Add a Project" }}
+      />
+      <Stack.Screen
+        name="screens/AddJobScreen"
+        options={{ title: "Add a Job" }}
+      />
+      <Stack.Screen
+        name="screens/AddEventScreen"
+        options={{ title: "Add an Event" }}
+      />
+    </Stack>
   );
 };
 
-export default PostLayout;
+export default Layout;

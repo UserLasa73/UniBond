@@ -14,28 +14,30 @@ import { useRouter } from "expo-router";
 import { BackHandler } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { PostStackParamList } from "./PostNav";
 
 type Media = {
   uri: string;
   type?: string;
 };
 
-type PostScreenNavigationProp = StackNavigationProp<
-  PostStackParamList,
-  "PostScreen"
->;
-
 const AddPostScreen = () => {
   const router = useRouter();
-  const navigation = useNavigation<PostScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const [content, setContent] = useState<string>("");
   const [media, setMedia] = useState<Media | null>(null);
 
   useEffect(() => {
     const backAction = () => {
-      // Navigate to a specific screen when back is pressed
-      navigation.navigate("PostScreen"); // Use the screen name from RootStackParamList
-      return true; // Prevent the default back action
+      Alert.alert("", "Discard the changes?", [
+        {
+          text: "Cancel",
+          onPress: () => null,
+          style: "cancel",
+        },
+        { text: "YES", onPress: () => navigation.navigate("PostScreen") },
+      ]);
+      return true;
     };
 
     BackHandler.addEventListener("hardwareBackPress", backAction);

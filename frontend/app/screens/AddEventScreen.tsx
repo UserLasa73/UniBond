@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,19 +7,44 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  BackHandler,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { PostStackParamList } from "./PostNav";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import { useNavigation } from "@react-navigation/native";
 
 const AddEventPost = () => {
   const router = useRouter();
-
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState<Date | null>(null);
   const [eventLocation, setEventLocation] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert("", "Discard the changes?", [
+        {
+          text: "Cancel",
+          onPress: () => null,
+          style: "cancel",
+        },
+        { text: "YES", onPress: () => navigation.navigate("PostScreen") },
+      ]);
+      return true;
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+    };
+  }, [navigation]);
 
   const handlePost = () => {
     console.log("Event Posted:");

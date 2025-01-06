@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  BackHandler,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -14,6 +16,24 @@ const AddProjectScreen = () => {
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [technologies, setTechnologies] = useState("");
+
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert("", "Discard the changes?", [
+        {
+          text: "Cancel",
+          onPress: () => null,
+          style: "cancel",
+        },
+        { text: "YES", onPress: () => router.push("/screens/PostScreen") },
+      ]);
+      return true;
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+    return () =>
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+  }, []);
 
   const handleProjectSubmit = () => {
     if (!projectTitle || !projectDescription) {
@@ -25,7 +45,8 @@ const AddProjectScreen = () => {
       projectDescription,
       technologies,
     });
-    // logic to send project details to the server
+    alert("Project successfully posted!");
+    router.push("/screens/PostScreen");
   };
 
   const handleCancel = () => {
@@ -61,16 +82,8 @@ const AddProjectScreen = () => {
         onChangeText={setTechnologies}
       />
 
-      <TouchableOpacity
-        style={{
-          backgroundColor: "#2C3036",
-          padding: 10,
-          borderRadius: 5,
-          alignItems: "center",
-        }}
-        onPress={handleProjectSubmit}
-      >
-        <Text style={{ color: "#fff" }}>Post Project</Text>
+      <TouchableOpacity style={styles.postButton} onPress={handleProjectSubmit}>
+        <Text style={styles.postButtonText}>Post Project</Text>
       </TouchableOpacity>
     </View>
   );
@@ -83,9 +96,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
-  },
-  button: {
-    color: "#fff",
   },
   cancelButton: {
     position: "absolute",
@@ -106,7 +116,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   postButton: {
-    backgroundColor: "#000",
+    backgroundColor: "#2C3036",
     padding: 10,
     borderRadius: 5,
     alignItems: "center",

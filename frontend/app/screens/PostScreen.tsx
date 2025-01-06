@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,39 +9,56 @@ import {
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
-import { useRouter } from "expo-router";
 import PostOptionItem from "../Components/PostOptionItem";
 import usePostParams from "../hooks/usePostParams";
+import { useNavigation } from "@react-navigation/native";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import { PostStackParamList } from "./PostNav";
+import { BackHandler } from "react-native";
+import { router } from "expo-router";
 
 const PostScreen = () => {
-  const router = useRouter();
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const { content, media } = usePostParams();
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(!!content || !!media);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
 
-  const handleOptionPress = (screen: string) => {
-    router.push(`/screens/${screen}`);
+  useEffect(() => {
+    const backAction = () => {
+      router.push("../(home)/(tabs)/Home");
+      return true;
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+    };
+  }, []);
+
+  const handleOptionPress = (screen: keyof PostStackParamList) => {
+    navigation.navigate(screen);
   };
 
   const handlePostPress = () => {
     console.log("Post submitted with content:", content, "and media:", media);
-    setShowPreview(false); // Hide the preview after posting
+    setShowPreview(false);
   };
 
   const toggleModal = () => {
-    setModalVisible(!isModalVisible);
+    setModalVisible((prev) => !prev);
   };
 
   const handleOptionSelect = (option: string) => {
     setSelectedVisibility(option);
-    setModalVisible(false); // Close modal after selection
+    toggleModal();
   };
 
   return (
     <View style={styles.container}>
+      {/* Custom Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("../(home)/(tabs)/Home")}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialIcons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
@@ -50,6 +67,7 @@ const PostScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
           <MaterialIcons name="person" size={40} color="#fff" />
@@ -65,41 +83,14 @@ const PostScreen = () => {
             <MaterialIcons name="arrow-drop-down" size={16} color="#000" />
           </TouchableOpacity>
         </View>
-        {/* Modal for dropdown */}
-        <Modal
-          visible={isModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={toggleModal}
-        >
-          <TouchableOpacity
-            style={styles.modalBackground}
-            onPress={toggleModal}
-          >
-            <View style={styles.modalContainer}>
-              <TouchableOpacity
-                style={styles.option}
-                onPress={() => handleOptionSelect("Anyone")}
-              >
-                <Text style={styles.optionText}>Anyone</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.option}
-                onPress={() => handleOptionSelect("My Network")}
-              >
-                <Text style={styles.optionText}>My Network</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
       </View>
 
+      {/* Post Content */}
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
-      {showPreview && (
-        <View style={styles.container}>
-          <Text>Preview:</Text>
-          <Text style={styles.promptText}>Content: {content}</Text>
+      {showPreview && (content || media) && (
+        <View style={styles.previewContainer}>
+          {content ? <Text style={styles.promptText}>{content}</Text> : null}
           {media?.uri ? (
             media.type === "image" ? (
               <Image source={{ uri: media.uri }} style={styles.imagePreview} />
@@ -119,6 +110,7 @@ const PostScreen = () => {
         </View>
       )}
 
+      {/* Post Options */}
       <View style={styles.options}>
         <PostOptionItem
           label="Add a Post"
@@ -141,6 +133,32 @@ const PostScreen = () => {
           onPress={() => handleOptionPress("AddEventScreen")}
         />
       </View>
+
+      {/* Visibility Selector Modal */}
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={toggleModal}
+      >
+        <TouchableOpacity
+          style={styles.modalBackground}
+          onPress={toggleModal}
+          activeOpacity={1}
+        >
+          <View style={styles.modalContainer}>
+            {["Anyone", "My Network"].map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.option}
+                onPress={() => handleOptionSelect(option)}
+              >
+                <Text style={styles.optionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -212,20 +230,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   placeholderText: {
-    marginTop: 20,
     fontSize: 14,
     color: "#aaa",
+  },
+  mediaPreviewContainer: {
+    marginVertical: 12,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
+    marginTop: 8,
   },
   options: {
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingTop: 20,
-  },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    marginTop: 8,
-    borderRadius: 8,
   },
   modalBackground: {
     flex: 1,
@@ -248,5 +268,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     textAlign: "center",
+  },
+  previewContainer: {
+    borderColor: "#ddd",
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 16,
   },
 });

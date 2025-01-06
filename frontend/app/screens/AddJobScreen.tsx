@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { PostStackParamList } from "./PostNav";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import { useNavigation } from "@react-navigation/native";
 
 type Media = {
   uri: string;
@@ -19,10 +23,31 @@ type Media = {
 
 const AddJobScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [location, setLocation] = useState("");
   const [media, setMedia] = useState<Media | null>(null);
+
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert("", "Discard the changes?", [
+        {
+          text: "Cancel",
+          onPress: () => null,
+          style: "cancel",
+        },
+        { text: "YES", onPress: () => navigation.navigate("PostScreen") },
+      ]);
+      return true;
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+    };
+  }, [navigation]);
 
   const handleJobSubmit = () => {
     if (!jobTitle || !jobDescription) {
