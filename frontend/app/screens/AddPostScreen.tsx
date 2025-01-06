@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,27 +11,53 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { BackHandler } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
 
 type Media = {
   uri: string;
   type?: string;
 };
 
+type PostScreenNavigationProp = StackNavigationProp<
+  PostStackParamList,
+  "PostScreen"
+>;
+
 const AddPostScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation<PostScreenNavigationProp>();
   const [content, setContent] = useState<string>("");
   const [media, setMedia] = useState<Media | null>(null);
+
+  useEffect(() => {
+    const backAction = () => {
+      // Navigate to a specific screen when back is pressed
+      navigation.navigate("PostScreen"); // Use the screen name from RootStackParamList
+      return true; // Prevent the default back action
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+    };
+  }, [navigation]);
 
   const handlePostSubmit = () => {
     if (content.trim() === "") {
       Alert.alert("Error", "Post content cannot be empty!");
       return;
     }
-    const mediaUri = media?.uri ?? null;
+    //const mediaUri = media?.uri ?? null;
 
     router.push({
       pathname: "/screens/PostScreen",
-      params: { content, media: mediaUri },
+      params: {
+        content,
+        media: media ? JSON.stringify(media) : null, // Serialize media
+      },
     });
   };
 
@@ -55,12 +81,14 @@ const AddPostScreen = () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
+      aspect: [1, 1],
       quality: 1,
     });
 
     if (!result.canceled && result.assets?.length) {
       const asset = result.assets[0];
-      setMedia({ uri: asset.uri, type: asset.type });
+      const mediaType = asset.type === "video" ? "video" : "image";
+      setMedia({ uri: asset.uri, type: mediaType });
     }
   };
 
@@ -85,10 +113,8 @@ const AddPostScreen = () => {
 
       {media && (
         <View style={styles.mediaPreview}>
-          {media.type === "image" ? (
+          {media.type === "image" && (
             <Image source={{ uri: media.uri }} style={styles.imagePreview} />
-          ) : (
-            <Text style={styles.videoPreviewText}>Video selected</Text>
           )}
         </View>
       )}

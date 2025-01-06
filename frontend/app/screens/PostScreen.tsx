@@ -8,16 +8,15 @@ import {
   Image,
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { Video, ResizeMode } from "expo-av";
+import { useRouter } from "expo-router";
 import PostOptionItem from "../Components/PostOptionItem";
+import usePostParams from "../hooks/usePostParams";
 
 const PostScreen = () => {
   const router = useRouter();
-  const { content: initialContent, media: initialMedia } =
-    useLocalSearchParams();
-  const [content, setContent] = useState(initialContent || "");
-  const [media, setMedia] = useState(initialMedia || null);
-
+  const { content, media } = usePostParams();
+  const [showPreview, setShowPreview] = useState(true);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
 
@@ -27,8 +26,7 @@ const PostScreen = () => {
 
   const handlePostPress = () => {
     console.log("Post submitted with content:", content, "and media:", media);
-    setContent("");
-    setMedia(null);
+    setShowPreview(false); // Hide the preview after posting
   };
 
   const toggleModal = () => {
@@ -37,7 +35,7 @@ const PostScreen = () => {
 
   const handleOptionSelect = (option: string) => {
     setSelectedVisibility(option);
-    setModalVisible(false);
+    setModalVisible(false); // Close modal after selection
   };
 
   return (
@@ -60,7 +58,7 @@ const PostScreen = () => {
           <Text style={styles.userName}>John Doe</Text>
           <TouchableOpacity
             style={styles.visibilitySelector}
-            onPress={toggleModal} // Toggle modal visibility when clicked
+            onPress={toggleModal}
           >
             <MaterialIcons name="public" size={16} color="#000" />
             <Text style={styles.visibilityText}>{selectedVisibility}</Text>
@@ -72,11 +70,11 @@ const PostScreen = () => {
           visible={isModalVisible}
           transparent={true}
           animationType="fade"
-          onRequestClose={toggleModal} // Close modal when clicking outside
+          onRequestClose={toggleModal}
         >
           <TouchableOpacity
             style={styles.modalBackground}
-            onPress={toggleModal} // Close modal when clicking outside
+            onPress={toggleModal}
           >
             <View style={styles.modalContainer}>
               <TouchableOpacity
@@ -98,16 +96,27 @@ const PostScreen = () => {
 
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
-      {content || media ? (
-        <View style={styles.postPreview}>
-          <Text style={styles.previewTitle}>Post Preview:</Text>
-          <Text>{content}</Text>
-          {media && typeof media === "string" && (
-            <Image source={{ uri: media }} style={styles.imagePreview} />
+      {showPreview && (
+        <View style={styles.container}>
+          <Text>Preview:</Text>
+          <Text style={styles.promptText}>Content: {content}</Text>
+          {media?.uri ? (
+            media.type === "image" ? (
+              <Image source={{ uri: media.uri }} style={styles.imagePreview} />
+            ) : media.type === "video" ? (
+              <Video
+                source={{ uri: media.uri }}
+                style={styles.imagePreview}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+              />
+            ) : (
+              <Text>Unsupported media type</Text>
+            )
+          ) : (
+            <Text>No media available</Text>
           )}
         </View>
-      ) : (
-        <Text style={styles.placeholderText}>No post details yet.</Text>
       )}
 
       <View style={styles.options}>
@@ -211,18 +220,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#eee",
     paddingTop: 20,
-  },
-  postPreview: {
-    marginTop: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 8,
   },
   imagePreview: {
     width: 200,
