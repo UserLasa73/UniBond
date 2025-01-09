@@ -3,26 +3,41 @@ import { Stack } from "expo-router";
 const Layout = () => {
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: "Home" }} />
       <Stack.Screen
-        name="screens/PostScreen"
-        options={{ title: "Share Post" }}
+        name="PostScreen"
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
-        name="screens/AddPostScreen"
-        options={{ title: "Add a Post" }}
+        name="AddPostScreen"
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
-        name="screens/AddProjectScreen"
-        options={{ title: "Add a Project" }}
+        name="AddProjectScreen"
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
-        name="screens/AddJobScreen"
-        options={{ title: "Add a Job" }}
+        name="AddJobScreen"
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
-        name="screens/AddEventScreen"
-        options={{ title: "Add an Event" }}
+        name="AddEventScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ProfileScreen"
+        options={{
+          headerShown: false,
+        }}
       />
     </Stack>
   );
