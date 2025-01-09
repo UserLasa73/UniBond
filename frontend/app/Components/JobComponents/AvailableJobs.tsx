@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { supabase } from "../../lib/supabse"; // Make sure your Supabase client is properly imported
 
 interface JobListing {
   id: string;
@@ -10,66 +11,59 @@ interface JobListing {
   type: string;
   level: string;
   time: string;
-  skills: string[];
+  skills: string;
+  is_active: boolean;
+
 }
 
-interface AvailableJobsProps {
-  jobListings: JobListing[];
-}
+const AvailableJobs: React.FC = () => {
+  const [jobListings, setJobListings] = useState<JobListing[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const AvailableJobs: React.FC<AvailableJobsProps> = ({ jobListings }) => {
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        // Fetch data from the 'jobs' table in Supabase
+        const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true); // Adjust the query as per your table
+        
+        if (error) {
+          console.error("Error fetching jobs:", error.message);
+        } else {
+          setJobListings(data || []); // Store the fetched job listings
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs(); // Call fetch function on component mount
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading jobs...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       {jobListings.length === 0 ? (
         <View style={styles.card}>
-          {/* Title */}
           <Text style={styles.title}>No Jobs Available</Text>
-
-          {/* User Info */}
-          <View style={styles.userInfo}>
-            <Image
-              source={{ uri: "https://via.placeholder.com/40" }}
-              style={styles.avatar}
-            />
-            <View style={styles.textGroup}>
-              <Text style={styles.name}>No Data</Text>
-              <Text style={styles.location}>Please check back later</Text>
-              <Text style={styles.date}>N/A</Text>
-            </View>
-          </View>
-
-          {/* Job Details */}
-          <View style={styles.details}>
-            <View style={styles.row}>
-              <Ionicons name="briefcase-outline" size={20} color="gray" />
-              <Text style={styles.detailText}>Time • N/A</Text>
-            </View>
-            <View style={styles.row}>
-              <MaterialIcons name="article" size={20} color="gray" />
-              <Text style={styles.detailText}>Skills: N/A</Text>
-            </View>
-          </View>
-
-          {/* Buttons */}
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity style={styles.saveButton}>
-              <Text style={styles.buttonText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.applyButton}>
-              <Text style={styles.buttonText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.subtitle}>Please check back later.</Text>
         </View>
       ) : (
         jobListings.map((job) => (
           <View key={job.id} style={styles.card}>
-            {/* Title */}
             <Text style={styles.title}>{job.title}</Text>
-
-            {/* User Info */}
             <View style={styles.userInfo}>
               <Image
-                source={{ uri: "https://via.placeholder.com/40" }}
+                source={{ uri: "https://via.placeholder.com/40" }} // Use an actual logo or avatar URL for the company
                 style={styles.avatar}
               />
               <View style={styles.textGroup}>
@@ -78,8 +72,6 @@ const AvailableJobs: React.FC<AvailableJobsProps> = ({ jobListings }) => {
                 <Text style={styles.date}>{job.time}</Text>
               </View>
             </View>
-
-            {/* Job Details */}
             <View style={styles.details}>
               <View style={styles.row}>
                 <Ionicons name="briefcase-outline" size={20} color="gray" />
@@ -88,12 +80,10 @@ const AvailableJobs: React.FC<AvailableJobsProps> = ({ jobListings }) => {
               <View style={styles.row}>
                 <MaterialIcons name="article" size={20} color="gray" />
                 <Text style={styles.detailText}>
-                  Skills: {job.skills.join(", ")}
+                  Skills: {job.skills} {/* Display skills as comma-separated */}
                 </Text>
               </View>
             </View>
-
-            {/* Buttons */}
             <View style={styles.buttonGroup}>
               <TouchableOpacity style={styles.saveButton}>
                 <Text style={styles.buttonText}>Save</Text>
@@ -116,6 +106,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "gray",
+  },
   card: {
     backgroundColor: "white",
     borderRadius: 8,
@@ -130,6 +129,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "gray",
   },
   userInfo: {
     flexDirection: "row",
