@@ -58,7 +58,7 @@ const PostScreen = () => {
     <View style={styles.container}>
       {/* Custom Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => router.push("/(home)/(tabs)/Home")}>
           <MaterialIcons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
