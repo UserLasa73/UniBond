@@ -44,7 +44,7 @@ export default function SignUpScreen() {
         id: userId,
         full_name: fullName,
         username: username,
-        website: "",
+
         avatar_url: "",
         updated_at: new Date(),
       });
