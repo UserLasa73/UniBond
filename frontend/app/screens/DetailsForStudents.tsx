@@ -9,6 +9,7 @@ import {
   View,
   Text,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Input, Button } from "@rneui/themed";
@@ -26,24 +27,22 @@ export default function DetailsForStudents() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const { userId } = useLocalSearchParams();
-  const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [fullname, setFullname] = useState("");
   const { session } = useAuth();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [profileExists, setProfileExists] = useState(false);
 
   useEffect(() => {
-    if (userId || session) getProfile();
-  }, [userId, session]);
+    if (session) getProfile();
+  }, [session]);
 
   async function getProfile() {
     try {
       setLoading(true);
-      const profileId = userId || session?.user?.id;
-      if (!profileId) throw new Error("No user or session available!");
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
 
       const { data, error } = await supabase
         .from("profiles")
@@ -69,7 +68,8 @@ export default function DetailsForStudents() {
         setInterests(data.interests);
       }
     } catch (error) {
-      if (error instanceof Error) Alert.alert(error.message);
+      console.error("Error fetching profile:", error);
+      if (error instanceof Error) Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -81,61 +81,54 @@ export default function DetailsForStudents() {
       const profileId = session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
+      // Check for duplicate username
+      const { data: existingUser, error: checkError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .neq("id", profileId)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingUser) {
+        Alert.alert("Error", "This username is already taken.");
+        return;
+      }
+
       const updates = {
-        id: profileId,
         username,
         avatar_url: avatarUrl,
         full_name: fullname,
         dob: dob.toISOString(),
         contact_number: contactNumber,
-        gender,
-        department,
-        faculty,
-        course,
-        skills,
-        interests,
-        updated_at: new Date(),
+        gender: gender,
+        department: department,
+        faculty: faculty,
+        course: course,
+        skills: skills,
+        interests: interests,
+        has_completed_details: true,
+        updated_at: new Date().toISOString(),
       };
-
-      const { error } = await supabase.from("profiles").upsert(updates);
-
-      if (error) throw error;
-      Alert.alert("Profile Updated!");
-    } catch (error) {
-      if (error instanceof Error) Alert.alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    checkIfProfileExists();
-  }, [session]);
-
-  async function checkIfProfileExists() {
-    try {
-      setLoading(true);
-      const profileId = session?.user?.id;
-      if (!profileId) return;
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id")
+        .update(updates)
         .eq("id", profileId)
-        .single();
+        .select(); // Ensure we get the updated data back if needed
 
-      if (data) {
-        setProfileExists(true);
-        router.push("/home"); // Redirect existing users
-      }
+      if (error) throw error;
+
+      Alert.alert("Profile Updated Successfully!");
+      router.push("/(home)/(tabs)/Home");
     } catch (error) {
+      console.error("Error updating profile:", error);
       if (error instanceof Error) Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
   }
-
-  if (profileExists) return null;
 
   return (
     <SafeAreaView style={{ flex: 1, paddingHorizontal: 22 }}>
@@ -145,78 +138,87 @@ export default function DetailsForStudents() {
         </TouchableOpacity>
         <Text style={styles.headerText}>{fullname || "Profile"}</Text>
       </View>
-      <ScrollView style={styles.container}>
-        <View style={{ alignItems: "center" }}>
-          <Avatar
-            size={200}
-            url={avatarUrl}
-            onUpload={(url) => setAvatarUrl(url)}
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="blue"
+          style={{ marginTop: 20 }}
+        />
+      ) : (
+        <ScrollView style={styles.container}>
+          <View style={{ alignItems: "center" }}>
+            <Avatar
+              size={200}
+              url={avatarUrl}
+              onUpload={(url) => setAvatarUrl(url)}
+            />
+          </View>
+
+          <Input label="Email" value={session?.user?.email} disabled />
+          <Input label="Username" value={username} onChangeText={setUsername} />
+          <Input label="Fullname" value={fullname} onChangeText={setFullname} />
+          <Input
+            label="Contact Number"
+            value={contactNumber}
+            onChangeText={setContactNumber}
           />
-        </View>
+          <Input label="Gender" value={gender} onChangeText={setGender} />
+          <Input
+            label="Department"
+            value={department}
+            onChangeText={setDepartment}
+          />
+          <Input label="Faculty" value={faculty} onChangeText={setFaculty} />
+          <Input label="Course" value={course} onChangeText={setCourse} />
+          <Input label="Skills" value={skills} onChangeText={setSkills} />
+          <Input
+            label="Interests"
+            value={interests}
+            onChangeText={setInterests}
+          />
 
-        <Input label="Email" value={session?.user?.email} disabled />
-        <Input label="Username" value={username} onChangeText={setUsername} />
-        <Input label="Fullname" value={fullname} onChangeText={setFullname} />
-        <Input
-          label="Contact Number"
-          value={contactNumber}
-          onChangeText={setContactNumber}
-        />
-        <Input label="Gender" value={gender} onChangeText={setGender} />
-        <Input
-          label="Department"
-          value={department}
-          onChangeText={setDepartment}
-        />
-        <Input label="Faculty" value={faculty} onChangeText={setFaculty} />
-        <Input label="Course" value={course} onChangeText={setCourse} />
-        <Input label="Skills" value={skills} onChangeText={setSkills} />
-        <Input
-          label="Interests"
-          value={interests}
-          onChangeText={setInterests}
-        />
+          <View>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+              <Input
+                label="Date of Birth"
+                value={dob.toDateString()}
+                editable={false}
+              />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dob}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setDob(selectedDate);
+                }}
+              />
+            )}
+          </View>
 
-        <View>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <Input
-              label="Date of Birth"
-              value={dob.toDateString()}
-              editable={false}
-            />
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={dob}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) setDob(selectedDate);
-              }}
-            />
-          )}
-        </View>
+          <Button
+            title={loading ? "Updating..." : "Update Profile"}
+            onPress={updateProfile}
+            disabled={loading}
+          />
 
-        <Button
-          title={loading ? "Updating..." : "Update Profile"}
-          onPress={updateProfile}
-          disabled={loading}
-        />
-
-        <Button
-          title="Sign Out"
-          onPress={async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) throw error;
-              router.push("../(auth)/login");
-            } catch (error) {
-              if (error instanceof Error) Alert.alert("Error", error.message);
-            }
-          }}
-        />
-      </ScrollView>
+          <Button
+            title="Sign Out"
+            onPress={async () => {
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                router.push("/(auth)/login");
+              } catch (error) {
+                console.error("Error signing out:", error);
+                if (error instanceof Error) Alert.alert("Error", error.message);
+              }
+            }}
+          />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

@@ -1,7 +1,9 @@
-import { Redirect, Slot, Stack } from "expo-router";
+import { Stack } from "expo-router";
+import { Redirect } from "expo-router";
 import { useAuth } from "../providers/AuthProvider";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabse";
+import { ActivityIndicator, View } from "react-native";
 
 export default function AuthLayout() {
   const { user } = useAuth();
@@ -12,7 +14,7 @@ export default function AuthLayout() {
     if (user) {
       checkUserDetails();
     } else {
-      setLoading(false); // No user logged in, stop loading
+      setLoading(false);
     }
   }, [user]);
 
@@ -20,16 +22,12 @@ export default function AuthLayout() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, has_completed_details")
+        .select("has_completed_details")
         .eq("id", user?.id)
         .single();
 
       if (error) throw error;
-
-      // Assuming `has_completed_details` is a boolean flag
-      if (!data?.has_completed_details) {
-        setIsNewUser(true);
-      }
+      setIsNewUser(!data?.has_completed_details);
     } catch (error) {
       console.error("Error fetching user profile:", error);
     } finally {
@@ -38,15 +36,20 @@ export default function AuthLayout() {
   }
 
   if (loading) {
-    return null; // Render nothing or a loading spinner
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="blue" />
+      </View>
+    );
   }
 
   if (isNewUser) {
-    return <Redirect href="/DetailsForStudents" />;
+    console.log("IS newuser", isNewUser);
+    return <Redirect href="../screens/DetailsForStudents" />;
   }
 
   if (user) {
-    return <Redirect href="../(home)/(tabs)/Home" />;
+    return <Redirect href="/(home)/(tabs)/Home" />;
   }
 
   return (
