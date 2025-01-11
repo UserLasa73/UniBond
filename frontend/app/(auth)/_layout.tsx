@@ -12,12 +12,14 @@ export default function AuthLayout() {
 
   useEffect(() => {
     if (user) {
-      checkUserDetails();
+      checkUserDetails(); // Check user details on login
     } else {
       setLoading(false);
+      setIsNewUser(true); // Reset when user logs out
     }
   }, [user]);
 
+  // This function checks if the user has completed the required details
   async function checkUserDetails() {
     try {
       const { data, error } = await supabase
@@ -27,11 +29,13 @@ export default function AuthLayout() {
         .single();
 
       if (error) throw error;
+
+      // If user has completed details, set `isNewUser` to false
       setIsNewUser(!data?.has_completed_details);
     } catch (error) {
       console.error("Error fetching user profile:", error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Stop the loading state once done
     }
   }
 
@@ -43,15 +47,17 @@ export default function AuthLayout() {
     );
   }
 
-  if (isNewUser) {
-    console.log("IS newuser", isNewUser);
+  // If user has not completed details or is new, redirect to DetailsForStudents
+  if (!isNewUser) {
     return <Redirect href="../screens/DetailsForStudents" />;
   }
 
+  // If the user is authenticated and has completed details, redirect to the home page
   if (user) {
     return <Redirect href="/(home)/(tabs)/Home" />;
   }
 
+  // If user is not logged in, show login screen
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />
