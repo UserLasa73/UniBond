@@ -16,13 +16,18 @@ import type { StackNavigationProp } from "@react-navigation/stack";
 import { PostStackParamList } from "./PostNav";
 import { BackHandler } from "react-native";
 import { router } from "expo-router";
+import { useAuth } from "../providers/AuthProvider";
 
 const PostScreen = () => {
   const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const { content, media } = usePostParams();
+  const { profile } = useAuth();
   const [showPreview, setShowPreview] = useState(!!content || !!media);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/profiles/";
+  const imageUrl = `${storageUrl}${profile.avatar_url}`;
 
   useEffect(() => {
     const backAction = () => {
@@ -70,10 +75,16 @@ const PostScreen = () => {
       {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
-          <MaterialIcons name="person" size={40} color="#fff" />
+          {profile?.avatar_url ? (
+            <Image source={{ uri: imageUrl }} style={styles.profileImage} />
+          ) : (
+            <MaterialIcons name="person" size={40} color="#fff" />
+          )}
         </View>
         <View style={styles.userDetails}>
-          <Text style={styles.userName}>John Doe</Text>
+          <Text style={styles.userName}>
+            {profile?.username || "Guest User"}
+          </Text>
           <TouchableOpacity
             style={styles.visibilitySelector}
             onPress={toggleModal}
