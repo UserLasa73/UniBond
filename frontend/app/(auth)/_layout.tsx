@@ -7,7 +7,7 @@ import { ActivityIndicator, View } from "react-native";
 
 export default function AuthLayout() {
   const { user } = useAuth();
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

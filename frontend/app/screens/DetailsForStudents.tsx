@@ -203,20 +203,6 @@ export default function DetailsForStudents() {
             onPress={updateProfile}
             disabled={loading}
           />
-
-          <Button
-            title="Sign Out"
-            onPress={async () => {
-              try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
-                router.push("/(auth)/login");
-              } catch (error) {
-                console.error("Error signing out:", error);
-                if (error instanceof Error) Alert.alert("Error", error.message);
-              }
-            }}
-          />
         </ScrollView>
       )}
     </SafeAreaView>
