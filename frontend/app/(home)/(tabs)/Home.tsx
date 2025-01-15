@@ -1,13 +1,39 @@
 // /screens/Home.tsx
-import React from "react";
-import { View, Text } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, Alert } from "react-native";
 import TopNavigationBar from "../../Components/TopNavigationBar"; // Import the top nav component
 import { useRouter } from "expo-router"; // For navigation
 import NotificationScreen from "@/app/screens/NotificationScreen";
+import { useAuth } from "@/app/providers/AuthProvider";
+import supabase from "@/lib/supabse";
 
 const HomeScreen = () => {
   const router = useRouter(); // Router hook to navigate programmatically
+  const { session } = useAuth();
+  const [username, setUsername] = useState("");
+  useEffect(() => {
+    if (session) getProfile();
+  }, [session]);
+  async function getProfile() {
+    try {
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
 
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`username`)
+        .eq("id", profileId)
+        .single();
+      if (data) {
+        setUsername(data.username);
+      }
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      if (error instanceof Error) Alert.alert("Error", error.message);
+    }
+  }
   const handleNotificationPress = () => {
     router.push("/screens/NotificationScreen"); // Navigate to NotificationScreen
   };
@@ -22,7 +48,7 @@ const HomeScreen = () => {
     <>
       {/* Top Navigation Bar */}
       <TopNavigationBar
-        userName="John Doe" // Display the user's name
+        userName={username} // Display the user's name
         onProfilePress={handleProfilePress} // Profile button logic
         onNotificationPress={handleNotificationPress}
         onPostPress={handlePostPress}
