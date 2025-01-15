@@ -59,7 +59,7 @@ export default function ShowProfileEdit() {
     }
   }
   const handleEditPress = () => {
-    router.push("./DetailsForStudents");
+    router.push("/screens/DetailsForStudents");
   };
   return (
     <SafeAreaView>
@@ -94,10 +94,10 @@ export default function ShowProfileEdit() {
         <Text style={{ fontSize: 20 }}>{skills} </Text>
       </View>
       <TouchableOpacity
-        style={{ position: "absolute", right: 10, top: 40 }}
+        style={{ position: "absolute", left: 130, top: 185 }}
         onPress={handleEditPress}
       >
-        <Ionicons name="pencil-outline" size={24} />
+        <Ionicons name="pencil-outline" size={30} />
       </TouchableOpacity>
     </SafeAreaView>
   );

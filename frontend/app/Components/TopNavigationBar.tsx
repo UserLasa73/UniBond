@@ -53,7 +53,7 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
       <TouchableOpacity onPress={onProfilePress} style={styles.profileImage}>
         <ShowingAvatar
           url={avatarUrl}
-          size={50} // Adjust the size to fit within the circular display
+          size={5} // Adjust the size to fit within the circular display
           onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
         />
       </TouchableOpacity>
@@ -86,10 +86,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
   },
   profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20, // Half of the width/height for a perfect circle
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     overflow: "hidden",
+    objectFit: "fill",
     borderWidth: 1,
     borderColor: "#ccc",
   },

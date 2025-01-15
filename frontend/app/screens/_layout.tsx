@@ -45,6 +45,12 @@ const Layout = () => {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="DetailsForStudents"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };
