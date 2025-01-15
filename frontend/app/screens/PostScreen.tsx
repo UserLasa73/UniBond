@@ -26,8 +26,10 @@ const PostScreen = () => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
   const storageUrl =
-    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/profiles/";
-  const imageUrl = `${storageUrl}${profile.avatar_url}`;
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+  const imageUrl = profile.avatar_url
+    ? `${storageUrl}${profile.avatar_url}`
+    : null;
 
   useEffect(() => {
     const backAction = () => {
@@ -75,8 +77,11 @@ const PostScreen = () => {
       {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: imageUrl }} style={styles.profileImage} />
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 50, height: 50, borderRadius: 25 }}
+            />
           ) : (
             <MaterialIcons name="person" size={40} color="#fff" />
           )}
