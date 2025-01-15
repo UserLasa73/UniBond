@@ -42,7 +42,7 @@ const HomeScreen = () => {
     router.push("/screens/PostScreen"); // Navigate to PostScreen
   };
   const handleProfilePress = () => {
-    router.push("/screens/ProfileScreen"); // Navigate to
+    router.push("/screens/ShowProfileEdit"); // Navigate to
   };
   return (
     <>
