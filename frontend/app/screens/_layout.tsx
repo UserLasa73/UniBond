@@ -21,6 +21,12 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
+        name="DonationScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="AddJobScreen"
         options={{
           headerShown: false,
