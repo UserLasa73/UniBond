@@ -198,11 +198,15 @@ export default function DetailsForStudents() {
             )}
           </View>
 
-          <Button
-            title={loading ? "Updating..." : "Update Profile"}
+          <TouchableOpacity
+            style={styles.Button}
             onPress={updateProfile}
             disabled={loading}
-          />
+          >
+            <Text style={styles.postButtonText}>
+              {loading ? "Updating..." : "Update Profile"}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -220,5 +224,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginLeft: 10,
+  },
+  Button: {
+    backgroundColor: "#2C3036",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  postButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

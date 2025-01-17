@@ -1,5 +1,4 @@
 import { Stack } from "expo-router";
-
 const Layout = () => {
   return (
     <Stack>
@@ -17,6 +16,12 @@ const Layout = () => {
       />
       <Stack.Screen
         name="AddProjectScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="DonationScreen"
         options={{
           headerShown: false,
         }}

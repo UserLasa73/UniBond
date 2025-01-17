@@ -69,7 +69,7 @@ const AddEventPost = () => {
     setEventDate(null);
     setEventLocation("");
     setEventDescription("");
-    router.push("/PostScreen");
+    router.push("./PostScreen");
   };
 
   return (
