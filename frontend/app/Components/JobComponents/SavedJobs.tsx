@@ -69,6 +69,29 @@ const SavedJobs: React.FC = () => {
     setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
   };
 
+  const unsaveJob = async (jobId: string) => {
+    if (!user) {
+      console.error("User not logged in");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("saved_jobs")
+        .delete()
+        .match({ job_id: jobId, user_id: user.id });
+
+      if (error) {
+        console.error("Error unsaving job:", error.message);
+      } else {
+        setSavedJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+        console.log("Deleting saved job with:", { jobId, userId: user.id });
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+    }
+  };
+
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
@@ -111,6 +134,14 @@ const SavedJobs: React.FC = () => {
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
+      </TouchableOpacity>
+
+      {/* Unsave Button */}
+      <TouchableOpacity
+        onPress={() => unsaveJob(item.id)}
+        style={styles.unsaveButton}
+      >
+        <Text style={styles.unsaveButtonText}>Unsave</Text>
       </TouchableOpacity>
     </View>
   );
@@ -210,5 +241,24 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 14,
     color: "#007BFF",
+  },
+  unsaveButton: {
+    backgroundColor: "#000",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    alignItems: "center",
+  },
+  unsaveButtonText: {
+    fontSize: 14,
+    color: "white",
+    fontWeight: "600",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "gray",
+    textAlign: "center",
   },
 });
