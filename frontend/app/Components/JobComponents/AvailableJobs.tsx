@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "../../lib/supabse";
+import { supabase } from "@/app/lib/supabse";
 
 interface JobListing {
   id: string;
@@ -18,7 +18,8 @@ interface JobListing {
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null); 
+  const [user, setUser] = useState<any>(null); // Store authenticated user
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -35,29 +36,44 @@ const AvailableJobs: React.FC = () => {
     };
 
     fetchJobs();
+
+    // Fetch current user
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error.message);
+      } else {
+        setUser(data?.user); // Store the user
+      }
+    };
+
+    getUser();
   }, []);
 
   const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id));
+    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
   };
 
   const saveJob = async (jobId: string) => {
-    try {
-      const userId = supabase.auth.user()?.id;
-      if (userId) {
+    if (user) {
+      try {
         const { data, error } = await supabase.from("saved_jobs").insert([
-          { user_id: userId, job_id: jobId },
+          {
+            user_id: user.id,
+            job_id: jobId,
+          },
         ]);
+
         if (error) {
           console.error("Error saving job:", error.message);
         } else {
           console.log("Job saved successfully:", data);
         }
-      } else {
-        console.log("No user authenticated");
+      } catch (error) {
+        console.error("Unexpected error:", error);
       }
-    } catch (error) {
-      console.error("Unexpected error saving job:", error);
+    } else {
+      console.error("User not authenticated");
     }
   };
 
@@ -93,7 +109,8 @@ const AvailableJobs: React.FC = () => {
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
             <Text style={styles.descriptionTitle}>Description - </Text>
-            {item.description}</Text>
+            {item.description}
+          </Text>
         </View>
       )}
 
@@ -105,7 +122,7 @@ const AvailableJobs: React.FC = () => {
       </TouchableOpacity>
 
       <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.saveButton} onPress={() => saveJob(item.id)}>
+        <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.applyButton}>
