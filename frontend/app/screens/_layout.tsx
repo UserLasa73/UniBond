@@ -56,6 +56,12 @@ const Layout = () => {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="OnScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };

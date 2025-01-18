@@ -218,6 +218,31 @@ export default function ProfileScreen() {
             <Text style={{ color: "#fff" }}>Sign Out</Text>
           </TouchableOpacity>
         )}
+        {!userId && (
+          <View style={styles.verticallySpaced}>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) throw error;
+                  router.push("../(auth)/login");
+                } catch (error) {
+                  if (error instanceof Error) {
+                    Alert.alert("Error", error.message);
+                  }
+                }
+              }}
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 5,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff" }}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
