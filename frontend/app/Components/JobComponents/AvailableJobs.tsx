@@ -12,13 +12,13 @@ interface JobListing {
   level: string;
   time: string;
   skills: string;
-  description: string; // Add description field
+  description: string;
   is_active: boolean;
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null); // Track expanded card
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -38,7 +38,27 @@ const AvailableJobs: React.FC = () => {
   }, []);
 
   const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+    setExpandedJobId((prevId) => (prevId === id ? null : id));
+  };
+
+  const saveJob = async (jobId: string) => {
+    try {
+      const userId = supabase.auth.user()?.id;
+      if (userId) {
+        const { data, error } = await supabase.from("saved_jobs").insert([
+          { user_id: userId, job_id: jobId },
+        ]);
+        if (error) {
+          console.error("Error saving job:", error.message);
+        } else {
+          console.log("Job saved successfully:", data);
+        }
+      } else {
+        console.log("No user authenticated");
+      }
+    } catch (error) {
+      console.error("Unexpected error saving job:", error);
+    }
   };
 
   const renderItem = ({ item }: { item: JobListing }) => (
@@ -85,7 +105,7 @@ const AvailableJobs: React.FC = () => {
       </TouchableOpacity>
 
       <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={() => saveJob(item.id)}>
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.applyButton}>
@@ -96,7 +116,6 @@ const AvailableJobs: React.FC = () => {
   );
 
   return (
-    
     <FlatList
       data={jobListings}
       keyExtractor={(item) => item.id}
