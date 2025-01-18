@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "../../lib/supabse"; // Make sure your Supabase client is properly imported
+import { supabase } from "../../lib/supabse";
 
 interface JobListing {
   id: string;
@@ -13,7 +13,6 @@ interface JobListing {
   time: string;
   skills: string;
   is_active: boolean;
-
 }
 
 const AvailableJobs: React.FC = () => {
@@ -24,13 +23,14 @@ const AvailableJobs: React.FC = () => {
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        // Fetch data from the 'jobs' table in Supabase
-        const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true); // Adjust the query as per your table
-        
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("is_active", true);
         if (error) {
           console.error("Error fetching jobs:", error.message);
         } else {
-          setJobListings(data || []); // Store the fetched job listings
+          setJobListings(data || []);
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -39,7 +39,7 @@ const AvailableJobs: React.FC = () => {
       }
     };
 
-    fetchJobs(); // Call fetch function on component mount
+    fetchJobs();
   }, []);
 
   if (loading) {
@@ -50,52 +50,56 @@ const AvailableJobs: React.FC = () => {
     );
   }
 
+  const renderItem = ({ item }: { item: JobListing }) => (
+    <View style={styles.card}>
+      <Text style={styles.title}>{item.title}</Text>
+      <View style={styles.userInfo}>
+        <Image
+          source={{ uri: "https://via.placeholder.com/40" }}
+          style={styles.avatar}
+        />
+        <View style={styles.textGroup}>
+          <Text style={styles.name}>{item.company}</Text>
+          <Text style={styles.location}>{item.location}</Text>
+          <Text style={styles.date}>{item.time}</Text>
+        </View>
+      </View>
+      <View style={styles.details}>
+        <View style={styles.row}>
+          <Ionicons name="briefcase-outline" size={20} color="gray" />
+          <Text style={styles.detailText}>
+            {item.type} - {item.level}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <MaterialIcons name="article" size={20} color="gray" />
+          <Text style={styles.detailText}>Skills: {item.skills}</Text>
+        </View>
+      </View>
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity style={styles.saveButton}>
+          <Text style={styles.buttonText}>Save</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.applyButton}>
+          <Text style={styles.buttonText}>Apply</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
-    <ScrollView style={styles.container}>
-      {jobListings.length === 0 ? (
+    <FlatList
+      data={jobListings}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      contentContainerStyle={styles.container}
+      ListEmptyComponent={
         <View style={styles.card}>
           <Text style={styles.title}>No Jobs Available</Text>
           <Text style={styles.subtitle}>Please check back later.</Text>
         </View>
-      ) : (
-        jobListings.map((job) => (
-          <View key={job.id} style={styles.card}>
-            <Text style={styles.title}>{job.title}</Text>
-            <View style={styles.userInfo}>
-              <Image
-                source={{ uri: "https://via.placeholder.com/40" }} // Use an actual logo or avatar URL for the company
-                style={styles.avatar}
-              />
-              <View style={styles.textGroup}>
-                <Text style={styles.name}>{job.company}</Text>
-                <Text style={styles.location}>{job.location}</Text>
-                <Text style={styles.date}>{job.time}</Text>
-              </View>
-            </View>
-            <View style={styles.details}>
-              <View style={styles.row}>
-                <Ionicons name="briefcase-outline" size={20} color="gray" />
-                <Text style={styles.detailText}>{job.type} - {job.level}</Text>
-              </View>
-              <View style={styles.row}>
-                <MaterialIcons name="article" size={20} color="gray" />
-                <Text style={styles.detailText}>
-                  Skills: {job.skills} {/* Display skills as comma-separated */}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity style={styles.saveButton}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.applyButton}>
-                <Text style={styles.buttonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </ScrollView>
+      }
+    />
   );
 };
 
