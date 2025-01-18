@@ -55,23 +55,27 @@ export default function SignUpScreen() {
 
       const userId = data.user.id;
 
-      // Step 2: Insert the profile into the database
+      // Step 2: Prepare profile data, only include fields that are not empty
       const profileData = {
         id: userId,
-        full_name: fullName,
-        username: username,
-        registration_number: registrationNumber,
-        alumni_role: userType === "alumni",
-        avatar_url: "",
+        full_name: fullName || undefined, // Don't include if empty
+        username: username || undefined, // Don't include if empty
+        registration_number: registrationNumber || undefined, // Don't include if empty
+        role: userType === "alumni" ? true : undefined, // Include only if alumni
         updated_at: new Date(),
       };
 
-      // Add alumni-specific fields
+      // Add alumni-specific fields if userType is "alumni"
       if (userType === "alumni") {
-        profileData.graduation_year = graduationYear;
-        profileData.job_title = jobTitle;
+        if (graduationYear) {
+          // Convert graduation year to a Date type (first day of the year)
+          const graduationDate = new Date(`${graduationYear}-01-01`);
+          profileData.graduation_year = graduationDate;
+        }
+        if (jobTitle) profileData.job_title = jobTitle;
       }
 
+      // Step 3: Insert the profile into the database
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert(profileData);
@@ -90,6 +94,7 @@ export default function SignUpScreen() {
       setLoading(false);
     }
   }
+
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
