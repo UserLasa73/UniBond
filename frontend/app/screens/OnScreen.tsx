@@ -10,7 +10,6 @@ const OnScreen = () => {
       pathname: "../(auth)/Signup",
       params: { userType }, // Passing userType to the signup screen
     });
-    console.log({ userType });
   };
 
   return (
