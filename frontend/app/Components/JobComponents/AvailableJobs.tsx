@@ -12,21 +12,18 @@ interface JobListing {
   level: string;
   time: string;
   skills: string;
+  description: string; // Add description field
   is_active: boolean;
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null); // Track expanded card
 
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("jobs")
-          .select("*")
-          .eq("is_active", true);
+        const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
         if (error) {
           console.error("Error fetching jobs:", error.message);
         } else {
@@ -34,21 +31,15 @@ const AvailableJobs: React.FC = () => {
         }
       } catch (error) {
         console.error("Unexpected error:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchJobs();
   }, []);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading jobs...</Text>
-      </View>
-    );
-  }
+  const toggleExpand = (id: string) => {
+    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+  };
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
@@ -76,6 +67,23 @@ const AvailableJobs: React.FC = () => {
           <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
       </View>
+
+      {/* Conditionally render additional fields */}
+      {expandedJobId === item.id && (
+        <View style={styles.additionalDetails}>
+          <Text style={styles.description}>
+            <Text style={styles.descriptionTitle}>Description - </Text>
+            {item.description}</Text>
+        </View>
+      )}
+
+      {/* Read More / Collapse Button */}
+      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+        <Text style={styles.readMoreText}>
+          {expandedJobId === item.id ? "Read Less" : "Read More"}
+        </Text>
+      </TouchableOpacity>
+
       <View style={styles.buttonGroup}>
         <TouchableOpacity style={styles.saveButton}>
           <Text style={styles.buttonText}>Save</Text>
@@ -88,11 +96,12 @@ const AvailableJobs: React.FC = () => {
   );
 
   return (
+    
     <FlatList
       data={jobListings}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
       ListEmptyComponent={
         <View style={styles.card}>
           <Text style={styles.title}>No Jobs Available</Text>
@@ -110,15 +119,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 18,
-    color: "gray",
-  },
   card: {
     backgroundColor: "white",
     borderRadius: 8,
@@ -133,10 +133,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "gray",
   },
   userInfo: {
     flexDirection: "row",
@@ -176,6 +172,25 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: "gray",
+  },
+  additionalDetails: {
+    marginTop: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: "gray",
+  },
+  descriptionTitle: {
+    fontWeight: "bold",
+    color: "black",
+  },
+  readMoreButton: {
+    marginVertical: 8,
+    alignSelf: "flex-start",
+  },
+  readMoreText: {
+    fontSize: 14,
+    color: "#007BFF",
   },
   buttonGroup: {
     flexDirection: "row",
