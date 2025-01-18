@@ -93,14 +93,29 @@ export default function ShowProfileEdit() {
         </Text>
         <Text style={{ fontSize: 20 }}>{skills} </Text>
       </View>
-      <TouchableOpacity
-        style={{ position: "absolute", left: 130, top: 185 }}
-        onPress={handleEditPress}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 20,
+        }}
       >
-        <Ionicons name="pencil-outline" size={30} />
-      </TouchableOpacity>
-      {!userId && (
-        <View style={{ paddingTop: 4, paddingBottom: 4, alignSelf: "stretch" }}>
+        <TouchableOpacity
+          onPress={handleEditPress}
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 25,
+            flex: 1,
+            alignItems: "center",
+            marginRight: 10, // Add margin to separate the buttons
+          }}
+        >
+          <Text style={{ color: "#fff" }}>Edit</Text>
+        </TouchableOpacity>
+        {!userId && (
           <TouchableOpacity
             onPress={async () => {
               try {
@@ -114,16 +129,19 @@ export default function ShowProfileEdit() {
               }
             }}
             style={{
-              backgroundColor: "#2C3036",
+              borderWidth: 2, // Add border width
+              borderColor: "#2C3036", // Set the border color
+              backgroundColor: "transparent",
               padding: 10,
-              borderRadius: 5,
+              borderRadius: 40,
+              flex: 1,
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff" }}>Sign Out</Text>
+            <Text style={{ color: "#2C3036" }}>Sign Out</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
     </SafeAreaView>
   );
 }

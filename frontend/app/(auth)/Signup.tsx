@@ -9,7 +9,7 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { Input, Button } from "@rneui/themed";
+import { Input } from "@rneui/themed";
 import { useRouter, useLocalSearchParams, Link } from "expo-router";
 import { supabase } from "@/lib/supabse";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,7 +28,6 @@ export default function SignUpScreen() {
 
   const router = useRouter();
   const { userType } = useLocalSearchParams(); // Retrieves userType
-  console.log("User Type:", userType);
 
   async function signUpWithEmail() {
     if (password !== confirmPassword) {
