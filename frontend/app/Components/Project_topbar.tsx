@@ -12,10 +12,10 @@ export default function Project_topbar() {
       {/* Title */}
       <Text style={styles.title}>Projects</Text>
 
-      {/* Right Button */}
+      {/* Right Button
       <TouchableOpacity style={styles.button} onPress={() => alert('Right Button Pressed')}>
         <Ionicons name="ellipsis-horizontal" size={24} color="black" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }
