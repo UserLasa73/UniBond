@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import React from "react";
 import { useRouter } from "expo-router";
 
@@ -19,20 +19,25 @@ const OnScreen = () => {
         Connect with your university network. Whether you're a student or an
         alumnus, stay updated with job opportunities and projects.
       </Text>
+      <Image
+        source={require("../Constatnts/uniBond-01.png")}
+        style={styles.logo}
+      />
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.loginButtonWrapper, { backgroundColor: "#45484A" }]}
+          style={[styles.AlumniButton, { backgroundColor: "#2C3036" }]}
           onPress={() => handleNavigation("student")}
           activeOpacity={0.8}
         >
-          <Text style={styles.loginButtonText}>Student</Text>
+          <Text style={styles.StudentButton}>Student</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.loginButtonWrapper]}
+          style={[styles.AlumniButton]}
           onPress={() => handleNavigation("alumni")}
           activeOpacity={0.8}
         >
-          <Text style={styles.signupButtonText}>Alumni</Text>
+          <Text style={styles.AlumniText}>Alumni</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -48,43 +53,55 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 40,
-    fontFamily: "Poppins-SemiBold",
+    fontSize: 50,
     paddingHorizontal: 20,
+    fontWeight: "900",
     textAlign: "center",
-    color: "#45484A",
+    color: "#2C3036",
     marginTop: 40,
+  },
+  logo: {
+    width: 600,
+    height: 600,
+    position: "absolute",
+    top: "10%",
+    resizeMode: "contain",
   },
   subTitle: {
     fontSize: 18,
     paddingHorizontal: 20,
     textAlign: "center",
-    color: "#AEB5BB",
+    color: "#2C3036",
     marginVertical: 20,
+    justifyContent: "center",
+    position: "absolute",
+    top: "70%",
   },
   buttonContainer: {
     marginTop: 20,
     flexDirection: "row",
     borderWidth: 2,
-    borderColor: "#45484A",
+    borderColor: "#2C3036",
     width: "80%",
     height: 60,
     borderRadius: 100,
+    bottom: 30,
+    position: "absolute",
   },
-  loginButtonWrapper: {
+  AlumniButton: {
     justifyContent: "center",
     alignItems: "center",
-    width: "50%",
+    width: "52%",
     borderRadius: 98,
   },
-  loginButtonText: {
+  StudentButton: {
     color: "#FFFFFF",
     fontSize: 18,
     fontFamily: "Poppins-SemiBold",
   },
-  signupButtonText: {
+  AlumniText: {
     fontSize: 18,
     fontFamily: "Poppins-SemiBold",
-    color: "#45484A",
+    color: "#2C3036",
   },
 });
