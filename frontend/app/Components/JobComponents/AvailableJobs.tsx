@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "@/app/lib/supabse";
+import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
 
 interface JobListing {
   id: string;
@@ -77,6 +77,45 @@ const AvailableJobs: React.FC = () => {
     }
   };
 
+  // Apply for the job
+  const applyForJob = async (jobId: string) => {
+    if (user) {
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError.message);
+        } else {
+          const applicantName = profile.full_name;
+
+          // Insert application details into applications table
+          const { data, error } = await supabase.from('applications').insert([
+            {
+              job_id: jobId,
+              user_id: user.id,
+              applicant_name: applicantName, // Store applicant's name
+              status: 'applied', // Set initial status to 'applied'
+            },
+          ]);
+
+          if (error) {
+            console.error("Error applying for job:", error.message);
+          } else {
+            console.log("Application submitted successfully:", data);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      }
+    } else {
+      console.error("User not authenticated");
+    }
+  };
+
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
@@ -125,7 +164,7 @@ const AvailableJobs: React.FC = () => {
         <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.applyButton}>
+        <TouchableOpacity onPress={() => applyForJob(item.id)} style={styles.applyButton}>
           <Text style={styles.buttonText}>Apply</Text>
         </TouchableOpacity>
       </View>
