@@ -12,7 +12,7 @@ const GetStartedPage = () => {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push("../(auth)/login")}
+        onPress={() => router.push("/screens/OnScreen")}
       >
         <Text style={styles.title}>Get Started</Text>
       </TouchableOpacity>

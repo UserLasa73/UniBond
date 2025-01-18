@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity, View, Text, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function ShowProfileEdit() {
   const [fullname, setFullname] = useState("");
@@ -20,13 +20,13 @@ export default function ShowProfileEdit() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
+  const { userId } = useLocalSearchParams();
   useEffect(() => {
-    if (session) getProfile();
-  }, [session]);
-
+    if (userId || session) getProfile();
+  }, [userId, session]);
   async function getProfile() {
     try {
-      const profileId = session?.user?.id;
+      const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
       const { data, error } = await supabase
@@ -99,6 +99,31 @@ export default function ShowProfileEdit() {
       >
         <Ionicons name="pencil-outline" size={30} />
       </TouchableOpacity>
+      {!userId && (
+        <View style={{ paddingTop: 4, paddingBottom: 4, alignSelf: "stretch" }}>
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                router.push("../(auth)/login");
+              } catch (error) {
+                if (error instanceof Error) {
+                  Alert.alert("Error", error.message);
+                }
+              }
+            }}
+            style={{
+              backgroundColor: "#2C3036",
+              padding: 10,
+              borderRadius: 5,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
