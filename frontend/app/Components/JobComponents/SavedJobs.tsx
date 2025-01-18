@@ -1,50 +1,104 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { supabase } from "../../lib/supabse";
+
+interface JobListing {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  level: string;
+  time: string;
+  skills: string;
+  description: string;
+  is_active: boolean;
+}
 
 const SavedJobs: React.FC = () => {
-  return (
-    <View style={styles.container}>
-      {/* Job Card */}
-      <View style={styles.card}>
-        {/* Title */}
-        <Text style={styles.title}>No Saved Jobs</Text>
+  const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
 
-        {/* User Info */}
-        <View style={styles.userInfo}>
-          <Image
-            source={{ uri: "https://via.placeholder.com/40" }}
-            style={styles.avatar}
-          />
-          <View style={styles.textGroup}>
-            <Text style={styles.name}>Company Name</Text>
-            <Text style={styles.location}>Location</Text>
-            <Text style={styles.date}>Posted Date</Text>
-          </View>
+  useEffect(() => {
+    const fetchSavedJobs = async () => {
+      try {
+        const userId = supabase.auth.user()?.id;
+        if (userId) {
+          const { data, error } = await supabase
+            .from("saved_jobs")
+            .select("job_id")
+            .eq("user_id", userId);
+
+          if (error) {
+            console.error("Error fetching saved jobs:", error.message);
+          } else {
+            const jobIds = data?.map((savedJob) => savedJob.job_id);
+            if (jobIds?.length) {
+              const { data: jobs, error: jobError } = await supabase
+                .from("jobs")
+                .select("*")
+                .in("id", jobIds);
+
+              if (jobError) {
+                console.error("Error fetching jobs:", jobError.message);
+              } else {
+                setSavedJobs(jobs || []);
+              }
+            }
+          }
+        } else {
+          console.log("No user authenticated");
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      }
+    };
+
+    fetchSavedJobs();
+  }, []);
+
+  const renderItem = ({ item }: { item: JobListing }) => (
+    <View style={styles.card}>
+      <Text style={styles.title}>{item.title}</Text>
+      <View style={styles.userInfo}>
+        <Image
+          source={{ uri: "https://via.placeholder.com/40" }}
+          style={styles.avatar}
+        />
+        <View style={styles.textGroup}>
+          <Text style={styles.name}>{item.company}</Text>
+          <Text style={styles.location}>{item.location}</Text>
+          <Text style={styles.date}>{item.time}</Text>
         </View>
-
-        {/* Job Details */}
-        <View style={styles.details}>
-          <View style={styles.row}>
-            <Ionicons name="briefcase-outline" size={20} color="gray" />
-            <Text style={styles.detailText}>Time • Next week</Text>
-          </View>
-          <View style={styles.row}>
-            <MaterialIcons name="article" size={20} color="gray" />
-            <Text style={styles.detailText}>
-              Skills: Communication, Consultative Selling, +8 more
-            </Text>
-          </View>
+      </View>
+      <View style={styles.details}>
+        <View style={styles.row}>
+          <Ionicons name="briefcase-outline" size={20} color="gray" />
+          <Text style={styles.detailText}>
+            {item.type} - {item.level}
+          </Text>
         </View>
-
-        {/* Apply Button */}
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity style={styles.applyButton}>
-            <Text style={styles.buttonText}>Apply</Text>
-          </TouchableOpacity>
+        <View style={styles.row}>
+          <MaterialIcons name="article" size={20} color="gray" />
+          <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
       </View>
     </View>
+  );
+
+  return (
+    <FlatList
+      data={savedJobs}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      contentContainerStyle={{ flexGrow: 1 }}
+      ListEmptyComponent={
+        <View style={styles.card}>
+          <Text style={styles.title}>No Saved Jobs</Text>
+          <Text style={styles.subtitle}>Save jobs to see them here.</Text>
+        </View>
+      }
+    />
   );
 };
 
@@ -53,7 +107,7 @@ export default SavedJobs;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,  // Adds some top padding to avoid content sticking to the top
+    paddingTop: 20,
     backgroundColor: "#fff",
   },
   card: {
@@ -66,7 +120,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     width: "90%",
-    marginTop: 10, // Add top margin for spacing
+    marginTop: 10,
   },
   title: {
     fontSize: 18,
@@ -111,22 +165,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: "gray",
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-  applyButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    width: "80%",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
