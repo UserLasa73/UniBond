@@ -9,31 +9,21 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useAuth } from "../providers/AuthProvider";
-import { createClient } from "@supabase/supabase-js";
-
-const { EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY } = process.env;
-if (!EXPO_PUBLIC_SUPABASE_URL || !EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error(
-    "Supabase URL or Anon Key is missing in the environment variables."
-  );
-}
-const supabase = createClient(
-  EXPO_PUBLIC_SUPABASE_URL,
-  EXPO_PUBLIC_SUPABASE_ANON_KEY
-);
+import { supabase } from "../lib/supabse";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import { useNavigation } from "@react-navigation/native";
+import { PostStackParamList } from "./PostNav";
 
 const AddProjectScreen = () => {
-  const router = useRouter();
   const { user } = useAuth();
-
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [technologies, setTechnologies] = useState("");
   const [timeline, setTimeline] = useState("");
   const [paymentDetails, setPaymentDetails] = useState("");
-  const [hasChanges, setHasChanges] = useState(false); // Track changes
+  const [hasChanges, setHasChanges] = useState(false);
 
   const handleInputChange = (
     setter: React.Dispatch<React.SetStateAction<any>>,
@@ -48,25 +38,23 @@ const AddProjectScreen = () => {
   useEffect(() => {
     const backAction = () => {
       if (hasChanges) {
-        Alert.alert(
-          "Discard the changes?",
-          "You have unsaved changes. Are you sure?",
-          [
-            { text: "Cancel", onPress: () => null, style: "cancel" },
-            { text: "YES", onPress: () => router.push("/screens/PostScreen") },
-          ]
-        );
+        Alert.alert("", "Discard the changes?", [
+          { text: "Cancel", onPress: () => null, style: "cancel" },
+          { text: "YES", onPress: () => navigation.navigate("PostScreen") },
+        ]);
         return true;
       } else {
-        return false;
+        navigation.navigate("PostScreen");
+        return true;
       }
     };
 
     BackHandler.addEventListener("hardwareBackPress", backAction);
 
-    return () =>
+    return () => {
       BackHandler.removeEventListener("hardwareBackPress", backAction);
-  }, [hasChanges]);
+    };
+  }, [hasChanges, navigation]);
 
   const handleProjectSubmit = async () => {
     if (!projectTitle || !projectDescription || !timeline || !paymentDetails) {
@@ -101,7 +89,7 @@ const AddProjectScreen = () => {
       alert("Error posting project: " + error.message);
     } else {
       alert("Project successfully posted!");
-      router.push("/screens/PostScreen");
+      navigation.navigate("PostScreen");
     }
   };
 
@@ -112,7 +100,7 @@ const AddProjectScreen = () => {
     setTimeline("");
     setPaymentDetails("");
     setHasChanges(false);
-    router.push("/screens/PostScreen");
+    navigation.navigate("PostScreen");
   };
 
   return (
