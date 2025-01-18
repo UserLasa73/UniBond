@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "../../lib/supabse";
+import { supabase } from "@/app/lib/supabse";
 
 interface JobListing {
   id: string;
@@ -18,44 +18,56 @@ interface JobListing {
 
 const SavedJobs: React.FC = () => {
   const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null); // Store authenticated user
 
   useEffect(() => {
-    const fetchSavedJobs = async () => {
+    const fetchUserAndSavedJobs = async () => {
       try {
-        const userId = supabase.auth.user()?.id;
-        if (userId) {
-          const { data, error } = await supabase
+        // Fetch authenticated user
+        const { data, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error("Error fetching user:", userError.message);
+        } else {
+          setUser(data?.user);
+        }
+
+        // Fetch saved jobs for the authenticated user
+        if (data?.user) {
+          const { data: savedJobData, error: savedJobError } = await supabase
             .from("saved_jobs")
             .select("job_id")
-            .eq("user_id", userId);
+            .eq("user_id", data?.user.id);
 
-          if (error) {
-            console.error("Error fetching saved jobs:", error.message);
+          if (savedJobError) {
+            console.error("Error fetching saved jobs:", savedJobError.message);
           } else {
-            const jobIds = data?.map((savedJob) => savedJob.job_id);
-            if (jobIds?.length) {
-              const { data: jobs, error: jobError } = await supabase
-                .from("jobs")
-                .select("*")
-                .in("id", jobIds);
+            const jobIds = savedJobData?.map((savedJob) => savedJob.job_id);
 
-              if (jobError) {
-                console.error("Error fetching jobs:", jobError.message);
-              } else {
-                setSavedJobs(jobs || []);
-              }
+            // Fetch job details for the saved job ids
+            const { data: jobs, error: jobsError } = await supabase
+              .from("jobs")
+              .select("*")
+              .in("id", jobIds);
+
+            if (jobsError) {
+              console.error("Error fetching job details:", jobsError.message);
+            } else {
+              setSavedJobs(jobs || []);
             }
           }
-        } else {
-          console.log("No user authenticated");
         }
       } catch (error) {
         console.error("Unexpected error:", error);
       }
     };
 
-    fetchSavedJobs();
+    fetchUserAndSavedJobs();
   }, []);
+
+  const toggleExpand = (id: string) => {
+    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+  };
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
@@ -83,6 +95,23 @@ const SavedJobs: React.FC = () => {
           <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
       </View>
+
+      {/* Conditionally render additional fields */}
+      {expandedJobId === item.id && (
+        <View style={styles.additionalDetails}>
+          <Text style={styles.description}>
+            <Text style={styles.descriptionTitle}>Description - </Text>
+            {item.description}
+          </Text>
+        </View>
+      )}
+
+      {/* Read More / Collapse Button */}
+      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+        <Text style={styles.readMoreText}>
+          {expandedJobId === item.id ? "Read Less" : "Read More"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -95,7 +124,7 @@ const SavedJobs: React.FC = () => {
       ListEmptyComponent={
         <View style={styles.card}>
           <Text style={styles.title}>No Saved Jobs</Text>
-          <Text style={styles.subtitle}>Save jobs to see them here.</Text>
+          <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
         </View>
       }
     />
@@ -107,8 +136,7 @@ export default SavedJobs;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
-    backgroundColor: "#fff",
+    padding: 16,
   },
   card: {
     backgroundColor: "white",
@@ -119,8 +147,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    width: "90%",
-    marginTop: 10,
   },
   title: {
     fontSize: 18,
@@ -165,5 +191,24 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: "gray",
+  },
+  additionalDetails: {
+    marginTop: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: "gray",
+  },
+  descriptionTitle: {
+    fontWeight: "bold",
+    color: "black",
+  },
+  readMoreButton: {
+    marginVertical: 8,
+    alignSelf: "flex-start",
+  },
+  readMoreText: {
+    fontSize: 14,
+    color: "#007BFF",
   },
 });
