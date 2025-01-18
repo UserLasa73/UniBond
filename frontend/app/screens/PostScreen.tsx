@@ -245,10 +245,6 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 16,
   },
-  placeholderText: {
-    fontSize: 14,
-    color: "#aaa",
-  },
   mediaPreviewContainer: {
     marginVertical: 12,
   },
