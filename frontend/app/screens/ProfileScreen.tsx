@@ -11,8 +11,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
-import { router, useLocalSearchParams } from "expo-router";
-
+import { Link, router, useLocalSearchParams } from "expo-router";
+import SeUser from "../(home)/SeUser";
+import UserScreen from "../user";
 export default function ProfileScreen() {
   const [fullname, setFullname] = useState("");
   const [username, setUsername] = useState("");
@@ -142,8 +143,8 @@ export default function ProfileScreen() {
     <SafeAreaView>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
-          style={{ position: "absolute", left: 0 }}
-          onPress={() => router.back()}
+          style={{ position: "absolute", left: 0, top: 20 }} // Adjusted positioning
+          onPress={() => router.back()} // Navigate back in the stack
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
@@ -197,6 +198,23 @@ export default function ProfileScreen() {
               {isFollowing ? "Unfollow" : "Follow"}
             </Text>
           )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 25,
+            flex: 1,
+            alignItems: "center",
+          }}
+        >
+          <Link href={`../user?userId=${userId}`} asChild>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff" }}>Message</Text>
+            )}
+          </Link>
         </TouchableOpacity>
       </View>
 
