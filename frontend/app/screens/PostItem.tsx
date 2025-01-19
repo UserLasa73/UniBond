@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, KeyboardAvoidingView, FlatList } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  KeyboardAvoidingView,
+  FlatList,
+  Animated,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Post = {
   id: number;
   content: string;
   likes: number;
-  comments: { username: string; comment: string }[]; 
+  comments: { username: string; comment: string }[];
   is_public: boolean;
   user_id: string;
 };
@@ -14,45 +23,66 @@ type Post = {
 type PostItemProps = {
   post: Post;
   username: string;
-  onLike: (postId: number, hasLiked: boolean) => void; // Pass hasLiked flag
+  onLike: (postId: number, hasLiked: boolean) => void;
   onCommentSubmit: (postId: number, newComment: string) => void;
 };
 
-const PostItem: React.FC<PostItemProps> = ({ post, username, onLike, onCommentSubmit }) => {
-  const [newComment, setNewComment] = useState<string>(""); // To store the comment text
-  const [showComments, setShowComments] = useState<boolean>(false); // To control visibility of comments and input field
-  const [hasLiked, setHasLiked] = useState<boolean>(false); // Track if the user has liked the post
-  const [likeCount, setLikeCount] = useState<number>(post.likes); // Track the like count locally for immediate updates
+const PostItem: React.FC<PostItemProps> = ({
+  post,
+  username,
+  onLike,
+  onCommentSubmit,
+}) => {
+  const [newComment, setNewComment] = useState<string>("");
+  const [showComments, setShowComments] = useState<boolean>(false);
+  const [hasLiked, setHasLiked] = useState<boolean>(false);
+  const [likeCount, setLikeCount] = useState<number>(post.likes);
+  const bounceAnim = new Animated.Value(1); // For like button animation
 
-  // Handle comment submission when enter is pressed
-  const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
+  const handleCommentSubmit = () => {
+    if (!newComment.trim()) {
+      alert("Comment cannot be empty!");
+      return;
+    }
 
     try {
-      onCommentSubmit(post.id, newComment); // Submit the comment
-      setNewComment(""); // Reset the input field
-      setShowComments(false); // Hide the input field after submitting
+      onCommentSubmit(post.id, newComment);
+      setNewComment("");
+      setShowComments(false);
     } catch (error) {
       console.error("Error adding comment:", error);
+      alert("Failed to add comment. Please try again.");
     }
   };
 
-  // Handle like toggle (increment or decrement the like count)
-  const handleLikeToggle = async () => {
-    const newHasLiked = !hasLiked; // Toggle the like state
-    const newLikeCount = newHasLiked ? likeCount + 1 : likeCount - 1; // Adjust the like count based on like state
+  const handleLikeToggle = () => {
+    const newHasLiked = !hasLiked;
+    const newLikeCount = newHasLiked ? likeCount + 1 : likeCount - 1;
 
-    setHasLiked(newHasLiked); // Update the local like state
-    setLikeCount(newLikeCount); // Update the local like count for immediate feedback
+    setHasLiked(newHasLiked);
+    setLikeCount(newLikeCount);
+
+    // Animate the like button
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1.2,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     try {
-      // Update the like count on the backend
       onLike(post.id, newHasLiked);
     } catch (error) {
       console.error("Error updating like count:", error);
-      // Revert the like state and count if an error occurs
       setHasLiked(!newHasLiked);
       setLikeCount(likeCount);
+      alert("Failed to update like. Please try again.");
     }
   };
 
@@ -61,23 +91,31 @@ const PostItem: React.FC<PostItemProps> = ({ post, username, onLike, onCommentSu
       <Text style={styles.postContent}>{post.content}</Text>
       <View style={styles.postActions}>
         {/* Like button */}
-        <TouchableOpacity onPress={handleLikeToggle} style={styles.actionButton}>
-          <Ionicons 
-            name="heart" 
-            size={24} 
-            color={hasLiked ? "red" : "gray"} // Change color based on like state
-          />
-          <Text>{likeCount}</Text> {/* Display updated like count */}
+        <TouchableOpacity
+          onPress={handleLikeToggle}
+          style={styles.actionButton}
+        >
+          <Animated.View style={{ transform: [{ scale: bounceAnim }] }}>
+            <Ionicons
+              name="heart"
+              size={24}
+              color={hasLiked ? "red" : "gray"}
+            />
+          </Animated.View>
+          <Text>{likeCount}</Text>
         </TouchableOpacity>
 
         {/* Comment button */}
-        <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.actionButton}>
+        <TouchableOpacity
+          onPress={() => setShowComments(!showComments)}
+          style={styles.actionButton}
+        >
           <Ionicons name="chatbubble" size={24} color="gray" />
           <Text>{post.comments.length}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Display the list of comments if showComments is true */}
+      {/* Comments Section */}
       {showComments && (
         <View style={styles.commentsContainer}>
           <FlatList
@@ -91,14 +129,14 @@ const PostItem: React.FC<PostItemProps> = ({ post, username, onLike, onCommentSu
             )}
           />
 
-          {/* Input field for new comment */}
+          {/* New Comment Input */}
           <KeyboardAvoidingView behavior="padding">
             <TextInput
               style={styles.commentInput}
               placeholder="Write a comment..."
               value={newComment}
               onChangeText={setNewComment}
-              onSubmitEditing={handleCommentSubmit} // Submit comment on pressing enter
+              onSubmitEditing={handleCommentSubmit}
             />
           </KeyboardAvoidingView>
         </View>
@@ -116,6 +154,7 @@ const styles = StyleSheet.create({
   postContent: {
     fontSize: 16,
     marginBottom: 8,
+    color: "#333",
   },
   postActions: {
     flexDirection: "row",
@@ -137,9 +176,11 @@ const styles = StyleSheet.create({
   commentUsername: {
     fontWeight: "bold",
     marginBottom: 4,
+    color: "#444",
   },
   commentText: {
     fontSize: 14,
+    color: "#555",
   },
   commentInput: {
     marginTop: 8,
@@ -147,6 +188,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     padding: 8,
+    backgroundColor: "#f9f9f9",
   },
 });
 

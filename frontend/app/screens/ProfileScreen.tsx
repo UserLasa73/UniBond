@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
-import { router, useLocalSearchParams } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 
 export default function ProfileScreen() {
   const [fullname, setFullname] = useState("");
@@ -30,14 +30,32 @@ export default function ProfileScreen() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
+  const [followerCount, setFollowerCount] = useState(0); // State for follower count
 
   useEffect(() => {
     if (userId || session) {
       getProfile();
       checkFollowingStatus();
       getFollowing(); // Fetching the following list when the component mounts
+      getFollowerCount(); // Fetch follower count when the component mounts
     }
   }, [userId, session]);
+
+  // Fetching the follower count for the profile
+  const getFollowerCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("followed_id", userId); // Filter by the profile being viewed
+
+      if (error) throw error;
+
+      setFollowerCount(data.length); // Set the count of followers
+    } catch (error) {
+      console.error("Error fetching follower count:", error);
+    }
+  };
 
   // Check if the current user is following this profile
   const checkFollowingStatus = async () => {
@@ -76,6 +94,7 @@ export default function ProfileScreen() {
       await action(followedId);
       setIsFollowing((prev) => !prev); // Toggle follow/unfollow state
       getFollowing(); // Fetch the updated following list
+      getFollowerCount(); // Fetch the updated follower count
     } catch (error) {
       Alert.alert("Error", "Something went wrong.");
     } finally {
@@ -87,7 +106,7 @@ export default function ProfileScreen() {
     const profileId = session?.user?.id;
     const { error } = await supabase
       .from("followers")
-      .insert([{ follower_id: profileId, followed_id: followedId }]); // Corrected
+      .insert([{ follower_id: profileId, followed_id: followedId }]);
 
     if (error) throw new Error("Error following user.");
   };
@@ -97,8 +116,8 @@ export default function ProfileScreen() {
     const { error } = await supabase
       .from("followers")
       .delete()
-      .eq("follower_id", profileId) // Current user (follower)
-      .eq("followed_id", followedId); // Profile being unfollowed
+      .eq("follower_id", profileId)
+      .eq("followed_id", followedId);
 
     if (error) throw new Error("Error unfollowing user.");
   };
@@ -142,7 +161,7 @@ export default function ProfileScreen() {
     <SafeAreaView>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
-          style={{ position: "absolute", left: 0 }}
+          style={{ position: "absolute", left: 0, top: 20 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color="black" />
@@ -168,6 +187,9 @@ export default function ProfileScreen() {
           {faculty} | {department}
         </Text>
         <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+          Followers: {followerCount}
+        </Text>
       </View>
 
       <View
@@ -198,19 +220,24 @@ export default function ProfileScreen() {
             </Text>
           )}
         </TouchableOpacity>
-      </View>
-
-      {/* Displaying the list of users this profile is following */}
-      <View style={{ marginTop: 20, marginHorizontal: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>Following:</Text>
-        {followingList.length > 0 ? (
-          followingList.map((follower) => (
-            <View key={follower.followed_id} style={{ marginTop: 10 }}>
-              <Text>{follower.profiles?.full_name}</Text>
-            </View>
-          ))
-        ) : (
-          <Text>No followers</Text>
+        {isFollowing && (
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#2C3036",
+              padding: 10,
+              borderRadius: 25,
+              flex: 1,
+              alignItems: "center",
+            }}
+          >
+            <Link href={`../user?userId=${userId}`} asChild>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff" }}>Message</Text>
+              )}
+            </Link>
+          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>
