@@ -1,8 +1,14 @@
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
+import { useAuth } from "../providers/AuthProvider";
 
 const GetStartedPage = () => {
+  const { user } = useAuth();
+  if (user) {
+    return <Redirect href="/(home)/(tabs)/Home" />;
+  }
+
   return (
     <View style={styles.container}>
       <Image
@@ -12,7 +18,7 @@ const GetStartedPage = () => {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.push("../(auth)/login")}
+        onPress={() => router.push("/screens/OnScreen")}
       >
         <Text style={styles.title}>Get Started</Text>
       </TouchableOpacity>
@@ -31,8 +37,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logo: {
-    width: 400,
-    height: 400,
+    width: 600,
+    height: 600,
     marginBottom: 40,
     resizeMode: "contain",
   },

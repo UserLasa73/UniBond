@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity, View, Text, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function ShowProfileEdit() {
   const [fullname, setFullname] = useState("");
@@ -20,13 +20,13 @@ export default function ShowProfileEdit() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
+  const { userId } = useLocalSearchParams();
   useEffect(() => {
-    if (session) getProfile();
-  }, [session]);
-
+    if (userId || session) getProfile();
+  }, [userId, session]);
   async function getProfile() {
     try {
-      const profileId = session?.user?.id;
+      const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
       const { data, error } = await supabase
@@ -93,12 +93,55 @@ export default function ShowProfileEdit() {
         </Text>
         <Text style={{ fontSize: 20 }}>{skills} </Text>
       </View>
-      <TouchableOpacity
-        style={{ position: "absolute", left: 130, top: 185 }}
-        onPress={handleEditPress}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 20,
+        }}
       >
-        <Ionicons name="pencil-outline" size={30} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleEditPress}
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 25,
+            flex: 1,
+            alignItems: "center",
+            marginRight: 10, // Add margin to separate the buttons
+          }}
+        >
+          <Text style={{ color: "#fff" }}>Edit</Text>
+        </TouchableOpacity>
+        {!userId && (
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                router.push("../(auth)/login");
+              } catch (error) {
+                if (error instanceof Error) {
+                  Alert.alert("Error", error.message);
+                }
+              }
+            }}
+            style={{
+              borderWidth: 2, // Add border width
+              borderColor: "#2C3036", // Set the border color
+              backgroundColor: "transparent",
+              padding: 10,
+              borderRadius: 40,
+              flex: 1,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#2C3036" }}>Sign Out</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
