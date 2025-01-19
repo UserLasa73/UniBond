@@ -2,10 +2,21 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TouchableOpacity, View, Text, Alert } from "react-native";
+import { TouchableOpacity, View, Text, Alert, FlatList, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { router, useLocalSearchParams } from "expo-router";
+import PostItem from "./PostItem"; // Import PostItem component
+
+// Define the Post type
+type Post = {
+  id: number;
+  content: string;
+  likes: number;
+  comments: { username: string; comment: string }[]; 
+  is_public: boolean;
+  user_id: string;
+};
 
 export default function ShowProfileEdit() {
   const [fullname, setFullname] = useState("");
@@ -20,10 +31,17 @@ export default function ShowProfileEdit() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]); // State for posts
   const { userId } = useLocalSearchParams();
+
   useEffect(() => {
-    if (userId || session) getProfile();
+    if (userId || session) {
+      getProfile();
+      fetchPosts();
+    }
   }, [userId, session]);
+
+  // Fetch user profile data
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -58,9 +76,85 @@ export default function ShowProfileEdit() {
       if (error instanceof Error) Alert.alert("Error", error.message);
     }
   }
+
+  // Fetch posts made by the user
+  async function fetchPosts() {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, content, likes, comments, is_public, user_id")
+        .eq("user_id", profileId);
+
+      if (data) {
+        setPosts(data);
+      }
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      Alert.alert("Error", "Could not fetch posts.");
+    }
+  }
+
   const handleEditPress = () => {
     router.push("/screens/DetailsForStudents");
   };
+
+  // Function to handle liking a post
+  const handleLike = async (postId: number) => {
+    try {
+      // Fetch the current likes count
+      const { data: postData, error: fetchError } = await supabase
+        .from("posts")
+        .select("likes")
+        .eq("id", postId)
+        .single();
+  
+      if (fetchError) throw fetchError;
+  
+      // Increment the likes count
+      const updatedLikes = (postData?.likes || 0) + 1;
+  
+      // Update the post with the new likes count
+      const { error: updateError } = await supabase
+        .from("posts")
+        .update({ likes: updatedLikes })
+        .eq("id", postId);
+  
+      if (updateError) throw updateError;
+  
+      // Optionally, refetch posts to get updated data
+      fetchPosts(); // Refresh the posts
+    } catch (error) {
+      console.error("Error liking post:", error);
+    }
+  };
+  
+
+// Function to handle submitting a comment
+const handleCommentSubmit = async (postId: number, newComment: string) => {
+  try {
+    const { error } = await supabase.from("comments").insert([
+      {
+        post_id: postId,
+        username, // Use the username from state or context
+        comment: newComment,
+      },
+    ]);
+
+    if (error) throw error;
+
+    // Optionally, refetch posts to get updated comments
+    fetchPosts(); // Refresh the posts
+  } catch (error) {
+    console.error("Error submitting comment:", error);
+  }
+};
+
+
   return (
     <SafeAreaView>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
@@ -72,14 +166,7 @@ export default function ShowProfileEdit() {
         </TouchableOpacity>
       </View>
 
-      <View
-        style={{
-          alignItems: "flex-start",
-          marginTop: 40,
-          marginRight: 20,
-          marginLeft: 20,
-        }}
-      >
+      <View style={{ alignItems: "flex-start", marginTop: 40, marginRight: 20, marginLeft: 20 }}>
         <ShowingAvatar
           url={avatarUrl}
           size={150}
@@ -91,17 +178,10 @@ export default function ShowProfileEdit() {
         <Text style={{ fontSize: 20 }}>
           {faculty} | {department}
         </Text>
-        <Text style={{ fontSize: 20 }}>{skills} </Text>
+        <Text style={{ fontSize: 20 }}>{skills}</Text>
       </View>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginHorizontal: 20,
-          marginTop: 20,
-        }}
-      >
+
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginHorizontal: 20, marginTop: 20 }}>
         <TouchableOpacity
           onPress={handleEditPress}
           style={{
@@ -110,11 +190,12 @@ export default function ShowProfileEdit() {
             borderRadius: 25,
             flex: 1,
             alignItems: "center",
-            marginRight: 10, // Add margin to separate the buttons
+            marginRight: 10,
           }}
         >
           <Text style={{ color: "#fff" }}>Edit</Text>
         </TouchableOpacity>
+
         {!userId && (
           <TouchableOpacity
             onPress={async () => {
@@ -129,8 +210,8 @@ export default function ShowProfileEdit() {
               }
             }}
             style={{
-              borderWidth: 2, // Add border width
-              borderColor: "#2C3036", // Set the border color
+              borderWidth: 2,
+              borderColor: "#2C3036",
               backgroundColor: "transparent",
               padding: 10,
               borderRadius: 40,
@@ -141,6 +222,25 @@ export default function ShowProfileEdit() {
             <Text style={{ color: "#2C3036" }}>Sign Out</Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* Posts Section */}
+      <View style={{ marginTop: 30 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>My Posts</Text>
+        
+        <FlatList
+  data={posts}
+  renderItem={({ item }) => (
+    <PostItem
+      post={item}
+      username={username || "Anonymous"} // Provide a default username if not available
+      onLike={handleLike} // Pass the like handler
+      onCommentSubmit={handleCommentSubmit} // Pass the comment handler
+    />
+  )}
+  keyExtractor={(item) => item.id.toString()}
+/>
+
       </View>
     </SafeAreaView>
   );
