@@ -46,7 +46,7 @@ const StatusJobs: React.FC = () => {
       // Fetch job applications for the logged-in user
       const { data: applications, error: applicationsError } = await supabase
         .from("applications")
-        .select("job_id, status")
+        .select("job_id, status,created_at")
         .eq("user_id", loggedInUser.id);
 
       if (applicationsError) throw applicationsError;
@@ -62,10 +62,14 @@ const StatusJobs: React.FC = () => {
       if (jobsError) throw jobsError;
 
       // Merge job details with their respective status
-      const jobsWithStatus = jobs.map((job) => ({
-        ...job,
-        status: applications.find((app) => app.job_id === job.id)?.status || "N/A", // Default to "N/A" if status is missing
-      }));
+      const jobsWithStatus = jobs.map((job) => {
+        const application = applications.find((app) => app.job_id === job.id);
+        return {
+          ...job,
+          status: application?.status || "N/A", // Default to "N/A" if status is missing
+          appliedTime: application?.created_at || "Unknown", // Default to "Unknown" if created_at is missing
+        };
+      });
 
       setJobListings(jobsWithStatus);
     } catch (error) {
@@ -122,8 +126,15 @@ const StatusJobs: React.FC = () => {
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>{item.time}</Text>
         </View>
+
       </View>
       <View style={styles.details}>
+        <View style={styles.row}>
+          <Ionicons name="calendar-outline" size={20} color="gray" />
+          <Text style={styles.detailText}>
+            Applied Date: {new Date(item.appliedTime).toLocaleString()}
+          </Text>
+        </View>
         <View style={styles.row}>
           <Ionicons name="briefcase-outline" size={20} color="gray" />
           <Text style={styles.detailText}>
@@ -134,10 +145,30 @@ const StatusJobs: React.FC = () => {
           <MaterialIcons name="article" size={20} color="gray" />
           <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
+        
         <View style={styles.row}>
           <MaterialIcons name="info-outline" size={20} color="gray" />
-          <Text style={styles.detailText}>Status: {item.status}</Text>
+          <Text style={styles.detailText}>
+            Status:{" "}
+            <Text
+              style={{
+                color:
+                  item.status?.toLowerCase() === "pending"
+                    ? "blue"
+                    : item.status?.toLowerCase() === "accepted"
+                      ? "green"
+                      : item.status?.toLowerCase() === "rejected"
+                        ? "red"
+                        : "gray", // Default color for "applied" or other statuses
+              }}
+            >
+              {item.status}
+            </Text>
+          </Text>
         </View>
+
+
+
       </View>
 
       {expandedJobId === item.id && (
