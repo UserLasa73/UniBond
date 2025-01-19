@@ -34,14 +34,40 @@ export default function ShowProfileEdit() {
   const [posts, setPosts] = useState<Post[]>([]); // State for posts
   const { userId } = useLocalSearchParams();
 
+  const [followingList, setFollowingList] = useState([]); // Store following list
+  const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
+
+
   useEffect(() => {
     if (userId || session) {
       getProfile();
+
       fetchPosts();
     }
   }, [userId, session]);
 
   // Fetch user profile data
+
+      getFollowing(); // Fetch the following list to get the count
+    }
+  }, [userId, session]);
+
+  const getFollowing = async () => {
+    const profileId = userId || session?.user?.id;
+    const { data, error } = await supabase
+      .from("followers")
+      .select("followed_id, profiles(*)") // Joining with profiles to get details
+      .eq("follower_id", profileId); // Filter by the current user's follower_id
+
+    if (error) {
+      console.error("Error fetching following list:", error);
+    } else {
+      setFollowingList(data); // Store the followed users in the state
+      setFollowingCount(data.length); // Set the following count to the number of followed users
+    }
+  };
+
+
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -59,7 +85,6 @@ export default function ShowProfileEdit() {
         setUsername(data.username);
         setFullname(data.full_name);
         setAvatarUrl(data.avatar_url);
-        setFullname(data.full_name);
         setDob(new Date(data.dob));
         setContactNumber(data.contact_number);
         setGender(data.gender);
@@ -76,6 +101,7 @@ export default function ShowProfileEdit() {
       if (error instanceof Error) Alert.alert("Error", error.message);
     }
   }
+
 
   // Fetch posts made by the user
   async function fetchPosts() {
@@ -98,6 +124,7 @@ export default function ShowProfileEdit() {
       Alert.alert("Error", "Could not fetch posts.");
     }
   }
+
 
   const handleEditPress = () => {
     router.push("/screens/DetailsForStudents");
@@ -155,6 +182,7 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
 };
 
 
+
   return (
     <SafeAreaView>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
@@ -178,10 +206,29 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
         <Text style={{ fontSize: 20 }}>
           {faculty} | {department}
         </Text>
+
         <Text style={{ fontSize: 20 }}>{skills}</Text>
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginHorizontal: 20, marginTop: 20 }}>
+
+        <Text style={{ fontSize: 20 }}>{skills} </Text>
+        <Text style={{ fontSize: 16, marginTop: 10 }}>
+          Following: {followingCount}{" "}
+          {/* Display the count of followed users */}
+        </Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 20,
+        }}
+      >
+
         <TouchableOpacity
           onPress={handleEditPress}
           style={{
@@ -224,6 +271,7 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
         )}
       </View>
 
+
       {/* Posts Section */}
       <View style={{ marginTop: 30 }}>
         <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>My Posts</Text>
@@ -240,6 +288,19 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
   )}
   keyExtractor={(item) => item.id.toString()}
 />
+
+
+      <View style={{ marginTop: 20, marginHorizontal: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>Following:</Text>
+        {followingList.length > 0 ? (
+          followingList.map((follower) => (
+            <View key={follower.followed_id} style={{ marginTop: 10 }}>
+              <Text>{follower.profiles?.full_name}</Text>
+            </View>
+          ))
+        ) : (
+          <Text>No following users</Text>
+        )}
 
       </View>
     </SafeAreaView>
