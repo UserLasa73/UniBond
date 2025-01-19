@@ -96,6 +96,44 @@ const SavedJobs: React.FC = () => {
     }
   };
 
+  const applyJob = async (jobId: string) => {
+    if (user) {
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError.message);
+        } else {
+          const applicantName = profile.full_name;
+
+          // Insert application details into applications table
+          const { data, error } = await supabase.from('applications').insert([
+            {
+              job_id: jobId,
+              user_id: user.id,
+              applicant_name: applicantName, // Store applicant's name
+              status: 'applied', // Set initial status to 'applied'
+            },
+          ]);
+
+          if (error) {
+            console.error("Error applying for job:", error.message);
+          } else {
+            console.log("Application submitted successfully:", data);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      }
+    } else {
+      console.error("User not authenticated");
+    }
+  };
+
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
@@ -136,6 +174,11 @@ const SavedJobs: React.FC = () => {
 
       <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
         <Text style={styles.unsaveButtonText}>Unsave</Text>
+      </TouchableOpacity>
+
+      {/* Apply Button */}
+      <TouchableOpacity onPress={() => applyJob(item.id)} style={styles.applyButton}>
+        <Text style={styles.applyButtonText}>Apply</Text>
       </TouchableOpacity>
     </View>
   );
@@ -252,6 +295,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   unsaveButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  applyButton: {
+    backgroundColor: "#000000",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
