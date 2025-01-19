@@ -13,16 +13,6 @@ export default function MainTabScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerRight: () => (
-            <Link href={"../user"} asChild>
-              <Ionicons
-                name="people"
-                size={26}
-                color="grey"
-                style={{ marginHorizontal: 15 }}
-              />
-            </Link>
-          ),
         }}
       />
       <ChannelList
