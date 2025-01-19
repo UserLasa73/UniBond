@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TouchableOpacity, View, Text, Alert, FlatList, StyleSheet } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  Text,
+  Alert,
+  FlatList,
+  StyleSheet,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { router, useLocalSearchParams } from "expo-router";
@@ -13,7 +20,7 @@ type Post = {
   id: number;
   content: string;
   likes: number;
-  comments: { username: string; comment: string }[]; 
+  comments: { username: string; comment: string }[];
   is_public: boolean;
   user_id: string;
 };
@@ -37,18 +44,11 @@ export default function ShowProfileEdit() {
   const [followingList, setFollowingList] = useState([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
 
-
   useEffect(() => {
     if (userId || session) {
       getProfile();
-
+      getFollowing();
       fetchPosts();
-    }
-  }, [userId, session]);
-
-  // Fetch user profile data
-
-      getFollowing(); // Fetch the following list to get the count
     }
   }, [userId, session]);
 
@@ -66,7 +66,6 @@ export default function ShowProfileEdit() {
       setFollowingCount(data.length); // Set the following count to the number of followed users
     }
   };
-
 
   async function getProfile() {
     try {
@@ -102,7 +101,6 @@ export default function ShowProfileEdit() {
     }
   }
 
-
   // Fetch posts made by the user
   async function fetchPosts() {
     try {
@@ -125,7 +123,6 @@ export default function ShowProfileEdit() {
     }
   }
 
-
   const handleEditPress = () => {
     router.push("/screens/DetailsForStudents");
   };
@@ -139,49 +136,46 @@ export default function ShowProfileEdit() {
         .select("likes")
         .eq("id", postId)
         .single();
-  
+
       if (fetchError) throw fetchError;
-  
+
       // Increment the likes count
       const updatedLikes = (postData?.likes || 0) + 1;
-  
+
       // Update the post with the new likes count
       const { error: updateError } = await supabase
         .from("posts")
         .update({ likes: updatedLikes })
         .eq("id", postId);
-  
+
       if (updateError) throw updateError;
-  
+
       // Optionally, refetch posts to get updated data
       fetchPosts(); // Refresh the posts
     } catch (error) {
       console.error("Error liking post:", error);
     }
   };
-  
 
-// Function to handle submitting a comment
-const handleCommentSubmit = async (postId: number, newComment: string) => {
-  try {
-    const { error } = await supabase.from("comments").insert([
-      {
-        post_id: postId,
-        username, // Use the username from state or context
-        comment: newComment,
-      },
-    ]);
+  // Function to handle submitting a comment
+  const handleCommentSubmit = async (postId: number, newComment: string) => {
+    try {
+      const { error } = await supabase.from("comments").insert([
+        {
+          post_id: postId,
+          username, // Use the username from state or context
+          comment: newComment,
+        },
+      ]);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Optionally, refetch posts to get updated comments
-    fetchPosts(); // Refresh the posts
-  } catch (error) {
-    console.error("Error submitting comment:", error);
-  }
-};
-
-
+      // Optionally, refetch posts to get updated comments
+      fetchPosts(); // Refresh the posts
+    } catch (error) {
+      console.error("Error submitting comment:", error);
+    }
+  };
 
   return (
     <SafeAreaView>
@@ -194,7 +188,14 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
         </TouchableOpacity>
       </View>
 
-      <View style={{ alignItems: "flex-start", marginTop: 40, marginRight: 20, marginLeft: 20 }}>
+      <View
+        style={{
+          alignItems: "flex-start",
+          marginTop: 40,
+          marginRight: 20,
+          marginLeft: 20,
+        }}
+      >
         <ShowingAvatar
           url={avatarUrl}
           size={150}
@@ -210,8 +211,15 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
         <Text style={{ fontSize: 20 }}>{skills}</Text>
       </View>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginHorizontal: 20, marginTop: 20 }}>
-
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 20,
+        }}
+      >
         <Text style={{ fontSize: 20 }}>{skills} </Text>
         <Text style={{ fontSize: 16, marginTop: 10 }}>
           Following: {followingCount}{" "}
@@ -228,7 +236,6 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
           marginTop: 20,
         }}
       >
-
         <TouchableOpacity
           onPress={handleEditPress}
           style={{
@@ -271,37 +278,37 @@ const handleCommentSubmit = async (postId: number, newComment: string) => {
         )}
       </View>
 
-
       {/* Posts Section */}
       <View style={{ marginTop: 30 }}>
-        <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>My Posts</Text>
-        
+        <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>
+          My Posts
+        </Text>
+
         <FlatList
-  data={posts}
-  renderItem={({ item }) => (
-    <PostItem
-      post={item}
-      username={username || "Anonymous"} // Provide a default username if not available
-      onLike={handleLike} // Pass the like handler
-      onCommentSubmit={handleCommentSubmit} // Pass the comment handler
-    />
-  )}
-  keyExtractor={(item) => item.id.toString()}
-/>
+          data={posts}
+          renderItem={({ item }) => (
+            <PostItem
+              post={item}
+              username={username || "Anonymous"} // Provide a default username if not available
+              onLike={handleLike} // Pass the like handler
+              onCommentSubmit={handleCommentSubmit} // Pass the comment handler
+            />
+          )}
+          keyExtractor={(item) => item.id.toString()}
+        />
 
-
-      <View style={{ marginTop: 20, marginHorizontal: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>Following:</Text>
-        {followingList.length > 0 ? (
-          followingList.map((follower) => (
-            <View key={follower.followed_id} style={{ marginTop: 10 }}>
-              <Text>{follower.profiles?.full_name}</Text>
-            </View>
-          ))
-        ) : (
-          <Text>No following users</Text>
-        )}
-
+        <View style={{ marginTop: 20, marginHorizontal: 20 }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>Following:</Text>
+          {followingList.length > 0 ? (
+            followingList.map((follower) => (
+              <View key={follower.followed_id} style={{ marginTop: 10 }}>
+                <Text>{follower.profiles?.full_name}</Text>
+              </View>
+            ))
+          ) : (
+            <Text>No following users</Text>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );

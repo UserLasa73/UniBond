@@ -47,8 +47,6 @@ export default function ProfileScreen() {
       .select("follower_id")
       .eq("follower_id", profileId) // Current user (logged-in user)
       .eq("followed_id", userId); // Profile being checked for follow status
-    console.log("Myid", profileId);
-    console.log(userId);
     if (error) {
       console.error("Error fetching following status:", error);
     } else {
