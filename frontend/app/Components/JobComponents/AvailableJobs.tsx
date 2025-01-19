@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
 
@@ -20,9 +20,11 @@ const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null); 
   const [user, setUser] = useState<any>(null); // Store authenticated user
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
   useEffect(() => {
     const fetchJobs = async () => {
+      setIsLoading(true); // Set loading state to true
       try {
         const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
         if (error) {
@@ -32,6 +34,8 @@ const AvailableJobs: React.FC = () => {
         }
       } catch (error) {
         console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false); // Set loading state to false once data is fetched
       }
     };
 
@@ -120,10 +124,7 @@ const AvailableJobs: React.FC = () => {
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: "https://via.placeholder.com/40" }}
-          style={styles.avatar}
-        />
+        {/* Removed the Image component */}
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
           <Text style={styles.location}>{item.location}</Text>
@@ -172,18 +173,26 @@ const AvailableJobs: React.FC = () => {
   );
 
   return (
-    <FlatList
-      data={jobListings}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={{ flexGrow: 1 }}
-      ListEmptyComponent={
-        <View style={styles.card}>
-          <Text style={styles.title}>No Jobs Available</Text>
-          <Text style={styles.subtitle}>Please check back later.</Text>
-        </View>
-      }
-    />
+    <View style={styles.container}>
+      {isLoading ? (
+        <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+      ) : (
+        <FlatList
+          data={jobListings}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ flexGrow: 1 }}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.title}>No Jobs Available</Text>
+              <Text style={styles.subtitle}>Please check back later.</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 };
 
@@ -193,6 +202,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "white",
@@ -213,12 +227,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   textGroup: {
     flex: 1,
@@ -293,5 +301,10 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "gray",
+    textAlign: "center",
   },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse";
 
@@ -20,9 +20,11 @@ const SavedJobs: React.FC = () => {
   const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Store authenticated user
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
   useEffect(() => {
     const fetchUserAndSavedJobs = async () => {
+      setIsLoading(true); // Set loading state to true
       try {
         // Fetch authenticated user
         const { data, error: userError } = await supabase.auth.getUser();
@@ -59,6 +61,8 @@ const SavedJobs: React.FC = () => {
         }
       } catch (error) {
         console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false); // Set loading state to false once data is fetched
       }
     };
 
@@ -96,10 +100,6 @@ const SavedJobs: React.FC = () => {
     <View style={styles.card}>
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: "https://via.placeholder.com/40" }}
-          style={styles.avatar}
-        />
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
           <Text style={styles.location}>{item.location}</Text>
@@ -119,7 +119,6 @@ const SavedJobs: React.FC = () => {
         </View>
       </View>
 
-      {/* Conditionally render additional fields */}
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
@@ -129,36 +128,39 @@ const SavedJobs: React.FC = () => {
         </View>
       )}
 
-      {/* Read More / Collapse Button */}
       <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
       </TouchableOpacity>
 
-      {/* Unsave Button */}
-      <TouchableOpacity
-        onPress={() => unsaveJob(item.id)}
-        style={styles.unsaveButton}
-      >
+      <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
         <Text style={styles.unsaveButtonText}>Unsave</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <FlatList
-      data={savedJobs}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={{ flexGrow: 1 }}
-      ListEmptyComponent={
-        <View style={styles.card}>
-          <Text style={styles.title}>No Saved Jobs</Text>
-          <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
+    <View style={styles.container}>
+      {isLoading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
         </View>
-      }
-    />
+      ) : (
+        <FlatList
+          data={savedJobs}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ flexGrow: 1 }}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.title}>No Saved Jobs</Text>
+              <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 };
 
@@ -168,6 +170,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "white",
@@ -188,12 +195,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   textGroup: {
     flex: 1,
@@ -243,17 +244,16 @@ const styles = StyleSheet.create({
     color: "#007BFF",
   },
   unsaveButton: {
-    backgroundColor: "#000",
+    backgroundColor: "#000000",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
     alignItems: "center",
+    marginTop: 8,
   },
   unsaveButtonText: {
-    fontSize: 14,
     color: "white",
+    fontSize: 16,
     fontWeight: "600",
   },
   subtitle: {
