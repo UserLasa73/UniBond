@@ -41,13 +41,14 @@ export default function ProfileScreen() {
 
   // Check if the current user is following this profile
   const checkFollowingStatus = async () => {
-    const profileId = userId || session?.user?.id;
+    const profileId = session?.user?.id;
     const { data, error } = await supabase
       .from("followers")
-      .select("followed_id")
-      .eq("follower_id", profileId)
-      .eq("followed_id", userId);
-
+      .select("follower_id")
+      .eq("follower_id", profileId) // Current user (logged-in user)
+      .eq("followed_id", userId); // Profile being checked for follow status
+    console.log("Myid", profileId);
+    console.log(userId);
     if (error) {
       console.error("Error fetching following status:", error);
     } else {
@@ -57,11 +58,11 @@ export default function ProfileScreen() {
 
   // Fetching the list of followed users with their profile details
   const getFollowing = async () => {
-    const profileId = userId || session?.user?.id;
+    const profileId = session?.user?.id;
     const { data, error } = await supabase
       .from("followers")
       .select("followed_id, profiles(*)") // Joining with profiles to get details
-      .eq("follower_id", profileId);
+      .eq("follower_id", profileId); // Current user's following list
 
     if (error) {
       console.error("Error fetching following list:", error);
@@ -85,21 +86,21 @@ export default function ProfileScreen() {
   };
 
   const followUser = async (followedId) => {
-    const profileId = userId || session?.user?.id;
+    const profileId = session?.user?.id;
     const { error } = await supabase
       .from("followers")
-      .insert([{ follower_id: profileId, followed_id: followedId }]);
+      .insert([{ follower_id: profileId, followed_id: followedId }]); // Corrected
 
     if (error) throw new Error("Error following user.");
   };
 
   const unfollowUser = async (followedId) => {
-    const profileId = userId || session?.user?.id;
+    const profileId = session?.user?.id;
     const { error } = await supabase
       .from("followers")
       .delete()
-      .eq("follower_id", profileId)
-      .eq("followed_id", followedId);
+      .eq("follower_id", profileId) // Current user (follower)
+      .eq("followed_id", followedId); // Profile being unfollowed
 
     if (error) throw new Error("Error unfollowing user.");
   };
