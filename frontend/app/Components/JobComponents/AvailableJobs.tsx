@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
 
@@ -70,8 +70,15 @@ const AvailableJobs: React.FC = () => {
 
         if (error) {
           console.error("Error saving job:", error.message);
+          Alert.alert("Already Saved");
         } else {
-          console.log("Job saved successfully:", data);
+          console.log("Job saved!", data);
+          Alert.alert(
+            "Success",
+            "The job has been saved successfully.",
+            [{ text: "OK" }],
+            { cancelable: true }
+          );
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -108,8 +115,15 @@ const AvailableJobs: React.FC = () => {
 
           if (error) {
             console.error("Error applying for job:", error.message);
+            Alert.alert("Already Applied");
           } else {
             console.log("Application submitted successfully:", data);
+            Alert.alert(
+              "Application Submitted",
+              "You have successfully applied for the job.",
+              [{ text: "OK" }],
+              { cancelable: true }
+            );
           }
         }
       } catch (error) {

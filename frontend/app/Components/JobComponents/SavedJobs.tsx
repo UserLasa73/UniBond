@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse";
 
@@ -122,8 +122,15 @@ const SavedJobs: React.FC = () => {
 
           if (error) {
             console.error("Error applying for job:", error.message);
+            Alert.alert("Already Applied");
           } else {
             console.log("Application submitted successfully:", data);
+            Alert.alert(
+              "Application Submitted",
+              "You have successfully applied for the job.",
+              [{ text: "OK" }],
+              { cancelable: true }
+            );
           }
         }
       } catch (error) {
@@ -315,6 +322,5 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: "gray",
-    textAlign: "center",
   },
 });

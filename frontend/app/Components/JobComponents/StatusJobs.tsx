@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
+import { supabase } from "@/app/lib/supabse"; // Adjust the path as needed
 
 interface JobListing {
   id: string;
@@ -14,6 +14,7 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  status?: string; // Status from the applications table
 }
 
 const StatusJobs: React.FC = () => {
@@ -23,60 +24,90 @@ const StatusJobs: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      setIsLoading(true); // Set loading state to true
-
-      try {
-        // Get the logged-in user
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          console.error("Error fetching user:", userError.message);
-          return;
-        }
-        const currentUser = userData?.user;
-        setUser(currentUser);
-
-        if (currentUser) {
-          // Fetch job_ids from the applications table for the current user
-          const { data: applicationData, error: applicationError } = await supabase
-            .from("applications")
-            .select("job_id")
-            .eq("user_id", currentUser.id);
-
-          if (applicationError) {
-            console.error("Error fetching applications:", applicationError.message);
-            return;
-          }
-
-          // Extract job IDs from the application data
-          const jobIds = applicationData?.map((application) => application.job_id) || [];
-
-          if (jobIds.length > 0) {
-            // Fetch job details from the jobs table
-            const { data: jobData, error: jobError } = await supabase
-              .from("jobs")
-              .select("*")
-              .in("id", jobIds);
-
-            if (jobError) {
-              console.error("Error fetching job details:", jobError.message);
-              return;
-            }
-
-            setJobListings(jobData || []);
-          } else {
-            setJobListings([]); // No jobs found
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-      } finally {
-        setIsLoading(false); // Set loading state to false
-      }
-    };
-
     fetchJobs();
   }, []);
+
+  const fetchJobs = async () => {
+    setIsLoading(true); // Start loading state
+    try {
+      // Fetch the authenticated user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const loggedInUser = userData?.user;
+      setUser(loggedInUser);
+
+      if (!loggedInUser) {
+        console.error("User not authenticated");
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch job applications for the logged-in user
+      const { data: applications, error: applicationsError } = await supabase
+        .from("applications")
+        .select("job_id, status")
+        .eq("user_id", loggedInUser.id);
+
+      if (applicationsError) throw applicationsError;
+
+      const appliedJobIds = applications.map((app) => app.job_id);
+
+      // Fetch job details for the applied jobs
+      const { data: jobs, error: jobsError } = await supabase
+        .from("jobs")
+        .select("*")
+        .in("id", appliedJobIds);
+
+      if (jobsError) throw jobsError;
+
+      // Merge job details with their respective status
+      const jobsWithStatus = jobs.map((job) => ({
+        ...job,
+        status: applications.find((app) => app.job_id === job.id)?.status || "N/A", // Default to "N/A" if status is missing
+      }));
+
+      setJobListings(jobsWithStatus);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false); // Stop loading state
+    }
+  };
+
+  const handleCancelApplication = async (jobId: string) => {
+    try {
+      // Confirm before canceling
+      Alert.alert(
+        "Cancel Application",
+        "Are you sure you want to cancel your application for this job?",
+        [
+          { text: "No", style: "cancel" },
+          {
+            text: "Yes",
+            onPress: async () => {
+              // Remove the application from the applications table
+              const { error } = await supabase
+                .from("applications")
+                .delete()
+                .eq("job_id", jobId)
+                .eq("user_id", user.id);
+
+              if (error) throw error;
+
+              // Update the job listings to remove the canceled job
+              setJobListings((prev) => prev.filter((job) => job.id !== jobId));
+
+              Alert.alert("Success", "Your application has been canceled.");
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("Error canceling application:", error);
+      Alert.alert("Error", "Failed to cancel application. Please try again.");
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
@@ -103,9 +134,12 @@ const StatusJobs: React.FC = () => {
           <MaterialIcons name="article" size={20} color="gray" />
           <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
+        <View style={styles.row}>
+          <MaterialIcons name="info-outline" size={20} color="gray" />
+          <Text style={styles.detailText}>Status: {item.status}</Text>
+        </View>
       </View>
 
-      {/* Conditionally render additional fields */}
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
@@ -115,11 +149,17 @@ const StatusJobs: React.FC = () => {
         </View>
       )}
 
-      {/* Read More / Collapse Button */}
       <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => handleCancelApplication(item.id)}
+        style={styles.cancelButton}
+      >
+        <Text style={styles.cancelButtonText}>Cancel Application</Text>
       </TouchableOpacity>
     </View>
   );
@@ -138,8 +178,8 @@ const StatusJobs: React.FC = () => {
           contentContainerStyle={{ flexGrow: 1 }}
           ListEmptyComponent={
             <View style={styles.card}>
-              <Text style={styles.title}>No Saved Jobs</Text>
-              <Text style={styles.subtitle}>You haven't applied to any jobs yet.</Text>
+              <Text style={styles.title}>No Applied Jobs!</Text>
+              <Text style={styles.subtitle}>You haven't Applied to any jobs yet.</Text>
             </View>
           }
         />
@@ -227,36 +267,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#007BFF",
   },
-  buttonGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  saveButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+  cancelButton: {
+    backgroundColor: "#FF6347",
+    paddingVertical: 10,
     borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
+    marginTop: 8,
     alignItems: "center",
   },
-  applyButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  buttonText: {
+  cancelButtonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   subtitle: {
     fontSize: 14,
     color: "gray",
-    textAlign: "center",
   },
 });
