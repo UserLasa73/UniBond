@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
 
@@ -14,15 +14,18 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  image_url: string | null; // Add image_url field to JobListing type
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null); 
   const [user, setUser] = useState<any>(null); // Store authenticated user
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
   useEffect(() => {
     const fetchJobs = async () => {
+      setIsLoading(true); // Set loading state to true
       try {
         const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
         if (error) {
@@ -32,6 +35,8 @@ const AvailableJobs: React.FC = () => {
         }
       } catch (error) {
         console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false); // Set loading state to false once data is fetched
       }
     };
 
@@ -66,8 +71,15 @@ const AvailableJobs: React.FC = () => {
 
         if (error) {
           console.error("Error saving job:", error.message);
+          Alert.alert("Already Saved");
         } else {
-          console.log("Job saved successfully:", data);
+          console.log("Job saved!", data);
+          Alert.alert(
+            "Success",
+            "The job has been saved successfully.",
+            [{ text: "OK" }],
+            { cancelable: true }
+          );
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -104,8 +116,15 @@ const AvailableJobs: React.FC = () => {
 
           if (error) {
             console.error("Error applying for job:", error.message);
+            Alert.alert("Already Applied");
           } else {
             console.log("Application submitted successfully:", data);
+            Alert.alert(
+              "Application Submitted",
+              "You have successfully applied for the job.",
+              [{ text: "OK" }],
+              { cancelable: true }
+            );
           }
         }
       } catch (error) {
@@ -118,12 +137,10 @@ const AvailableJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
+      
+
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: "https://via.placeholder.com/40" }}
-          style={styles.avatar}
-        />
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
           <Text style={styles.location}>{item.location}</Text>
@@ -143,7 +160,6 @@ const AvailableJobs: React.FC = () => {
         </View>
       </View>
 
-      {/* Conditionally render additional fields */}
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
@@ -153,13 +169,17 @@ const AvailableJobs: React.FC = () => {
         </View>
       )}
 
-      {/* Read More / Collapse Button */}
       <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
       </TouchableOpacity>
 
+        {/* Conditionally render image if image_url exists */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.image} />
+      ) : null}
+      
       <View style={styles.buttonGroup}>
         <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
           <Text style={styles.buttonText}>Save</Text>
@@ -172,27 +192,38 @@ const AvailableJobs: React.FC = () => {
   );
 
   return (
-    <FlatList
-      data={jobListings}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={{ flexGrow: 1 }}
-      ListEmptyComponent={
-        <View style={styles.card}>
-          <Text style={styles.title}>No Jobs Available</Text>
-          <Text style={styles.subtitle}>Please check back later.</Text>
+    <View style={styles.container}>
+      {isLoading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
         </View>
-      }
-    />
+      ) : (
+        <FlatList
+          data={jobListings}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ flexGrow: 1 }}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.title}>No Jobs Available</Text>
+              <Text style={styles.subtitle}>Please check back later.</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 };
-
-export default AvailableJobs;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "white",
@@ -204,6 +235,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  image: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
   title: {
     fontSize: 18,
     fontWeight: "bold",
@@ -213,12 +250,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   textGroup: {
     flex: 1,
@@ -294,4 +325,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  subtitle: {
+    fontSize: 14,
+    color: "gray",
+    textAlign: "center",
+  },
 });
+
+export default AvailableJobs;

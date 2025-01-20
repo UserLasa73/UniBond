@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse";
 
@@ -14,15 +14,18 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  image_url: string;  // Add image_url to the JobListing interface
 }
 
 const SavedJobs: React.FC = () => {
   const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Store authenticated user
+  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
   useEffect(() => {
     const fetchUserAndSavedJobs = async () => {
+      setIsLoading(true); // Set loading state to true
       try {
         // Fetch authenticated user
         const { data, error: userError } = await supabase.auth.getUser();
@@ -44,7 +47,7 @@ const SavedJobs: React.FC = () => {
           } else {
             const jobIds = savedJobData?.map((savedJob) => savedJob.job_id);
 
-            // Fetch job details for the saved job ids
+            // Fetch job details for the saved job ids, including the image_url
             const { data: jobs, error: jobsError } = await supabase
               .from("jobs")
               .select("*")
@@ -59,6 +62,8 @@ const SavedJobs: React.FC = () => {
         }
       } catch (error) {
         console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false); // Set loading state to false once data is fetched
       }
     };
 
@@ -92,14 +97,55 @@ const SavedJobs: React.FC = () => {
     }
   };
 
+  const applyJob = async (jobId: string) => {
+    if (user) {
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError.message);
+        } else {
+          const applicantName = profile.full_name;
+
+          // Insert application details into applications table
+          const { data, error } = await supabase.from('applications').insert([{
+            job_id: jobId,
+            user_id: user.id,
+            applicant_name: applicantName, // Store applicant's name
+            status: 'applied', // Set initial status to 'applied'
+          }]);
+
+          if (error) {
+            console.error("Error applying for job:", error.message);
+            Alert.alert("Already Applied");
+          } else {
+            console.log("Application submitted successfully:", data);
+            Alert.alert(
+              "Application Submitted",
+              "You have successfully applied for the job.",
+              [{ text: "OK" }],
+              { cancelable: true }
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      }
+    } else {
+      console.error("User not authenticated");
+    }
+  };
+
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
+      
+
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: "https://via.placeholder.com/40" }}
-          style={styles.avatar}
-        />
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
           <Text style={styles.location}>{item.location}</Text>
@@ -119,7 +165,6 @@ const SavedJobs: React.FC = () => {
         </View>
       </View>
 
-      {/* Conditionally render additional fields */}
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
@@ -129,36 +174,49 @@ const SavedJobs: React.FC = () => {
         </View>
       )}
 
-      {/* Read More / Collapse Button */}
       <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
       </TouchableOpacity>
 
-      {/* Unsave Button */}
-      <TouchableOpacity
-        onPress={() => unsaveJob(item.id)}
-        style={styles.unsaveButton}
-      >
+        {/* Render Image if available */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      ) : null}
+
+      <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
         <Text style={styles.unsaveButtonText}>Unsave</Text>
+      </TouchableOpacity>
+
+      {/* Apply Button */}
+      <TouchableOpacity onPress={() => applyJob(item.id)} style={styles.applyButton}>
+        <Text style={styles.applyButtonText}>Apply</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <FlatList
-      data={savedJobs}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={{ flexGrow: 1 }}
-      ListEmptyComponent={
-        <View style={styles.card}>
-          <Text style={styles.title}>No Saved Jobs</Text>
-          <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
+    <View style={styles.container}>
+      {isLoading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
         </View>
-      }
-    />
+      ) : (
+        <FlatList
+          data={savedJobs}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ flexGrow: 1 }}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.title}>No Saved Jobs</Text>
+              <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
   );
 };
 
@@ -168,6 +226,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
     backgroundColor: "white",
@@ -188,12 +251,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   textGroup: {
     flex: 1,
@@ -243,22 +300,39 @@ const styles = StyleSheet.create({
     color: "#007BFF",
   },
   unsaveButton: {
-    backgroundColor: "#000",
+    backgroundColor: "#000000",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
     alignItems: "center",
+    marginTop: 8,
   },
   unsaveButtonText: {
-    fontSize: 14,
     color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  applyButton: {
+    backgroundColor: "#000000",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: {
+    color: "white",
+    fontSize: 16,
     fontWeight: "600",
   },
   subtitle: {
     fontSize: 14,
     color: "gray",
-    textAlign: "center",
+  },
+  jobImage: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8,
   },
 });
