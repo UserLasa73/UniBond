@@ -120,10 +120,7 @@ const StatusJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
-      {/* Job Image */}
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
-      )}
+      
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
         <View style={styles.textGroup}>
@@ -185,6 +182,11 @@ const StatusJobs: React.FC = () => {
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
       </TouchableOpacity>
+
+        {/* Job Image */}
+      {item.image_url && (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      )}
 
       <TouchableOpacity
         onPress={() => handleCancelApplication(item.id)}

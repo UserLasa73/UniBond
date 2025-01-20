@@ -142,10 +142,7 @@ const SavedJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
-      {/* Render Image if available */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
-      ) : null}
+      
 
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
@@ -182,6 +179,11 @@ const SavedJobs: React.FC = () => {
           {expandedJobId === item.id ? "Read Less" : "Read More"}
         </Text>
       </TouchableOpacity>
+
+        {/* Render Image if available */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      ) : null}
 
       <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
         <Text style={styles.unsaveButtonText}>Unsave</Text>

@@ -137,10 +137,7 @@ const AvailableJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
-      {/* Conditionally render image if image_url exists */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.image} />
-      ) : null}
+      
 
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
@@ -178,6 +175,11 @@ const AvailableJobs: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
+        {/* Conditionally render image if image_url exists */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.image} />
+      ) : null}
+      
       <View style={styles.buttonGroup}>
         <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
           <Text style={styles.buttonText}>Save</Text>
