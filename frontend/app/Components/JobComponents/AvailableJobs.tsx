@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse"; // Assuming this path for your supabase client
 
@@ -14,6 +14,7 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  image_url: string | null; // Add image_url field to JobListing type
 }
 
 const AvailableJobs: React.FC = () => {
@@ -136,9 +137,13 @@ const AvailableJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
+      {/* Conditionally render image if image_url exists */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.image} />
+      ) : null}
+
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
-        {/* Removed the Image component */}
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
           <Text style={styles.location}>{item.location}</Text>
@@ -158,7 +163,6 @@ const AvailableJobs: React.FC = () => {
         </View>
       </View>
 
-      {/* Conditionally render additional fields */}
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
           <Text style={styles.description}>
@@ -168,7 +172,6 @@ const AvailableJobs: React.FC = () => {
         </View>
       )}
 
-      {/* Read More / Collapse Button */}
       <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
         <Text style={styles.readMoreText}>
           {expandedJobId === item.id ? "Read Less" : "Read More"}
@@ -190,8 +193,8 @@ const AvailableJobs: React.FC = () => {
     <View style={styles.container}>
       {isLoading ? (
         <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
       ) : (
         <FlatList
           data={jobListings}
@@ -209,8 +212,6 @@ const AvailableJobs: React.FC = () => {
     </View>
   );
 };
-
-export default AvailableJobs;
 
 const styles = StyleSheet.create({
   container: {
@@ -231,6 +232,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  image: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 16,
   },
   title: {
     fontSize: 18,
@@ -322,3 +329,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+export default AvailableJobs;

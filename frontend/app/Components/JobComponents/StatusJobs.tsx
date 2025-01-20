@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse"; // Adjust the path as needed
 
@@ -15,6 +15,7 @@ interface JobListing {
   description: string;
   is_active: boolean;
   status?: string; // Status from the applications table
+  image_url?: string; // Add the image URL field
 }
 
 const StatusJobs: React.FC = () => {
@@ -46,7 +47,7 @@ const StatusJobs: React.FC = () => {
       // Fetch job applications for the logged-in user
       const { data: applications, error: applicationsError } = await supabase
         .from("applications")
-        .select("job_id, status,created_at")
+        .select("job_id, status, created_at")
         .eq("user_id", loggedInUser.id);
 
       if (applicationsError) throw applicationsError;
@@ -119,6 +120,10 @@ const StatusJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
+      {/* Job Image */}
+      {item.image_url && (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      )}
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
         <View style={styles.textGroup}>
@@ -126,7 +131,6 @@ const StatusJobs: React.FC = () => {
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>{item.time}</Text>
         </View>
-
       </View>
       <View style={styles.details}>
         <View style={styles.row}>
@@ -145,7 +149,6 @@ const StatusJobs: React.FC = () => {
           <MaterialIcons name="article" size={20} color="gray" />
           <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
-        
         <View style={styles.row}>
           <MaterialIcons name="info-outline" size={20} color="gray" />
           <Text style={styles.detailText}>
@@ -166,9 +169,6 @@ const StatusJobs: React.FC = () => {
             </Text>
           </Text>
         </View>
-
-
-
       </View>
 
       {expandedJobId === item.id && (
@@ -219,8 +219,6 @@ const StatusJobs: React.FC = () => {
   );
 };
 
-export default StatusJobs;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -240,6 +238,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  jobImage: {
+    width: "100%", // Make the image take the full width of the card
+    height: 200, // Set the desired height of the image
+    borderRadius: 8,
+    marginBottom: 16,
   },
   title: {
     fontSize: 18,
@@ -306,12 +310,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButtonText: {
+    fontSize: 16,
     color: "white",
-    fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "gray",
+    textAlign: "center",
   },
 });
+
+export default StatusJobs;

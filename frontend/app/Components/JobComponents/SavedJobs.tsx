@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { supabase } from "@/app/lib/supabse";
 
@@ -14,6 +14,7 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  image_url: string;  // Add image_url to the JobListing interface
 }
 
 const SavedJobs: React.FC = () => {
@@ -46,7 +47,7 @@ const SavedJobs: React.FC = () => {
           } else {
             const jobIds = savedJobData?.map((savedJob) => savedJob.job_id);
 
-            // Fetch job details for the saved job ids
+            // Fetch job details for the saved job ids, including the image_url
             const { data: jobs, error: jobsError } = await supabase
               .from("jobs")
               .select("*")
@@ -111,14 +112,12 @@ const SavedJobs: React.FC = () => {
           const applicantName = profile.full_name;
 
           // Insert application details into applications table
-          const { data, error } = await supabase.from('applications').insert([
-            {
-              job_id: jobId,
-              user_id: user.id,
-              applicant_name: applicantName, // Store applicant's name
-              status: 'applied', // Set initial status to 'applied'
-            },
-          ]);
+          const { data, error } = await supabase.from('applications').insert([{
+            job_id: jobId,
+            user_id: user.id,
+            applicant_name: applicantName, // Store applicant's name
+            status: 'applied', // Set initial status to 'applied'
+          }]);
 
           if (error) {
             console.error("Error applying for job:", error.message);
@@ -143,6 +142,11 @@ const SavedJobs: React.FC = () => {
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
+      {/* Render Image if available */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      ) : null}
+
       <Text style={styles.title}>{item.title}</Text>
       <View style={styles.userInfo}>
         <View style={styles.textGroup}>
@@ -322,5 +326,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: "gray",
+  },
+  jobImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 8,
   },
 });
