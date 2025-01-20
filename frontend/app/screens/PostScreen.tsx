@@ -17,7 +17,7 @@ import { PostStackParamList } from "./PostNav";
 import { BackHandler } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../providers/AuthProvider";
-
+import * as FileSystem from "expo-file-system";
 const PostScreen = () => {
   const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const { content, media } = usePostParams();
@@ -25,6 +25,8 @@ const PostScreen = () => {
   const [showPreview, setShowPreview] = useState(!!content || !!media);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
+  const [mediaUri, setMediaUri] = useState<string | null>(null);
+
   const storageUrl =
     "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
   const imageUrl = profile.avatar_url
@@ -42,6 +44,34 @@ const PostScreen = () => {
       BackHandler.removeEventListener("hardwareBackPress", backAction);
     };
   }, []);
+
+  useEffect(() => {
+    const prepareMedia = async () => {
+      if (media?.uri) {
+        try {
+          // Check if the file exists at the given URI
+          const fileInfo = await FileSystem.getInfoAsync(media.uri);
+
+          if (fileInfo.exists) {
+            // Create a new URI in the document directory
+            const newUri = `${FileSystem.documentDirectory}${media.uri.split("/").pop()}`;
+
+            // Copy the file to the new location
+            await FileSystem.copyAsync({ from: media.uri, to: newUri });
+
+            // Set the new URI for use in your app
+            setPersistentUri(newUri);
+          } else {
+            console.error("Media file does not exist:", media.uri);
+          }
+        } catch (error) {
+          console.error("Error copying media file:", error);
+        }
+      }
+    };
+
+    prepareMedia();
+  }, [media]);
 
   const handleOptionPress = (screen: keyof PostStackParamList) => {
     navigation.navigate(screen);
@@ -73,7 +103,6 @@ const PostScreen = () => {
           <Text style={styles.postButton}>Post</Text>
         </TouchableOpacity>
       </View>
-
       {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
@@ -100,32 +129,31 @@ const PostScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Post Content */}
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
       {showPreview && (content || media) && (
         <View style={styles.previewContainer}>
           {content ? <Text style={styles.promptText}>{content}</Text> : null}
-          {media?.uri ? (
-            media.type === "image" ? (
-              <Image source={{ uri: media.uri }} style={styles.imagePreview} />
-            ) : media.type === "video" ? (
-              <Video
-                source={{ uri: media.uri }}
-                style={styles.imagePreview}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-              />
-            ) : (
-              <Text>Unsupported media type</Text>
-            )
+          {mediaUri && media?.type === "image" ? (
+            <Image
+              source={{ uri: mediaUri }}
+              style={styles.imagePreview}
+              onError={(error) =>
+                console.log("Image load error:", error.nativeEvent)
+              }
+            />
+          ) : mediaUri && media?.type === "video" ? (
+            <Video
+              source={{ uri: mediaUri }}
+              style={styles.imagePreview}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+            />
           ) : (
-            <Text>No media available</Text>
+            <Text>Unsupported media type</Text>
           )}
         </View>
       )}
-
       {/* Post Options */}
       <View style={styles.options}>
         <PostOptionItem
@@ -149,7 +177,6 @@ const PostScreen = () => {
           onPress={() => handleOptionPress("AddEventScreen")}
         />
       </View>
-
       {/* Visibility Selector Modal */}
       <Modal
         visible={isModalVisible}
@@ -181,6 +208,7 @@ const PostScreen = () => {
 
 export default PostScreen;
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
