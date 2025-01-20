@@ -4,6 +4,7 @@ import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "./ShowingAvatar";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
+import { Image } from "react-native";
 
 interface TopNavigationBarProps {
   userName: string;
@@ -20,10 +21,15 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
 }) => {
   const { session } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
+  const { profile } = useAuth();
   useEffect(() => {
     if (session) getProfile();
   }, [session]);
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+  const imageUrl = profile.avatar_url
+    ? `${storageUrl}${profile.avatar_url}`
+    : null;
 
   async function getProfile() {
     try {
@@ -50,12 +56,17 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
   return (
     <View style={styles.container}>
       {/* Profile Icon */}
-      <TouchableOpacity onPress={onProfilePress} style={styles.profileImage}>
-        <ShowingAvatar
-          url={avatarUrl}
-          size={5} // Adjust the size to fit within the circular display
-          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-        />
+      <TouchableOpacity onPress={onProfilePress}>
+        <View style={styles.profileImage}>
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+            />
+          ) : (
+            <MaterialIcons name="person" size={40} color="#fff" />
+          )}
+        </View>
       </TouchableOpacity>
 
       {/* User Name */}
@@ -86,13 +97,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
   },
   profileImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    overflow: "hidden",
-    objectFit: "fill",
-    borderWidth: 1,
-    borderColor: "#ccc",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
   },
   userName: {
     fontSize: 18,

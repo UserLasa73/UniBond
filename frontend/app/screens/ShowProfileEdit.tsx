@@ -187,46 +187,51 @@ export default function ShowProfileEdit() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       </View>
+      <View style={{ marginTop: 40, marginHorizontal: 20 }}>
+        {/* Row: Profile Picture + Followers and Following */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <ShowingAvatar
+            url={avatarUrl}
+            size={50} // Adjust size as needed
+            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+          />
 
-      <View
-        style={{
-          alignItems: "flex-start",
-          marginTop: 40,
-          marginRight: 20,
-          marginLeft: 20,
-        }}
-      >
-        <ShowingAvatar
-          url={avatarUrl}
-          size={150}
-          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-        />
-        <Text style={{ fontSize: 20, fontWeight: "bold" }}>
-          {fullname || "Profile"}
-        </Text>
-        <Text style={{ fontSize: 20 }}>
-          {faculty} | {department}
-        </Text>
+          {/* Followers and Following */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {/* Following */}
+            <View style={{ alignItems: "center", marginHorizontal: 10 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {followingCount}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+            </View>
 
-        <Text style={{ fontSize: 20 }}>{skills}</Text>
+            {/* Followers */}
+            <View style={{ alignItems: "center", marginHorizontal: 10 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {/* Replace this with the actual follower count */}
+                {followingList.length}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+            </View>
+          </View>
+        </View>
+        <View style={{ marginTop: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+            {fullname || "Profile"}
+          </Text>
+          <Text style={{ fontSize: 16, color: "#666" }}>
+            {faculty} | {department}
+          </Text>
+          <Text style={{ fontSize: 16, color: "#666" }}>{skills}</Text>
+        </View>
       </View>
-
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginHorizontal: 20,
-          marginTop: 20,
-        }}
-      >
-        <Text style={{ fontSize: 20 }}>{skills} </Text>
-        <Text style={{ fontSize: 16, marginTop: 10 }}>
-          Following: {followingCount}{" "}
-          {/* Display the count of followed users */}
-        </Text>
-      </View>
-
       <View
         style={{
           flexDirection: "row",
@@ -277,7 +282,6 @@ export default function ShowProfileEdit() {
           </TouchableOpacity>
         )}
       </View>
-
       {/* Posts Section */}
       <View style={{ marginTop: 30 }}>
         <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>
@@ -296,19 +300,6 @@ export default function ShowProfileEdit() {
           )}
           keyExtractor={(item) => item.id.toString()}
         />
-
-        <View style={{ marginTop: 20, marginHorizontal: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: "bold" }}>Following:</Text>
-          {followingList.length > 0 ? (
-            followingList.map((follower) => (
-              <View key={follower.followed_id} style={{ marginTop: 10 }}>
-                <Text>{follower.profiles?.full_name}</Text>
-              </View>
-            ))
-          ) : (
-            <Text>No following users</Text>
-          )}
-        </View>
       </View>
     </SafeAreaView>
   );
