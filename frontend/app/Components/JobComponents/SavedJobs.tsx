@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   jobImage: {
     width: "100%",
-    height: 200,
+    aspectRatio: 1,
     borderRadius: 8,
     marginBottom: 8,
   },

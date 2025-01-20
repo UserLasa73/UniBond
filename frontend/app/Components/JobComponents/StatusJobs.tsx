@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   },
   jobImage: {
     width: "100%", // Make the image take the full width of the card
-    height: 200, // Set the desired height of the image
+    aspectRatio: 1, // Set the desired height of the image
     borderRadius: 8,
     marginBottom: 16,
   },
