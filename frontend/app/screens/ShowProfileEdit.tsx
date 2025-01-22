@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   StyleSheet,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
@@ -130,8 +131,8 @@ export default function ShowProfileEdit() {
           ...prevPosts,
           ...eventsData.map((event) => ({
             ...event,
-            content: event.description, // Map event description to post content
-            is_event: true, // Flag to differentiate events from posts
+            content: event.description,
+            is_event: true,
           })),
         ]);
       }
@@ -274,7 +275,6 @@ export default function ShowProfileEdit() {
         >
           <Text style={{ color: "#fff" }}>Edit</Text>
         </TouchableOpacity>
-
         {!userId && (
           <TouchableOpacity
             onPress={async () => {
@@ -345,5 +345,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  // Add more styles as needed
 });
