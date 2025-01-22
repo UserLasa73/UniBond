@@ -66,22 +66,25 @@ const EventScreen = () => {
     try {
       const { data, error } = await supabase.from("events").insert([
         {
-          user_id: userId,
+          uid: userId,
           event_name: eventName,
-          event_date: eventDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
-          location: eventLocation,
-          description: eventDescription,
+          event_date: eventDate.toISOString().split("T")[0],
+          event_location: eventLocation,
+          event_description: eventDescription,
           date_posted: datePosted,
         },
       ]);
 
       if (error) {
+        console.log("Error:", error);
         Alert.alert("Error", "Error posting event: " + error.message);
       } else {
+        console.log("Event posted successfully:", data);
         Alert.alert("Success", "Event successfully posted!");
         navigation.navigate("PostScreen");
       }
     } catch (err) {
+      console.error("Unexpected error:", err);
       Alert.alert("Error", "An unexpected error occurred.");
     }
   };
@@ -90,6 +93,7 @@ const EventScreen = () => {
     setShowDatePicker(false);
     if (selectedDate) {
       setEventDate(selectedDate);
+      setHasChanges(true);
     }
   };
 
@@ -98,6 +102,7 @@ const EventScreen = () => {
     setEventDate(null);
     setEventLocation("");
     setEventDescription("");
+    setHasChanges(false);
     navigation.navigate("PostScreen");
   };
 
@@ -115,7 +120,10 @@ const EventScreen = () => {
           style={styles.input}
           placeholder="Enter event name"
           value={eventName}
-          onChangeText={setEventName}
+          onChangeText={(text) => {
+            setEventName(text);
+            setHasChanges(true);
+          }}
         />
       </View>
 
@@ -149,7 +157,10 @@ const EventScreen = () => {
           style={styles.input}
           placeholder="Enter event location"
           value={eventLocation}
-          onChangeText={setEventLocation}
+          onChangeText={(text) => {
+            setEventLocation(text);
+            setHasChanges(true);
+          }}
         />
       </View>
 
@@ -160,7 +171,10 @@ const EventScreen = () => {
           style={[styles.input, styles.textArea]}
           placeholder="Enter event description"
           value={eventDescription}
-          onChangeText={setEventDescription}
+          onChangeText={(text) => {
+            setEventDescription(text);
+            setHasChanges(true);
+          }}
           multiline
           numberOfLines={4}
         />
@@ -224,7 +238,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   postButton: {
-    backgroundColor: "#000",
+    backgroundColor: "#2C3036",
     padding: 10,
     borderRadius: 5,
     alignItems: "center",
