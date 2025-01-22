@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import supabase from "../../lib/supabse";
+import { useFocusEffect } from "@react-navigation/native";
 
 interface ProjectData {
   project_id: number;
@@ -29,25 +30,28 @@ export default function ProjectTitleBox() {
   const [projectData, setProjectData] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data, error } = await supabase.from("projects").select("*");
-        if (error) throw error;
-        setProjectData(data || []);
-      } catch (error) {
-        console.error("Error fetching project data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Function to fetch project data
+  const fetchData = async () => {
+    try {
+      const { data, error } = await supabase.from("projects").select("*");
+      if (error) throw error;
+      setProjectData(data || []);
+    } catch (error) {
+      console.error("Error fetching project data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, []);
+  // Use useFocusEffect to fetch data when the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleSave = async (projectId: number) => {
     try {
-      // Update the database
       const { error } = await supabase
         .from("projects")
         .update({ is_saved: true })
@@ -55,12 +59,15 @@ export default function ProjectTitleBox() {
 
       if (error) throw error;
 
-      // Update the local state by removing the saved project
+      // Update the local state by modifying the specific project
       setProjectData((prevProjects) =>
-        prevProjects.filter((project) => project.project_id !== projectId)
+        prevProjects.map((project) =>
+          project.project_id === projectId
+            ? { ...project, is_saved: true }  // Mark this project as saved
+            : project
+        )
       );
 
-      // Display success message
       Alert.alert("Success", "Project saved successfully!");
     } catch (error) {
       console.error("Error saving project:", error);
@@ -70,7 +77,6 @@ export default function ProjectTitleBox() {
 
   const handleApply = async (projectId: number) => {
     try {
-      // Update the `is_applied` status in the database
       const { error } = await supabase
         .from("projects")
         .update({ is_applied: true })
@@ -78,12 +84,15 @@ export default function ProjectTitleBox() {
 
       if (error) throw error;
 
-      // Update the local state by removing the applied project
+      // Update the local state by modifying the specific project
       setProjectData((prevProjects) =>
-        prevProjects.filter((project) => project.project_id !== projectId)
+        prevProjects.map((project) =>
+          project.project_id === projectId
+            ? { ...project, is_applied: true }  // Mark this project as applied
+            : project
+        )
       );
 
-      // Display success message
       Alert.alert("Success", "You have applied for the project!");
     } catch (error) {
       console.error("Error applying to project:", error);
@@ -137,8 +146,11 @@ export default function ProjectTitleBox() {
         <TouchableOpacity
           style={styles.saveButton}
           onPress={() => handleSave(item.project_id)}
+          disabled={item.is_saved} // Disable if the project is saved
         >
-          <Text style={styles.buttonText}>Save</Text>
+          <Text style={styles.buttonText}>
+            {item.is_saved ? "Saved" : "Save"}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.applyButton}
