@@ -10,7 +10,7 @@ const Projects = () => {
       {/* <Text>Projects</Text> */}
       <Project_topbar />
       <Project_conditionbar />
-      <Project_titlebox />
+      {/* <Project_titlebox /> */}
     </View>
   );
 };
