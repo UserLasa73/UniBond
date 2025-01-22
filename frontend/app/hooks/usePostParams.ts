@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 interface Media {
   uri: string;
   type?: string;
+  duration?: number; // added duration for videos
 }
 
 const usePostParams = () => {

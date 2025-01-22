@@ -12,32 +12,31 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { BackHandler } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { PostStackParamList } from "./PostNav";
 
 type Media = {
   uri: string;
   type?: string;
+  duration?: number;
 };
 
 const AddPostScreen = () => {
   const router = useRouter();
-  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
   const [content, setContent] = useState<string>("");
   const [media, setMedia] = useState<Media | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const backAction = () => {
-      Alert.alert("", "Discard the changes?", [
-        {
-          text: "Cancel",
-          onPress: () => null,
-          style: "cancel",
-        },
-        { text: "YES", onPress: () => navigation.navigate("PostScreen") },
-      ]);
-      return true;
+      if (hasChanges) {
+        Alert.alert("", "Discard the changes?", [
+          { text: "Cancel", onPress: () => null, style: "cancel" },
+          { text: "YES", onPress: () => router.back() },
+        ]);
+        return true;
+      } else {
+        router.back();
+        return true;
+      }
     };
 
     BackHandler.addEventListener("hardwareBackPress", backAction);
@@ -45,20 +44,28 @@ const AddPostScreen = () => {
     return () => {
       BackHandler.removeEventListener("hardwareBackPress", backAction);
     };
-  }, [navigation]);
+  }, [hasChanges, router]);
 
   const handlePostSubmit = () => {
     if (content.trim() === "") {
       Alert.alert("Error", "Post content cannot be empty!");
       return;
     }
-    //const mediaUri = media?.uri ?? null;
+
+    if (media?.type === "video" && media.duration && media.duration > 30) {
+      Alert.alert("Error", "Video duration must be 30 seconds or less!");
+      return;
+    }
+
+    console.log(
+      `Post submitted with content: ${content} and media: ${JSON.stringify(media)}`
+    );
 
     router.push({
       pathname: "/screens/PostScreen",
       params: {
         content,
-        media: media ? JSON.stringify(media) : null, // Serialize media
+        media: media ? JSON.stringify(media) : null,
       },
     });
   };
@@ -90,7 +97,13 @@ const AddPostScreen = () => {
     if (!result.canceled && result.assets?.length) {
       const asset = result.assets[0];
       const mediaType = asset.type === "video" ? "video" : "image";
-      setMedia({ uri: asset.uri, type: mediaType });
+      const duration = asset.type === "video" ? asset.duration : undefined;
+      setMedia({
+        uri: asset.uri,
+        type: mediaType,
+        duration: duration ?? undefined,
+      });
+      setHasChanges(true);
     }
   };
 
@@ -109,7 +122,10 @@ const AddPostScreen = () => {
           multiline
           placeholder="What do you want to share?"
           value={content}
-          onChangeText={setContent}
+          onChangeText={(text) => {
+            setContent(text);
+            setHasChanges(true);
+          }}
         />
       </View>
 
@@ -117,6 +133,9 @@ const AddPostScreen = () => {
         <View style={styles.mediaPreview}>
           {media.type === "image" && (
             <Image source={{ uri: media.uri }} style={styles.imagePreview} />
+          )}
+          {media.type === "video" && (
+            <Text style={styles.videoPreviewText}>Video selected</Text>
           )}
         </View>
       )}

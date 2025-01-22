@@ -1,5 +1,14 @@
 import * as React from "react";
-import { Text, View, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from "react-native";
 import SearchBar from "../../Components/SearchBar";
 import { supabase } from "../../../lib/supabse"; // Import your Supabase client
 import { useRouter } from "expo-router";

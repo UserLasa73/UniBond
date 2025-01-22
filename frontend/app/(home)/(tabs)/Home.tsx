@@ -1,86 +1,232 @@
-// /screens/Home.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
-  Text,
   Alert,
-  TouchableOpacity,
   StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
   Image,
 } from "react-native";
-import TopNavigationBar from "../../Components/TopNavigationBar"; // Import the top nav component
-import { useRouter } from "expo-router"; // For navigation
-import NotificationScreen from "@/app/screens/NotificationScreen";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/app/providers/AuthProvider";
-import supabase from "@/lib/supabse";
+import TopNavigationBar from "../../Components/TopNavigationBar";
+import { supabase } from "../../../lib/supabse";
+import PostItem from "../../screens/PostItem";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+type Post = {
+  id: number;
+  content: string;
+  likes: number;
+  comments: { username: string; comment: string }[];
+  is_public: boolean;
+  user_id: string;
+};
 
-const HomeScreen = () => {
-  const navigation = useNavigation();
-  const router = useRouter(); // Router hook to navigate programmatically
+type Event = {
+  id: number;
+  event_name: string;
+  event_date: string;
+  event_location: string;
+  event_description: string;
+};
+
+const HomeScreen: React.FC = () => {
+  const router = useRouter();
   const { session } = useAuth();
-  const [username, setUsername] = useState("");
+  const navigation = useNavigation();
+  const [username, setUsername] = useState<string>("");
+  const [combinedData, setCombinedData] = useState<(Post | Event)[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
   useEffect(() => {
-    if (session) getProfile();
+    if (session) {
+      getProfile();
+      fetchCombinedData();
+    }
   }, [session]);
-  async function getProfile() {
+
+  const getProfile = async () => {
     try {
       const profileId = session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
       const { data, error } = await supabase
         .from("profiles")
-        .select(`username`)
+        .select("username")
         .eq("id", profileId)
         .single();
-      if (data) {
-        setUsername(data.username);
+
+      if (error) throw error;
+      setUsername(data.username || "Anonymous");
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      Alert.alert("Error", "Could not fetch user profile.");
+    }
+  };
+
+  const fetchCombinedData = async () => {
+    setLoading(true);
+    try {
+      const [postsResponse, eventsResponse] = await Promise.all([
+        supabase
+          .from("posts")
+          .select("id, content, likes, comments, is_public, user_id")
+          .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`),
+        supabase
+          .from("events")
+          .select(
+            "id, event_name, event_date, event_location, event_description"
+          ),
+      ]);
+
+      if (postsResponse.error || eventsResponse.error) {
+        throw new Error(
+          postsResponse.error?.message || eventsResponse.error?.message
+        );
       }
+
+      const posts = postsResponse.data.map((post: Post) => ({
+        ...post,
+        type: "post",
+      }));
+      const events = eventsResponse.data.map((event: Event) => ({
+        ...event,
+        type: "event",
+      }));
+
+      setCombinedData([...events, ...posts]); // Events first, then posts
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      Alert.alert("Error", "Could not fetch data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (postId: number) => {
+    try {
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? { ...item, likes: item.likes + 1 }
+            : item
+        )
+      );
+
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          likes: (combinedData.find((p) => p.id === postId) as Post).likes + 1,
+        })
+        .eq("id", postId);
 
       if (error) throw error;
     } catch (error) {
-      console.error("Error fetching profile:", error);
-      if (error instanceof Error) Alert.alert("Error", error.message);
+      console.error("Error liking post:", error);
+      Alert.alert("Error", "Could not like the post.");
     }
-  }
-  const handleNotificationPress = () => {
-    router.push("/screens/NotificationScreen"); // Navigate to NotificationScreen
   };
 
-  const handlePostPress = () => {
-    router.push("/screens/PostScreen"); // Navigate to PostScreen
+  const handleCommentSubmit = async (postId: number, newComment: string) => {
+    try {
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? {
+                ...item,
+                comments: [...item.comments, { username, comment: newComment }],
+              }
+            : item
+        )
+      );
+
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          comments: [
+            ...(combinedData.find((p) => p.id === postId) as Post).comments,
+            { username, comment: newComment },
+          ],
+        })
+        .eq("id", postId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      Alert.alert("Error", "Could not add the comment.");
+    }
   };
-  const handleProfilePress = () => {
-    router.push("/screens/ShowProfileEdit"); // Navigate to
+
+  const renderItem = ({ item }: { item: Post | Event }) => {
+    if (item.type === "event") {
+      const event = item as Event;
+      return (
+        <View style={styles.eventItem}>
+          <Text style={styles.eventTitle}>{event.event_name}</Text>
+          <Text style={styles.eventDetails}>Date: {event.event_date}</Text>
+          <Text style={styles.eventDetails}>
+            Location: {event.event_location}
+          </Text>
+          <Text style={styles.eventDetails}>
+            Description: {event.event_description}
+          </Text>
+        </View>
+      );
+    } else if (item.type === "post") {
+      const post = item as Post;
+      return (
+        <PostItem
+          post={post}
+          username={username}
+          onLike={handleLike}
+          onCommentSubmit={handleCommentSubmit}
+        />
+      );
+    }
+    return null;
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
   return (
     <>
-      {/* Top Navigation Bar */}
       <TopNavigationBar
-        userName={username} // Display the user's name
-        onProfilePress={handleProfilePress} // Profile button logic
-        onNotificationPress={handleNotificationPress}
-        onPostPress={handlePostPress}
+        userName={username}
+        onProfilePress={() => router.push("/screens/ShowProfileEdit")}
+        onNotificationPress={() => router.push("/screens/NotificationScreen")}
+        onPostPress={() => router.push("/screens/PostScreen")}
       />
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Welcome to UniBond!</Text>
-        <TouchableOpacity
-          style={styles.DonateButton}
-          onPress={() => {
-            router.push("/screens/DonationScreen");
-          }}
-        >
-          <Image source={require("../../Constatnts/Donate Icon.png")} />
 
-          <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
-        </TouchableOpacity>
-      </View>
+      <FlatList
+        data={combinedData}
+        renderItem={renderItem}
+        keyExtractor={(item) =>
+          `${item.type === "event" ? "event" : "post"}-${item.id}`
+        }
+        contentContainerStyle={styles.combinedList}
+      />
+      <TouchableOpacity
+        style={styles.DonateButton}
+        onPress={() => {
+          router.push("/screens/DonationScreen");
+        }}
+      >
+        <Image source={require("../../Constatnts/Donate Icon.png")} />
+        <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
+      </TouchableOpacity>
     </>
   );
 };
 
-export default HomeScreen;
 const styles = StyleSheet.create({
   DonateButton: {
     borderWidth: 1,
@@ -105,4 +251,29 @@ const styles = StyleSheet.create({
     // Shadow for Android
     elevation: 5,
   },
+  combinedList: {
+    padding: 16,
+  },
+  eventItem: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  eventDetails: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 4,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
+
+export default HomeScreen;
