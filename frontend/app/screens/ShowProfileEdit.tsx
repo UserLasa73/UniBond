@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   StyleSheet,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
@@ -107,19 +108,39 @@ export default function ShowProfileEdit() {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      const { data, error } = await supabase
+      // Fetch posts
+      const { data: postsData, error: postsError } = await supabase
         .from("posts")
         .select("id, content, likes, comments, is_public, user_id")
         .eq("user_id", profileId);
 
-      if (data) {
-        setPosts(data);
+      if (postsData) {
+        setPosts(postsData); // Update state with posts
       }
 
-      if (error) throw error;
+      if (postsError) throw postsError;
+
+      // Fetch events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("events") // Assuming events are in the "events" table
+        .select("id, event_name, event_description, event_date,uid,event_date") // Adjust columns as needed
+        .eq("uid", profileId);
+
+      if (eventsData) {
+        setPosts((prevPosts) => [
+          ...prevPosts,
+          ...eventsData.map((event) => ({
+            ...event,
+            content: event.description,
+            is_event: true,
+          })),
+        ]);
+      }
+
+      if (eventsError) throw eventsError;
     } catch (error) {
-      console.error("Error fetching posts:", error);
-      Alert.alert("Error", "Could not fetch posts.");
+      console.error("Error fetching posts and events:", error);
+      Alert.alert("Error", "Could not fetch posts or events.");
     }
   }
 
@@ -254,7 +275,6 @@ export default function ShowProfileEdit() {
         >
           <Text style={{ color: "#fff" }}>Edit</Text>
         </TouchableOpacity>
-
         {!userId && (
           <TouchableOpacity
             onPress={async () => {
@@ -287,16 +307,26 @@ export default function ShowProfileEdit() {
         <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>
           My Posts
         </Text>
-
         <FlatList
           data={posts}
           renderItem={({ item }) => (
-            <PostItem
-              post={item}
-              username={username || "Anonymous"} // Provide a default username if not available
-              onLike={handleLike} // Pass the like handler
-              onCommentSubmit={handleCommentSubmit} // Pass the comment handler
-            />
+            <View style={{ marginBottom: 20 }}>
+              {item.is_event ? (
+                <View style={styles.eventItem}>
+                  <Text style={styles.eventevent_name}>{item.event_name}</Text>
+                  <Text> Description:{item.event_description}</Text>
+                  <Text> Location:{item.event_location}</Text>
+                  <Text> Date: {item.event_date}</Text>
+                </View>
+              ) : (
+                <PostItem
+                  post={item}
+                  username={username || "Anonymous"}
+                  onLike={handleLike}
+                  onCommentSubmit={handleCommentSubmit}
+                />
+              )}
+            </View>
           )}
           keyExtractor={(item) => item.id.toString()}
         />
@@ -304,3 +334,15 @@ export default function ShowProfileEdit() {
     </SafeAreaView>
   );
 }
+const styles = StyleSheet.create({
+  eventItem: {
+    padding: 15,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  eventevent_name: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});

@@ -1,12 +1,21 @@
-// HomeScreen.tsx
 import React, { useEffect, useState } from "react";
-import { View, Alert, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import {
+  View,
+  Alert,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/app/providers/AuthProvider";
 import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
-import PostItem from "../../screens/PostItem"; // Import the PostItem component
-
+import PostItem from "../../screens/PostItem";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 type Post = {
   id: number;
   content: string;
@@ -16,18 +25,26 @@ type Post = {
   user_id: string;
 };
 
+type Event = {
+  id: number;
+  event_name: string;
+  event_date: string;
+  event_location: string;
+  event_description: string;
+};
+
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { session } = useAuth();
-
+  const navigation = useNavigation();
   const [username, setUsername] = useState<string>("");
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [combinedData, setCombinedData] = useState<(Post | Event)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (session) {
       getProfile();
-      fetchPosts();
+      fetchCombinedData();
     }
   }, [session]);
 
@@ -50,19 +67,40 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchCombinedData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("posts")
-        .select("id, content, likes, comments, is_public, user_id")
-        .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
+      const [postsResponse, eventsResponse] = await Promise.all([
+        supabase
+          .from("posts")
+          .select("id, content, likes, comments, is_public, user_id")
+          .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`),
+        supabase
+          .from("events")
+          .select(
+            "id, event_name, event_date, event_location, event_description"
+          ),
+      ]);
 
-      if (error) throw error;
-      setPosts(data || []);
+      if (postsResponse.error || eventsResponse.error) {
+        throw new Error(
+          postsResponse.error?.message || eventsResponse.error?.message
+        );
+      }
+
+      const posts = postsResponse.data.map((post: Post) => ({
+        ...post,
+        type: "post",
+      }));
+      const events = eventsResponse.data.map((event: Event) => ({
+        ...event,
+        type: "event",
+      }));
+
+      setCombinedData([...events, ...posts]); // Events first, then posts
     } catch (error) {
-      console.error("Error fetching posts:", error);
-      Alert.alert("Error", "Could not fetch posts.");
+      console.error("Error fetching data:", error);
+      Alert.alert("Error", "Could not fetch data.");
     } finally {
       setLoading(false);
     }
@@ -70,49 +108,85 @@ const HomeScreen: React.FC = () => {
 
   const handleLike = async (postId: number) => {
     try {
-      const post = posts.find((p) => p.id === postId);
-      if (!post) throw new Error("Post not found");
-
-      setPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, likes: p.likes + 1 } : p))
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? { ...item, likes: item.likes + 1 }
+            : item
+        )
       );
 
       const { error } = await supabase
         .from("posts")
-        .update({ likes: post.likes + 1 })
+        .update({
+          likes: (combinedData.find((p) => p.id === postId) as Post).likes + 1,
+        })
         .eq("id", postId);
 
       if (error) throw error;
     } catch (error) {
       console.error("Error liking post:", error);
       Alert.alert("Error", "Could not like the post.");
-      fetchPosts();
     }
   };
 
   const handleCommentSubmit = async (postId: number, newComment: string) => {
     try {
-      const post = posts.find((p) => p.id === postId);
-      if (!post) throw new Error("Post not found");
-
-      const updatedComments = [...post.comments, { username, comment: newComment }];
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, comments: updatedComments } : p
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? {
+                ...item,
+                comments: [...item.comments, { username, comment: newComment }],
+              }
+            : item
         )
       );
 
       const { error } = await supabase
         .from("posts")
-        .update({ comments: updatedComments })
+        .update({
+          comments: [
+            ...(combinedData.find((p) => p.id === postId) as Post).comments,
+            { username, comment: newComment },
+          ],
+        })
         .eq("id", postId);
 
       if (error) throw error;
     } catch (error) {
       console.error("Error adding comment:", error);
       Alert.alert("Error", "Could not add the comment.");
-      fetchPosts();
     }
+  };
+
+  const renderItem = ({ item }: { item: Post | Event }) => {
+    if (item.type === "event") {
+      const event = item as Event;
+      return (
+        <View style={styles.eventItem}>
+          <Text style={styles.eventTitle}>{event.event_name}</Text>
+          <Text style={styles.eventDetails}>Date: {event.event_date}</Text>
+          <Text style={styles.eventDetails}>
+            Location: {event.event_location}
+          </Text>
+          <Text style={styles.eventDetails}>
+            Description: {event.event_description}
+          </Text>
+        </View>
+      );
+    } else if (item.type === "post") {
+      const post = item as Post;
+      return (
+        <PostItem
+          post={post}
+          username={username}
+          onLike={handleLike}
+          onCommentSubmit={handleCommentSubmit}
+        />
+      );
+    }
+    return null;
   };
 
   if (loading) {
@@ -131,26 +205,69 @@ const HomeScreen: React.FC = () => {
         onNotificationPress={() => router.push("/screens/NotificationScreen")}
         onPostPress={() => router.push("/screens/PostScreen")}
       />
+
       <FlatList
-        data={posts}
-        renderItem={({ item }) => (
-          <PostItem
-            post={item}
-            username={username}
-            onLike={handleLike}
-            onCommentSubmit={handleCommentSubmit}
-          />
-        )}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.postList}
+        data={combinedData}
+        renderItem={renderItem}
+        keyExtractor={(item) =>
+          `${item.type === "event" ? "event" : "post"}-${item.id}`
+        }
+        contentContainerStyle={styles.combinedList}
       />
+      <TouchableOpacity
+        style={styles.DonateButton}
+        onPress={() => {
+          router.push("/screens/DonationScreen");
+        }}
+      >
+        <Image source={require("../../Constatnts/Donate Icon.png")} />
+        <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
+      </TouchableOpacity>
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  postList: {
+  DonateButton: {
+    borderWidth: 1,
+    borderColor: "#EBF2FA",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 70,
+    position: "absolute",
+    top: 600, // Consider replacing this with a more responsive positioning like `bottom`.
+    right: 20,
+    height: 70,
+    backgroundColor: "#EBF2FA",
+    borderRadius: 100,
+    // Shadow for iOS
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    // Shadow for Android
+    elevation: 5,
+  },
+  combinedList: {
     padding: 16,
+  },
+  eventItem: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  eventDetails: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 4,
   },
   loaderContainer: {
     flex: 1,
