@@ -1,50 +1,173 @@
-import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  Alert,
+} from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import supabase from "../../lib/supabse";
+import { useFocusEffect } from "@react-navigation/native";
 
-export default function Project_titlebox(){
-  return (
+interface ProjectData {
+  project_id: number;
+  user_id: string;
+  user_name: string;
+  project_title: string;
+  location: string;
+  date_posted: string;
+  project_status: string;
+  skills: string;
+  is_saved: boolean;
+  is_applied: boolean;
+}
+
+export default function ProjectTitleBox() {
+  const [projectData, setProjectData] = useState<ProjectData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Function to fetch project data
+  const fetchData = async () => {
+    try {
+      const { data, error } = await supabase.from("projects").select("*");
+      if (error) throw error;
+      setProjectData(data || []);
+    } catch (error) {
+      console.error("Error fetching project data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use useFocusEffect to fetch data when the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+  const handleSave = async (projectId: number) => {
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ is_saved: true })
+        .eq("project_id", projectId);
+
+      if (error) throw error;
+
+      // Update the local state by modifying the specific project
+      setProjectData((prevProjects) =>
+        prevProjects.map((project) =>
+          project.project_id === projectId
+            ? { ...project, is_saved: true }  // Mark this project as saved
+            : project
+        )
+      );
+
+      Alert.alert("Success", "Project saved successfully!");
+    } catch (error) {
+      console.error("Error saving project:", error);
+      Alert.alert("Error", "Failed to save the project. Please try again.");
+    }
+  };
+
+  const handleApply = async (projectId: number) => {
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ is_applied: true })
+        .eq("project_id", projectId);
+
+      if (error) throw error;
+
+      // Update the local state by modifying the specific project
+      setProjectData((prevProjects) =>
+        prevProjects.map((project) =>
+          project.project_id === projectId
+            ? { ...project, is_applied: true }  // Mark this project as applied
+            : project
+        )
+      );
+
+      Alert.alert("Success", "You have applied for the project!");
+    } catch (error) {
+      console.error("Error applying to project:", error);
+      Alert.alert("Error", "Failed to apply for the project. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  if (projectData.length === 0) {
+    return (
+      <View style={styles.loader}>
+        <Text style={{ color: "gray", fontSize: 16 }}>No Projects Found</Text>
+      </View>
+    );
+  }
+
+  const renderItem = ({ item }: { item: ProjectData }) => (
     <View style={styles.card}>
-      {/* Title */}
-      <Text style={styles.title}>Project Title</Text>
-
-      {/* User Info */}
+      <Text style={styles.title}>{item.project_title}</Text>
       <View style={styles.userInfo}>
         <Image
           source={{ uri: "https://via.placeholder.com/40" }}
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
-          <Text style={styles.name}>Name</Text>
-          <Text style={styles.location}>Job location</Text>
-          <Text style={styles.date}>8d ago</Text>
-        </View>
-      </View>
-
-      {/* Job Details */}
-      <View style={styles.details}>
-        <View style={styles.row}>
-          <Ionicons name="briefcase-outline" size={20} color="gray" />
-          <Text style={styles.detailText}>Time • Next week</Text>
-        </View>
-        <View style={styles.row}>
-          <MaterialIcons name="article" size={20} color="gray" />
-          <Text style={styles.detailText}>
-            Skills: Communication, Consultative Selling, +8 more
+          <Text style={styles.name}>User ID: {item.user_id}</Text>
+          <Text style={styles.location}>{item.location}</Text>
+          <Text style={styles.date}>
+            {new Date(item.date_posted).toLocaleDateString()}
           </Text>
         </View>
       </View>
-
-      {/* Buttons */}
+      <View style={styles.details}>
+        <View style={styles.row}>
+          <Ionicons name="briefcase-outline" size={20} color="gray" />
+          <Text style={styles.detailText}>Status: {item.project_status}</Text>
+        </View>
+        <View style={styles.row}>
+          <MaterialIcons name="article" size={20} color="gray" />
+          <Text style={styles.detailText}>Skills: {item.skills}</Text>
+        </View>
+      </View>
       <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.saveButton}>
-          <Text style={styles.buttonText}>Save</Text>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={() => handleSave(item.project_id)}
+          disabled={item.is_saved} // Disable if the project is saved
+        >
+          <Text style={styles.buttonText}>
+            {item.is_saved ? "Saved" : "Save"}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.applyButton}>
+        <TouchableOpacity
+          style={styles.applyButton}
+          onPress={() => handleApply(item.project_id)}
+        >
           <Text style={styles.buttonText}>Apply</Text>
         </TouchableOpacity>
       </View>
     </View>
+  );
+
+  return (
+    <FlatList
+      data={projectData}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.project_id.toString()}
+    />
   );
 }
 
@@ -58,6 +181,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 18,

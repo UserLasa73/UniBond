@@ -1,74 +1,51 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Project_titlebox from "./Project_titlebox"; // Import the Project_titlebox component
+import Project_status from "./Project_status"; // Import the Project_status component
+import Saved_project from "./Saved_project"; // Import the Saved_project component
 
-export default function Project_conditionbar() {
-  // State to track the active tab
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+const TABS = ["Available", "Saved", "Status"];
 
-  // Function to handle tab press
-  const handleTabPress = (tabName: string) => {
-    setActiveTab(tabName);
-  };
+export default function ProjectConditionBar() {
+  const [activeTab, setActiveTab] = useState<string>("Available");
 
   return (
-    <View style={styles.container}>
-      {/* Available Tab */}
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "Available" && styles.activeTab]}
-        onPress={() => handleTabPress("Available")}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name="person"
-          size={24}
-          color={activeTab === "Available" ? "#2C3036" : "#8E8E93"}
-        />
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === "Available" && styles.activeText,
-          ]}
-        >
-          Available
-        </Text>
-      </TouchableOpacity>
+    <View>
+      {/* Tab Navigation */}
+      <View style={styles.container}>
+        {TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            onPress={() => setActiveTab(tab)}
+            activeOpacity={0.7}
+            accessibilityLabel={`Switch to ${tab} tab`}
+          >
+            <Ionicons
+              name={
+                tab === "Available"
+                  ? "person"
+                  : tab === "Saved"
+                  ? "bookmark"
+                  : "time"
+              }
+              size={24}
+              color={activeTab === tab ? "#2C3036" : "#8E8E93"}
+            />
+            <Text style={[styles.tabText, activeTab === tab && styles.activeText]}>
+              {tab}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {/* Saved Tab */}
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "Saved" && styles.activeTab]}
-        onPress={() => handleTabPress("Saved")}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name="bookmark"
-          size={24}
-          color={activeTab === "Saved" ? "#2C3036" : "#8E8E93"}
-        />
-        <Text
-          style={[styles.tabText, activeTab === "Saved" && styles.activeText]}
-        >
-          Saved
-        </Text>
-      </TouchableOpacity>
-
-      {/* Status Tab */}
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "Status" && styles.activeTab]}
-        onPress={() => handleTabPress("Status")}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name="time"
-          size={24}
-          color={activeTab === "Status" ? "#2C3036" : "#8E8E93"}
-        />
-        <Text
-          style={[styles.tabText, activeTab === "Status" && styles.activeText]}
-        >
-          Status
-        </Text>
-      </TouchableOpacity>
+      {/* Display Content Based on Active Tab */}
+      <View style={styles.content}>
+        {activeTab === "Available" && <Project_titlebox />}
+        {activeTab === "Saved" && <Saved_project  />}
+        {activeTab === "Status" && <Project_status/>}
+      </View>
     </View>
   );
 }
@@ -85,10 +62,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    backgroundColor: "#e0e0e0",
-    borderRadius: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    backgroundColor: "#dcdcdc",
+    borderRadius: 15,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   tabText: {
     fontSize: 12,
@@ -97,5 +74,16 @@ const styles = StyleSheet.create({
   },
   activeText: {
     color: "#2C3036",
+    fontWeight: "bold",
+  },
+  content: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  message: {
+    fontSize: 16,
+    color: "gray",
+    textAlign: "center",
+    marginTop: 20,
   },
 });
