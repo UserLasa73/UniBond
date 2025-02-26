@@ -44,6 +44,7 @@ export default function ShowProfileEdit() {
 
   const [followingList, setFollowingList] = useState([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
+  const [postsCount, setPostsCount] = useState(0); // Store number of posts made by the user
 
   // State for dropdown menu
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -120,6 +121,7 @@ export default function ShowProfileEdit() {
 
       if (postsData) {
         setPosts(postsData); // Update state with posts
+        setPostsCount(postsData.length); // Update posts count
       }
 
       if (postsError) throw postsError;
@@ -127,7 +129,7 @@ export default function ShowProfileEdit() {
       // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
         .from("events") // Assuming events are in the "events" table
-        .select("id, event_name, event_description,event_location,event_date") // Adjust columns as needed
+        .select("id, event_name, event_description, event_location, event_date") // Adjust columns as needed
         .eq("uid", profileId);
 
       if (eventsData) {
@@ -139,6 +141,7 @@ export default function ShowProfileEdit() {
             is_event: true,
           })),
         ]);
+        setPostsCount((prevCount) => prevCount + eventsData.length); // Update posts count with events
       }
 
       if (eventsError) throw eventsError;
@@ -279,18 +282,34 @@ export default function ShowProfileEdit() {
             onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
 
-          {/* Followers and Following */}
+          {/* Followers, Following, and Posts Count */}
           <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {/* Posts Count */}
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {postsCount}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
+            </View>
+
+            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
+              |
+            </Text>
+
             {/* Following */}
-            <View style={{ alignItems: "center", marginHorizontal: 10 }}>
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followingCount}
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
             </View>
 
+            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
+              |
+            </Text>
+
             {/* Followers */}
-            <View style={{ alignItems: "center", marginHorizontal: 10 }}>
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followingList.length}
               </Text>
