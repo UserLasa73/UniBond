@@ -39,6 +39,12 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
+        name="EditEventScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="ProfileScreen"
         options={{
           headerShown: false,
