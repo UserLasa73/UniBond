@@ -81,7 +81,7 @@ export default function Auth() {
         <Text style={styles.title}>Sign in</Text>
       </TouchableOpacity>
       <View style={styles.verticallySpaced}>
-        <Link style={styles.Link} href="/(auth)/Signup">
+        <Link style={styles.Link} href="/screens/OnScreen">
           Don't have an account? Sign up
         </Link>
       </View>
