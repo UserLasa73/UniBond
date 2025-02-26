@@ -9,7 +9,7 @@ import {
   Alert,
   FlatList,
   StyleSheet,
-  ScrollView,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
@@ -44,6 +44,10 @@ export default function ShowProfileEdit() {
 
   const [followingList, setFollowingList] = useState([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
+
+  // State for dropdown menu
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null); // Store selected event for dropdown
 
   useEffect(() => {
     if (userId || session) {
@@ -123,7 +127,7 @@ export default function ShowProfileEdit() {
       // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
         .from("events") // Assuming events are in the "events" table
-        .select("id, event_name, event_description, event_date,uid,event_date") // Adjust columns as needed
+        .select("id, event_name, event_description,event_location,event_date") // Adjust columns as needed
         .eq("uid", profileId);
 
       if (eventsData) {
@@ -198,6 +202,58 @@ export default function ShowProfileEdit() {
     }
   };
 
+  // Function to handle deleting a post
+  const handleDeletePost = async (postId: number) => {
+    try {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) throw error;
+      fetchPosts(); // Refresh the posts after deletion
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      Alert.alert("Error", "Could not delete post.");
+    }
+  };
+
+  // Function to handle editing a post
+  const handleEditPost = (postId: number) => {
+    router.push(`/screens/EditPost?postId=${postId}`);
+  };
+
+  // Function to handle deleting an event
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventId);
+      if (error) throw error;
+      fetchPosts(); // Refresh the events after deletion
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      Alert.alert("Error", "Could not delete event.");
+    }
+  };
+
+  // Function to handle editing an event
+  const handleEditEvent = (event) => {
+    router.push({
+      pathname: "/screens/EditEventScreen",
+      params: {
+        eventId: event.id,
+        eventName: event.event_name,
+        eventDescription: event.event_description,
+        eventDate: event.event_date,
+        eventLocation: event.event_location,
+      },
+    });
+  };
+
+  // Function to open dropdown menu for an event
+  const openDropdown = (event) => {
+    setSelectedEvent(event);
+    setDropdownVisible(true);
+  };
+
   return (
     <SafeAreaView>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
@@ -236,7 +292,6 @@ export default function ShowProfileEdit() {
             {/* Followers */}
             <View style={{ alignItems: "center", marginHorizontal: 10 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {/* Replace this with the actual follower count */}
                 {followingList.length}
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
@@ -313,9 +368,25 @@ export default function ShowProfileEdit() {
             <View style={{ marginBottom: 20 }}>
               {item.is_event ? (
                 <View style={styles.eventItem}>
-                  <Text style={styles.eventevent_name}>{item.event_name}</Text>
-                  <Text> Description:{item.event_description}</Text>
-                  <Text> Location:{item.event_location}</Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text style={styles.eventevent_name}>
+                      {item.event_name}
+                    </Text>
+                    <TouchableOpacity onPress={() => openDropdown(item)}>
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={24}
+                        color="black"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text> Description: {item.event_description}</Text>
+                  <Text> Location: {item.event_location}</Text>
                   <Text> Date: {item.event_date}</Text>
                 </View>
               ) : (
@@ -324,6 +395,8 @@ export default function ShowProfileEdit() {
                   username={username || "Anonymous"}
                   onLike={handleLike}
                   onCommentSubmit={handleCommentSubmit}
+                  onDelete={handleDeletePost}
+                  onEdit={handleEditPost}
                 />
               )}
             </View>
@@ -331,9 +404,40 @@ export default function ShowProfileEdit() {
           keyExtractor={(item) => item.id.toString()}
         />
       </View>
+
+      {/* Dropdown Menu */}
+      <Modal
+        transparent={true}
+        visible={dropdownVisible}
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity
+              onPress={() => {
+                handleEditEvent(selectedEvent);
+                setDropdownVisible(false);
+              }}
+              style={styles.dropdownItem}
+            >
+              <Text>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                handleDeleteEvent(selectedEvent.id);
+                setDropdownVisible(false);
+              }}
+              style={styles.dropdownItem}
+            >
+              <Text style={{ color: "red" }}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   eventItem: {
     padding: 15,
@@ -344,5 +448,20 @@ const styles = StyleSheet.create({
   eventevent_name: {
     fontSize: 18,
     fontWeight: "bold",
+  },
+  dropdownContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  dropdownMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 10,
+    width: 150,
+  },
+  dropdownItem: {
+    padding: 10,
   },
 });
