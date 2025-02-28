@@ -26,6 +26,7 @@ type Post = {
   username: string; // Added username
   posted_date: string; // Added posted date
   avatar_url: string; // Added avatar URL
+  role: boolean; // Added role
 };
 
 type Event = {
@@ -38,6 +39,7 @@ type Event = {
   username: string; // Added username
   posted_date: string; // Added posted date
   avatar_url: string; // Added avatar URL
+  role: boolean; // Added role
 };
 
 const HomeScreen: React.FC = () => {
@@ -61,7 +63,7 @@ const HomeScreen: React.FC = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("username, avatar_url")
+        .select("username, avatar_url, role")
         .eq("id", profileId)
         .single();
 
@@ -73,12 +75,12 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // Fetch user profile data (username and avatar) by user_id
+  // Fetch user profile data (username, avatar, and role) by user_id
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("username, avatar_url")
+        .select("username, avatar_url, role")
         .eq("id", userId)
         .single();
 
@@ -86,7 +88,7 @@ const HomeScreen: React.FC = () => {
       return data;
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      return { username: "Anonymous", avatar_url: null };
+      return { username: "Anonymous", avatar_url: null, role: false }; // Default role is false (Student)
     }
   };
 
@@ -119,6 +121,7 @@ const HomeScreen: React.FC = () => {
             type: "post",
             username: userProfile.username,
             avatar_url: userProfile.avatar_url,
+            role: userProfile.role, // Include role
             posted_date: new Date(post.created_at).toISOString(), // Store as ISO string
           };
         })
@@ -133,6 +136,7 @@ const HomeScreen: React.FC = () => {
             type: "event",
             username: userProfile.username,
             avatar_url: userProfile.avatar_url,
+            role: userProfile.role, // Include role
             posted_date: new Date(event.created_at).toISOString(), // Store as ISO string
           };
         })
@@ -249,7 +253,10 @@ const HomeScreen: React.FC = () => {
                 <MaterialIcons name="person" size={40} color="#000" />
               )}
               <View style={styles.userInfoText}>
-                <Text style={styles.username}>{event.username}</Text>
+                <Text style={styles.username}>
+                  {event.username} ({event.role ? "Alumni" : "Student"}){" "}
+                  {/* Display role */}
+                </Text>
                 <Text style={styles.postedDate}>
                   {calculatePostDuration(event.posted_date)}
                 </Text>
@@ -280,7 +287,8 @@ const HomeScreen: React.FC = () => {
           username={post.username}
           avatarUrl={imageUrl}
           postedDate={post.posted_date}
-          postDuration={calculatePostDuration(post.posted_date)} // Pass post duration to PostItem
+          postDuration={calculatePostDuration(post.posted_date)}
+          role={post.role} // Pass role to PostItem
           onLike={handleLike}
           onCommentSubmit={handleCommentSubmit}
           onProfilePress={() =>
@@ -338,12 +346,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 70,
     position: "absolute",
-    top: 600, // Consider replacing this with a more responsive positioning like `bottom`.
+    top: 600,
     right: 20,
     height: 70,
     backgroundColor: "#EBF2FA",
     borderRadius: 100,
-    // Shadow for iOS
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -351,7 +358,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    // Shadow for Android
     elevation: 5,
   },
   combinedList: {
@@ -376,13 +382,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-    marginLeft: 10,
   },
   userInfoText: {
     flexDirection: "column",

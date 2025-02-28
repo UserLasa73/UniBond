@@ -242,10 +242,10 @@ export default function ProfileScreen() {
           onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
         />
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
-          {fullname || "Profile"}
+          {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
-          {username} {role ? "Alumni" : "Student"}
+          {username} | {contactNumber}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
           {faculty} | {department}
