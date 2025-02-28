@@ -14,8 +14,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
-import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+
 type Post = {
   id: number;
   content: string;
@@ -23,6 +22,9 @@ type Post = {
   comments: { username: string; comment: string }[];
   is_public: boolean;
   user_id: string;
+  username: string; // Added username
+  posted_date: string; // Added posted date
+  avatar_url: string; // Added avatar URL
 };
 
 type Event = {
@@ -31,12 +33,15 @@ type Event = {
   event_date: string;
   event_location: string;
   event_description: string;
+  user_id: string; // Added user_id for events
+  username: string; // Added username
+  posted_date: string; // Added posted date
+  avatar_url: string; // Added avatar URL
 };
 
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { session } = useAuth();
-  const navigation = useNavigation();
   const [username, setUsername] = useState<string>("");
   const [combinedData, setCombinedData] = useState<(Post | Event)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -55,7 +60,7 @@ const HomeScreen: React.FC = () => {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, avatar_url")
         .eq("id", profileId)
         .single();
 
@@ -67,42 +72,99 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // Fetch user profile data (username and avatar) by user_id
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      return { username: "Anonymous", avatar_url: null };
+    }
+  };
+
   const fetchCombinedData = async () => {
     setLoading(true);
     try {
-      const [postsResponse, eventsResponse] = await Promise.all([
-        supabase
-          .from("posts")
-          .select("id, content, likes, comments, is_public, user_id")
-          .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`),
-        supabase
-          .from("events")
-          .select(
-            "id, event_name, event_date, event_location, event_description"
-          ),
-      ]);
+      // Fetch posts
+      const { data: postsData, error: postsError } = await supabase
+        .from("posts")
+        .select("id, content, likes, comments, is_public, user_id, created_at")
+        .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
 
-      if (postsResponse.error || eventsResponse.error) {
-        throw new Error(
-          postsResponse.error?.message || eventsResponse.error?.message
+      if (postsError) throw postsError;
+
+      // Fetch events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("events")
+        .select(
+          "id, event_name, event_date, event_location, event_description, uid, created_at"
         );
-      }
 
-      const posts = postsResponse.data.map((post: Post) => ({
-        ...post,
-        type: "post",
-      }));
-      const events = eventsResponse.data.map((event: Event) => ({
-        ...event,
-        type: "event",
-      }));
+      if (eventsError) throw eventsError;
 
-      setCombinedData([...events, ...posts]); // Events first, then posts
+      // Fetch user profile data for each post
+      const postsWithUserData = await Promise.all(
+        postsData.map(async (post: Post) => {
+          const userProfile = await fetchUserProfile(post.user_id);
+          return {
+            ...post,
+            type: "post",
+            username: userProfile.username,
+            avatar_url: userProfile.avatar_url,
+            posted_date: new Date(post.created_at).toISOString(), // Store as ISO string
+          };
+        })
+      );
+
+      // Fetch user profile data for each event
+      const eventsWithUserData = await Promise.all(
+        eventsData.map(async (event: Event) => {
+          const userProfile = await fetchUserProfile(event.uid);
+          return {
+            ...event,
+            type: "event",
+            username: userProfile.username,
+            avatar_url: userProfile.avatar_url,
+            posted_date: new Date(event.created_at).toISOString(), // Store as ISO string
+          };
+        })
+      );
+
+      setCombinedData([...eventsWithUserData, ...postsWithUserData]); // Events first, then posts
     } catch (error) {
       console.error("Error fetching data:", error);
       Alert.alert("Error", "Could not fetch data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Calculate post duration
+  const calculatePostDuration = (postedDate: string) => {
+    const postDate = new Date(postedDate);
+    const currentDate = new Date();
+    const timeDifference = currentDate.getTime() - postDate.getTime();
+
+    // Convert time difference to days, hours, or minutes
+    const daysDifference = Math.floor(timeDifference / (1000 * 3600 * 24));
+    const hoursDifference = Math.floor(timeDifference / (1000 * 3600));
+    const minutesDifference = Math.floor(timeDifference / (1000 * 60));
+
+    if (daysDifference > 0) {
+      return `${daysDifference} day${daysDifference > 1 ? "s" : ""} ago`;
+    } else if (hoursDifference > 0) {
+      return `${hoursDifference} hour${hoursDifference > 1 ? "s" : ""} ago`;
+    } else if (minutesDifference > 0) {
+      return `${minutesDifference} minute${minutesDifference > 1 ? "s" : ""} ago`;
+    } else {
+      return "Just now";
     }
   };
 
@@ -163,8 +225,36 @@ const HomeScreen: React.FC = () => {
   const renderItem = ({ item }: { item: Post | Event }) => {
     if (item.type === "event") {
       const event = item as Event;
+      const storageUrl =
+        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+      const imageUrl = event.avatar_url
+        ? `${storageUrl}${event.avatar_url}`
+        : null;
+
       return (
         <View style={styles.eventItem}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push(`/screens/ProfileScreen?userId=${event.uid}`)
+            }
+          >
+            <View style={styles.userInfoContainer}>
+              {imageUrl ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={{ width: 40, height: 40, borderRadius: 20 }}
+                />
+              ) : (
+                <MaterialIcons name="person" size={40} color="#000" />
+              )}
+              <View style={styles.userInfoText}>
+                <Text style={styles.username}>{event.username}</Text>
+                <Text style={styles.postedDate}>
+                  {calculatePostDuration(event.posted_date)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
           <Text style={styles.eventTitle}>{event.event_name}</Text>
           <Text style={styles.eventDetails}>Date: {event.event_date}</Text>
           <Text style={styles.eventDetails}>
@@ -177,12 +267,24 @@ const HomeScreen: React.FC = () => {
       );
     } else if (item.type === "post") {
       const post = item as Post;
+      const storageUrl =
+        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+      const imageUrl = post.avatar_url
+        ? `${storageUrl}${post.avatar_url}`
+        : null;
+
       return (
         <PostItem
           post={post}
-          username={username}
+          username={post.username}
+          avatarUrl={imageUrl}
+          postedDate={post.posted_date}
+          postDuration={calculatePostDuration(post.posted_date)} // Pass post duration to PostItem
           onLike={handleLike}
           onCommentSubmit={handleCommentSubmit}
+          onProfilePress={() =>
+            router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
+          }
         />
       );
     }
@@ -268,6 +370,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     marginTop: 4,
+  },
+  userInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+    marginLeft: 10,
+  },
+  userInfoText: {
+    flexDirection: "column",
+  },
+  username: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginRight: 10,
+    marginLeft: 10,
+  },
+  postedDate: {
+    fontSize: 12,
+    color: "#666",
+    marginRight: 10,
+    marginLeft: 10,
   },
   loaderContainer: {
     flex: 1,

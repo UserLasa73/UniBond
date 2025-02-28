@@ -258,7 +258,8 @@ export default function ShowProfileEdit() {
   };
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* Add flex: 1 to SafeAreaView */}
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
           style={{ position: "absolute", left: 0 }}
@@ -377,7 +378,8 @@ export default function ShowProfileEdit() {
         )}
       </View>
       {/* Posts Section */}
-      <View style={{ marginTop: 30 }}>
+      <View style={{ marginTop: 30, flex: 1 }}>
+        {/* Add flex: 1 to the parent container */}
         <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>
           My Posts
         </Text>
@@ -404,9 +406,10 @@ export default function ShowProfileEdit() {
                       />
                     </TouchableOpacity>
                   </View>
-                  <Text> Description: {item.event_description}</Text>
-                  <Text> Location: {item.event_location}</Text>
-                  <Text> Date: {item.event_date}</Text>
+                  {/* Wrap strings in <Text> components */}
+                  <Text>Description: {item.event_description}</Text>
+                  <Text>Location: {item.event_location}</Text>
+                  <Text>Date: {item.event_date}</Text>
                 </View>
               ) : (
                 <PostItem
@@ -423,7 +426,6 @@ export default function ShowProfileEdit() {
           keyExtractor={(item) => item.id.toString()}
         />
       </View>
-
       {/* Dropdown Menu */}
       <Modal
         transparent={true}
