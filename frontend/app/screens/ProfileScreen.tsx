@@ -26,6 +26,7 @@ export default function ProfileScreen() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
+  const [role, setRole] = useState<boolean>(false); // State for role
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
@@ -172,7 +173,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role` // Add role to the select query
         )
         .eq("id", profileId)
         .single();
@@ -191,6 +192,7 @@ export default function ProfileScreen() {
         setCourse(data.course);
         setSkills(data.skills);
         setInterests(data.interests);
+        setRole(data.role);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -241,6 +243,9 @@ export default function ProfileScreen() {
         />
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"}
+        </Text>
+        <Text style={{ fontSize: 16, color: "#555" }}>
+          {username} {role ? "Alumni" : "Student"}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
           {faculty} | {department}
