@@ -39,9 +39,12 @@ export default function ShowProfileEdit() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
+  const [role, setRole] = useState<boolean>(false); // State for role
   const [posts, setPosts] = useState<Post[]>([]); // State for posts
   const { userId } = useLocalSearchParams();
 
+  const [followersList, setFollowersList] = useState([]); // Store followers list
+  const [followersCount, setFollowersCount] = useState(0); // Store number of followers
   const [followingList, setFollowingList] = useState([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
   const [postsCount, setPostsCount] = useState(0); // Store number of posts made by the user
@@ -53,26 +56,55 @@ export default function ShowProfileEdit() {
   useEffect(() => {
     if (userId || session) {
       getProfile();
-      getFollowing();
+      getFollowers(); // Fetch followers
+      getFollowing(); // Fetch following
       fetchPosts();
     }
   }, [userId, session]);
 
-  const getFollowing = async () => {
-    const profileId = userId || session?.user?.id;
-    const { data, error } = await supabase
-      .from("followers")
-      .select("followed_id, profiles(*)") // Joining with profiles to get details
-      .eq("follower_id", profileId); // Filter by the current user's follower_id
+  // Fetch followers
+  const getFollowers = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
 
-    if (error) {
-      console.error("Error fetching following list:", error);
-    } else {
-      setFollowingList(data); // Store the followed users in the state
-      setFollowingCount(data.length); // Set the following count to the number of followed users
+      const { data, error } = await supabase
+        .from("followers")
+        .select("follower_id, profiles(*)")
+        .eq("followed_id", profileId);
+
+      if (error) throw error;
+
+      setFollowersList(data || []);
+      setFollowersCount(data.length);
+    } catch (error) {
+      console.error("Error fetching followers:", error);
+      Alert.alert("Error", "Could not fetch followers.");
     }
   };
 
+  // Fetch following
+  const getFollowing = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("followers")
+        .select("followed_id, profiles(*)")
+        .eq("follower_id", profileId);
+
+      if (error) throw error;
+
+      setFollowingList(data || []);
+      setFollowingCount(data.length);
+    } catch (error) {
+      console.error("Error fetching following:", error);
+      Alert.alert("Error", "Could not fetch following.");
+    }
+  };
+
+  // Fetch profile data
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -81,7 +113,7 @@ export default function ShowProfileEdit() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role`
         )
         .eq("id", profileId)
         .single();
@@ -98,6 +130,7 @@ export default function ShowProfileEdit() {
         setCourse(data.course);
         setSkills(data.skills);
         setInterests(data.interests);
+        setRole(data.role); // Set role state
       }
 
       if (error) throw error;
@@ -120,16 +153,16 @@ export default function ShowProfileEdit() {
         .eq("user_id", profileId);
 
       if (postsData) {
-        setPosts(postsData); // Update state with posts
-        setPostsCount(postsData.length); // Update posts count
+        setPosts(postsData);
+        setPostsCount(postsData.length);
       }
 
       if (postsError) throw postsError;
 
       // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
-        .from("events") // Assuming events are in the "events" table
-        .select("id, event_name, event_description, event_location, event_date") // Adjust columns as needed
+        .from("events")
+        .select("id, event_name, event_description, event_location, event_date")
         .eq("uid", profileId);
 
       if (eventsData) {
@@ -141,7 +174,7 @@ export default function ShowProfileEdit() {
             is_event: true,
           })),
         ]);
-        setPostsCount((prevCount) => prevCount + eventsData.length); // Update posts count with events
+        setPostsCount((prevCount) => prevCount + eventsData.length);
       }
 
       if (eventsError) throw eventsError;
@@ -158,7 +191,6 @@ export default function ShowProfileEdit() {
   // Function to handle liking a post
   const handleLike = async (postId: number) => {
     try {
-      // Fetch the current likes count
       const { data: postData, error: fetchError } = await supabase
         .from("posts")
         .select("likes")
@@ -167,10 +199,8 @@ export default function ShowProfileEdit() {
 
       if (fetchError) throw fetchError;
 
-      // Increment the likes count
       const updatedLikes = (postData?.likes || 0) + 1;
 
-      // Update the post with the new likes count
       const { error: updateError } = await supabase
         .from("posts")
         .update({ likes: updatedLikes })
@@ -178,8 +208,7 @@ export default function ShowProfileEdit() {
 
       if (updateError) throw updateError;
 
-      // Optionally, refetch posts to get updated data
-      fetchPosts(); // Refresh the posts
+      fetchPosts();
     } catch (error) {
       console.error("Error liking post:", error);
     }
@@ -191,15 +220,14 @@ export default function ShowProfileEdit() {
       const { error } = await supabase.from("comments").insert([
         {
           post_id: postId,
-          username, // Use the username from state or context
+          username,
           comment: newComment,
         },
       ]);
 
       if (error) throw error;
 
-      // Optionally, refetch posts to get updated comments
-      fetchPosts(); // Refresh the posts
+      fetchPosts();
     } catch (error) {
       console.error("Error submitting comment:", error);
     }
@@ -210,7 +238,7 @@ export default function ShowProfileEdit() {
     try {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
       if (error) throw error;
-      fetchPosts(); // Refresh the posts after deletion
+      fetchPosts();
     } catch (error) {
       console.error("Error deleting post:", error);
       Alert.alert("Error", "Could not delete post.");
@@ -230,7 +258,7 @@ export default function ShowProfileEdit() {
         .delete()
         .eq("id", eventId);
       if (error) throw error;
-      fetchPosts(); // Refresh the events after deletion
+      fetchPosts();
     } catch (error) {
       console.error("Error deleting event:", error);
       Alert.alert("Error", "Could not delete event.");
@@ -259,7 +287,7 @@ export default function ShowProfileEdit() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* Add flex: 1 to SafeAreaView */}
+      {/* Back Button */}
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
           style={{ position: "absolute", left: 0 }}
@@ -268,8 +296,9 @@ export default function ShowProfileEdit() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       </View>
+
+      {/* Profile Header */}
       <View style={{ marginTop: 40, marginHorizontal: 20 }}>
-        {/* Row: Profile Picture + Followers and Following */}
         <View
           style={{
             flexDirection: "row",
@@ -279,13 +308,12 @@ export default function ShowProfileEdit() {
         >
           <ShowingAvatar
             url={avatarUrl}
-            size={50} // Adjust size as needed
+            size={50}
             onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
 
           {/* Followers, Following, and Posts Count */}
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {/* Posts Count */}
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {postsCount}
@@ -297,30 +325,30 @@ export default function ShowProfileEdit() {
               |
             </Text>
 
-            {/* Following */}
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {followingCount}
+                {followersCount}
               </Text>
-              <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
             </View>
 
             <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
               |
             </Text>
 
-            {/* Followers */}
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {followingList.length}
+                {followingCount}
               </Text>
-              <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
             </View>
           </View>
         </View>
+
+        {/* Profile Details */}
         <View style={{ marginTop: 20 }}>
           <Text style={{ fontSize: 20, fontWeight: "bold" }}>
-            {fullname || "Profile"}
+            {fullname || "Profile"} ({role ? "Alumni" : "Student"})
           </Text>
           <Text style={{ fontSize: 16, color: "#666" }}>
             {faculty} | {department}
@@ -328,6 +356,8 @@ export default function ShowProfileEdit() {
           <Text style={{ fontSize: 16, color: "#666" }}>{skills}</Text>
         </View>
       </View>
+
+      {/* Edit and Sign Out Buttons */}
       <View
         style={{
           flexDirection: "row",
@@ -377,9 +407,9 @@ export default function ShowProfileEdit() {
           </TouchableOpacity>
         )}
       </View>
+
       {/* Posts Section */}
       <View style={{ marginTop: 30, flex: 1 }}>
-        {/* Add flex: 1 to the parent container */}
         <Text style={{ fontSize: 18, fontWeight: "bold", marginLeft: 20 }}>
           My Posts
         </Text>
@@ -406,7 +436,6 @@ export default function ShowProfileEdit() {
                       />
                     </TouchableOpacity>
                   </View>
-                  {/* Wrap strings in <Text> components */}
                   <Text>Description: {item.event_description}</Text>
                   <Text>Location: {item.event_location}</Text>
                   <Text>Date: {item.event_date}</Text>
@@ -426,6 +455,7 @@ export default function ShowProfileEdit() {
           keyExtractor={(item) => item.id.toString()}
         />
       </View>
+
       {/* Dropdown Menu */}
       <Modal
         transparent={true}
