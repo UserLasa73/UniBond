@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
-import { SafeAreaView, FlatList, ScrollView } from "react-native";
+import { SafeAreaView, FlatList } from "react-native";
 import {
   TouchableOpacity,
   View,
@@ -41,9 +41,11 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
-      fetchPostsAndEvents(); // Fetch posts and events when the component mounts
+      if (isFollowing) {
+        fetchPostsAndEvents(); // Fetch posts and events only if following
+      }
     }
-  }, [userId, session]);
+  }, [userId, session, isFollowing]); // Add isFollowing to dependency array
 
   // Fetch posts and events created by the user
   const fetchPostsAndEvents = async () => {
@@ -131,6 +133,9 @@ export default function ProfileScreen() {
       setIsFollowing((prev) => !prev);
       getFollowing();
       getFollowerCount();
+      if (!isFollowing) {
+        fetchPostsAndEvents(); // Fetch posts and events after following
+      }
     } catch (error) {
       Alert.alert("Error", "Something went wrong.");
     } finally {
@@ -340,35 +345,40 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Posts Section */}
-      <View style={{ marginTop: 30, marginHorizontal: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
-        <FlatList
-          data={posts}
-          renderItem={renderPost}
-          keyExtractor={(item) => item.id.toString()}
-          ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 10 }}>
-              No posts found.
-            </Text>
-          }
-        />
-      </View>
+      {/* Conditionally render posts and events only if following */}
+      {isFollowing && (
+        <>
+          {/* Posts Section */}
+          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
+            <FlatList
+              data={posts}
+              renderItem={renderPost}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={{ textAlign: "center", marginTop: 10 }}>
+                  No posts found.
+                </Text>
+              }
+            />
+          </View>
 
-      {/* Events Section */}
-      <View style={{ marginTop: 30, marginHorizontal: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
-        <FlatList
-          data={events}
-          renderItem={renderEvent}
-          keyExtractor={(item) => item.id.toString()}
-          ListEmptyComponent={
-            <Text style={{ textAlign: "center", marginTop: 10 }}>
-              No events found.
-            </Text>
-          }
-        />
-      </View>
+          {/* Events Section */}
+          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
+            <FlatList
+              data={events}
+              renderItem={renderEvent}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={{ textAlign: "center", marginTop: 10 }}>
+                  No events found.
+                </Text>
+              }
+            />
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
