@@ -14,6 +14,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
+import { MaterialIcons } from "@expo/vector-icons";
 
 type Post = {
   id: number;
