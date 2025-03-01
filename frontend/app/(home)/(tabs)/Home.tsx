@@ -23,10 +23,10 @@ type Post = {
   comments: { username: string; comment: string }[];
   is_public: boolean;
   user_id: string;
-  username: string; // Added username
-  posted_date: string; // Added posted date
-  avatar_url: string; // Added avatar URL
-  role: boolean; // Added role
+  username: string;
+  posted_date: string;
+  avatar_url: string;
+  role: boolean;
 };
 
 type Event = {
@@ -35,11 +35,12 @@ type Event = {
   event_date: string;
   event_location: string;
   event_description: string;
-  user_id: string; // Added user_id for events
-  username: string; // Added username
-  posted_date: string; // Added posted date
-  avatar_url: string; // Added avatar URL
-  role: boolean; // Added role
+  user_id: string;
+  username: string;
+  posted_date: string;
+  avatar_url: string;
+  role: boolean;
+  interested_count: number; // Ensure this is included
 };
 
 const HomeScreen: React.FC = () => {
@@ -75,7 +76,6 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // Fetch user profile data (username, avatar, and role) by user_id
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -88,7 +88,7 @@ const HomeScreen: React.FC = () => {
       return data;
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      return { username: "Anonymous", avatar_url: null, role: false }; // Default role is false (Student)
+      return { username: "Anonymous", avatar_url: null, role: false };
     }
   };
 
@@ -103,11 +103,11 @@ const HomeScreen: React.FC = () => {
 
       if (postsError) throw postsError;
 
-      // Fetch events
+      // Fetch events (include interested_count)
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
         .select(
-          "id, event_name, event_date, event_location, event_description, uid, created_at"
+          "id, event_name, event_date, event_location, event_description, uid, created_at, interested_count"
         );
 
       if (eventsError) throw eventsError;
@@ -121,8 +121,8 @@ const HomeScreen: React.FC = () => {
             type: "post",
             username: userProfile.username,
             avatar_url: userProfile.avatar_url,
-            role: userProfile.role, // Include role
-            posted_date: new Date(post.created_at).toISOString(), // Store as ISO string
+            role: userProfile.role,
+            posted_date: new Date(post.created_at).toISOString(),
           };
         })
       );
@@ -136,13 +136,13 @@ const HomeScreen: React.FC = () => {
             type: "event",
             username: userProfile.username,
             avatar_url: userProfile.avatar_url,
-            role: userProfile.role, // Include role
-            posted_date: new Date(event.created_at).toISOString(), // Store as ISO string
+            role: userProfile.role,
+            posted_date: new Date(event.created_at).toISOString(),
           };
         })
       );
 
-      setCombinedData([...eventsWithUserData, ...postsWithUserData]); // Events first, then posts
+      setCombinedData([...eventsWithUserData, ...postsWithUserData]);
     } catch (error) {
       console.error("Error fetching data:", error);
       Alert.alert("Error", "Could not fetch data.");
@@ -151,13 +151,11 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // Calculate post duration
   const calculatePostDuration = (postedDate: string) => {
     const postDate = new Date(postedDate);
     const currentDate = new Date();
     const timeDifference = currentDate.getTime() - postDate.getTime();
 
-    // Convert time difference to days, hours, or minutes
     const daysDifference = Math.floor(timeDifference / (1000 * 3600 * 24));
     const hoursDifference = Math.floor(timeDifference / (1000 * 3600));
     const minutesDifference = Math.floor(timeDifference / (1000 * 60));
@@ -175,25 +173,36 @@ const HomeScreen: React.FC = () => {
 
   const handleLike = async (postId: number) => {
     try {
-      setCombinedData((prev) =>
-        prev.map((item) =>
-          item.type === "post" && item.id === postId
-            ? { ...item, likes: item.likes + 1 }
-            : item
-        )
-      );
+      // Find the post in the combinedData array
+      const post = combinedData.find(
+        (item) => item.type === "post" && item.id === postId
+      ) as Post;
 
+      if (!post) throw new Error("Post not found");
+
+      // Toggle like state
+      const isLiked = post.likes > 0; // Assuming likes > 0 means the user has liked the post
+      const newLikes = isLiked ? post.likes - 1 : post.likes + 1;
+
+      // Update the database
       const { error } = await supabase
         .from("posts")
-        .update({
-          likes: (combinedData.find((p) => p.id === postId) as Post).likes + 1,
-        })
+        .update({ likes: newLikes })
         .eq("id", postId);
 
       if (error) throw error;
+
+      // Update the local state
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? { ...item, likes: newLikes }
+            : item
+        )
+      );
     } catch (error) {
-      console.error("Error liking post:", error);
-      Alert.alert("Error", "Could not like the post.");
+      console.error("Error toggling like:", error);
+      Alert.alert("Error", "Could not toggle like.");
     }
   };
 
@@ -227,6 +236,96 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const handleInterestToggle = async (eventId: number) => {
+    try {
+      // Check if the user is already interested
+      const { data: interestData, error: interestError } = await supabase
+        .from("event_interests")
+        .select("*")
+        .eq("event_id", eventId)
+        .eq("user_id", session?.user?.id);
+
+      if (interestError) throw interestError;
+
+      const isInterested = interestData.length > 0;
+
+      if (isInterested) {
+        // Remove interest
+        const { error: removeError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", session?.user?.id);
+
+        if (removeError) throw removeError;
+
+        // Decrement the interested count in the events table
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count - 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update the local state directly
+        setCombinedData((prev) =>
+          prev.map((item) =>
+            item.type === "event" && item.id === eventId
+              ? { ...item, interested_count: newInterestedCount }
+              : item
+          )
+        );
+      } else {
+        // Add interest
+        const { error: addError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: session?.user?.id }]);
+
+        if (addError) throw addError;
+
+        // Increment the interested count in the events table
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count + 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update the local state directly
+        setCombinedData((prev) =>
+          prev.map((item) =>
+            item.type === "event" && item.id === eventId
+              ? { ...item, interested_count: newInterestedCount }
+              : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Could not toggle interest.");
+    }
+  };
+
   const renderItem = ({ item }: { item: Post | Event }) => {
     if (item.type === "event") {
       const event = item as Event;
@@ -254,8 +353,7 @@ const HomeScreen: React.FC = () => {
               )}
               <View style={styles.userInfoText}>
                 <Text style={styles.username}>
-                  {event.username} ({event.role ? "Alumni" : "Student"}){" "}
-                  {/* Display role */}
+                  {event.username} ({event.role ? "Alumni" : "Student"})
                 </Text>
                 <Text style={styles.postedDate}>
                   {calculatePostDuration(event.posted_date)}
@@ -271,6 +369,15 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.eventDetails}>
             Description: {event.event_description}
           </Text>
+          <TouchableOpacity
+            style={styles.interestedButton}
+            onPress={() => handleInterestToggle(event.id)}
+          >
+            <Text style={styles.interestedButtonText}>
+              {event.interested_count > 0 ? "Not Interested" : " Interested"} (
+              {event.interested_count})
+            </Text>
+          </TouchableOpacity>
         </View>
       );
     } else if (item.type === "post") {
@@ -288,7 +395,7 @@ const HomeScreen: React.FC = () => {
           avatarUrl={imageUrl}
           postedDate={post.posted_date}
           postDuration={calculatePostDuration(post.posted_date)}
-          role={post.role} // Pass role to PostItem
+          role={post.role}
           onLike={handleLike}
           onCommentSubmit={handleCommentSubmit}
           onProfilePress={() =>
@@ -402,6 +509,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  interestedButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#007BFF",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  interestedButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
   },
 });
 
