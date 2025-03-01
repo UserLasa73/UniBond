@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
-import { SafeAreaView, FlatList, Modal, Linking } from "react-native";
+import {
+  SafeAreaView,
+  FlatList,
+  Modal,
+  TouchableWithoutFeedback,
+} from "react-native";
 import {
   TouchableOpacity,
   View,
@@ -27,21 +32,19 @@ export default function ProfileScreen() {
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
   const [role, setRole] = useState<boolean>(false);
-  const [linkedin, setLinkedin] = useState("");
-  const [github, setGithub] = useState("");
-  const [portfolio, setPortfolio] = useState("");
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [postsCount, setPostsCount] = useState(0);
   const [posts, setPosts] = useState([]);
   const [events, setEvents] = useState([]);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
+  const [email, setEmail] = useState(""); // State for email
+  const [github, setGithub] = useState(""); // State for GitHub
+  const [linkedin, setLinkedin] = useState(""); // State for LinkedIn
+  const [portfolio, setPortfolio] = useState(""); // State for portfolio
 
   useEffect(() => {
     if (userId || session) {
@@ -49,12 +52,129 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
-      getFollowingCount();
-      fetchPosts();
+      if (isFollowing) {
+        fetchPostsAndEvents();
+      }
     }
-  }, [userId, session]);
+  }, [userId, session, isFollowing]);
 
-  // Fetch profile data
+  // Fetch posts and events created by the user
+  const fetchPostsAndEvents = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // Fetch posts
+      const { data: postsData, error: postsError } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", profileId);
+
+      if (postsError) throw postsError;
+
+      // Fetch events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("uid", profileId);
+
+      if (eventsError) throw eventsError;
+
+      // Update state with posts and events
+      setPosts(postsData || []);
+      setEvents(eventsData || []);
+    } catch (error) {
+      console.error("Error fetching posts and events:", error);
+      Alert.alert("Error", "Unable to load posts and events.");
+    }
+  };
+
+  // Fetching the follower count for the profile
+  const getFollowerCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("followed_id", userId);
+
+      if (error) throw error;
+
+      setFollowerCount(data.length);
+    } catch (error) {
+      console.error("Error fetching follower count:", error);
+    }
+  };
+
+  // Check if the current user is following this profile
+  const checkFollowingStatus = async () => {
+    const profileId = session?.user?.id;
+    const { data, error } = await supabase
+      .from("followers")
+      .select("follower_id")
+      .eq("follower_id", profileId)
+      .eq("followed_id", userId);
+
+    if (error) {
+      console.error("Error fetching following status:", error);
+    } else {
+      setIsFollowing(data.length > 0);
+    }
+  };
+
+  // Fetching the list of followed users with their profile details
+  const getFollowing = async () => {
+    const profileId = session?.user?.id;
+    const { data, error } = await supabase
+      .from("followers")
+      .select("followed_id, profiles(*)")
+      .eq("follower_id", profileId);
+
+    if (error) {
+      console.error("Error fetching following list:", error);
+    } else {
+      setFollowingList(data);
+    }
+  };
+
+  const toggleFollow = async (followedId) => {
+    setLoading(true);
+    try {
+      const action = isFollowing ? unfollowUser : followUser;
+      await action(followedId);
+      setIsFollowing((prev) => !prev);
+      getFollowing();
+      getFollowerCount();
+      if (!isFollowing) {
+        fetchPostsAndEvents(); // Fetch posts and events after following
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const followUser = async (followedId) => {
+    const profileId = session?.user?.id;
+    const { error } = await supabase
+      .from("followers")
+      .insert([{ follower_id: profileId, followed_id: followedId }]);
+
+    if (error) throw new Error("Error following user.");
+  };
+
+  const unfollowUser = async (followedId) => {
+    const profileId = session?.user?.id;
+    const { error } = await supabase
+      .from("followers")
+      .delete()
+      .eq("follower_id", profileId)
+      .eq("followed_id", followedId);
+
+    if (error) throw new Error("Error unfollowing user.");
+  };
+
+  // Fetching the profile data
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -63,7 +183,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, linkedin, github, portfolio`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, github, linkedin, portfolio`
         )
         .eq("id", profileId)
         .single();
@@ -83,10 +203,10 @@ export default function ProfileScreen() {
         setSkills(data.skills);
         setInterests(data.interests);
         setRole(data.role);
-        setUserEmail(data.email);
-        setLinkedin(data.linkedin || "");
-        setGithub(data.github || "");
-        setPortfolio(data.portfolio || "");
+        setEmail(data.email); // Set email
+        setGithub(data.github); // Set GitHub
+        setLinkedin(data.linkedin); // Set LinkedIn
+        setPortfolio(data.portfolio); // Set portfolio
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -94,7 +214,7 @@ export default function ProfileScreen() {
     }
   }
 
-  // Render posts and events
+  // Render a single post
   const renderPost = ({ item }) => (
     <View style={styles.postContainer}>
       <Text style={styles.postContent}>{item.content}</Text>
@@ -102,6 +222,7 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Render a single event
   const renderEvent = ({ item }) => (
     <View style={styles.eventContainer}>
       <Text style={styles.eventName}>{item.event_name}</Text>
@@ -111,9 +232,35 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Toggle dropdown visibility
+  const toggleDropdown = () => {
+    setShowDropdown((prev) => !prev);
+  };
+
+  // Render the dropdown menu
+  const renderDropdown = () => (
+    <Modal
+      transparent={true}
+      visible={showDropdown}
+      onRequestClose={() => setShowDropdown(false)}
+    >
+      <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
+        <View style={styles.dropdownOverlay}>
+          <View style={styles.dropdownMenu}>
+            <Text style={styles.dropdownHeader}>Contact Info</Text>
+            <Text style={styles.dropdownItem}>Email: {email}</Text>
+            <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
+            <Text style={styles.dropdownItem}>GitHub: {github}</Text>
+            <Text style={styles.dropdownItem}>LinkedIn: {linkedin}</Text>
+            <Text style={styles.dropdownItem}>Portfolio: {portfolio}</Text>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* Header and Profile Details */}
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
           style={{ position: "absolute", left: 0, top: 20 }}
@@ -130,45 +277,11 @@ export default function ProfileScreen() {
           marginHorizontal: 20,
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <ShowingAvatar
-            url={avatarUrl}
-            size={150}
-            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-          />
-          <View style={{ flexDirection: "row", marginTop: 10 }}>
-            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
-              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {postsCount}
-              </Text>
-              <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
-            </View>
-            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
-              |
-            </Text>
-            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
-              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {followerCount}
-              </Text>
-              <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
-            </View>
-            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
-              |
-            </Text>
-            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
-              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                {followingCount}
-              </Text>
-              <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
-            </View>
-          </View>
-        </View>
+        <ShowingAvatar
+          url={avatarUrl}
+          size={150}
+          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+        />
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
@@ -179,9 +292,11 @@ export default function ProfileScreen() {
           {faculty} | {department}
         </Text>
         <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+          Followers: {followerCount}
+        </Text>
       </View>
 
-      {/* Follow/Edit Buttons */}
       <View
         style={{
           flexDirection: "row",
@@ -236,7 +351,6 @@ export default function ProfileScreen() {
                 padding: 10,
                 borderRadius: 25,
                 flex: 1,
-                marginLeft: 10,
                 alignItems: "center",
               }}
             >
@@ -249,11 +363,18 @@ export default function ProfileScreen() {
               </Link>
             </TouchableOpacity>
 
+            {/* Three-Dot Menu Button */}
             <TouchableOpacity
-              onPress={() => setDropdownVisible(true)}
-              style={{ marginLeft: 10 }}
+              onPress={toggleDropdown}
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 25,
+                alignItems: "center",
+                marginLeft: 10,
+              }}
             >
-              <Ionicons name="ellipsis-vertical" size={24} color="black" />
+              <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
             </TouchableOpacity>
           </>
         )}
@@ -286,49 +407,43 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Dropdown Modal */}
-      <Modal
-        transparent={true}
-        visible={dropdownVisible}
-        onRequestClose={() => setDropdownVisible(false)}
-      >
-        <View style={styles.dropdownContainer}>
-          <View style={styles.dropdownMenu}>
-            <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
-            <Text style={styles.dropdownItem}>Email: {userEmail}</Text>
-            {linkedin && (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(linkedin)}
-                style={styles.dropdownItem}
-              >
-                <Text style={{ color: "#0077B5" }}>LinkedIn</Text>
-              </TouchableOpacity>
-            )}
-            {github && (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(github)}
-                style={styles.dropdownItem}
-              >
-                <Text style={{ color: "#333" }}>GitHub</Text>
-              </TouchableOpacity>
-            )}
-            {portfolio && (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(portfolio)}
-                style={styles.dropdownItem}
-              >
-                <Text style={{ color: "#2C3036" }}>Portfolio</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              onPress={() => setDropdownVisible(false)}
-              style={styles.closeButton}
-            >
-              <Text style={{ color: "#2C3036" }}>Close</Text>
-            </TouchableOpacity>
+      {/* Dropdown Menu */}
+      {renderDropdown()}
+
+      {/* Conditionally render posts and events only if following */}
+      {isFollowing && (
+        <>
+          {/* Posts Section */}
+          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
+            <FlatList
+              data={posts}
+              renderItem={renderPost}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={{ textAlign: "center", marginTop: 10 }}>
+                  No posts found.
+                </Text>
+              }
+            />
           </View>
-        </View>
-      </Modal>
+
+          {/* Events Section */}
+          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
+            <FlatList
+              data={events}
+              renderItem={renderEvent}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text style={{ textAlign: "center", marginTop: 10 }}>
+                  No events found.
+                </Text>
+              }
+            />
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -372,7 +487,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 5,
   },
-  dropdownContainer: {
+  dropdownOverlay: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -380,16 +495,17 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     backgroundColor: "#fff",
-    borderRadius: 8,
     padding: 20,
-    width: 250,
+    borderRadius: 10,
+    width: "80%",
+  },
+  dropdownHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   dropdownItem: {
     fontSize: 16,
-    marginBottom: 10,
-  },
-  closeButton: {
-    marginTop: 10,
-    alignItems: "center",
+    marginVertical: 5,
   },
 });
