@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
-import { SafeAreaView, FlatList } from "react-native";
+import { SafeAreaView, FlatList, Modal } from "react-native";
 import {
   TouchableOpacity,
   View,
@@ -33,8 +33,12 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0); // State for following count
+  const [postsCount, setPostsCount] = useState(0); // State for posts count
   const [posts, setPosts] = useState([]); // State for posts
   const [events, setEvents] = useState([]); // State for events
+  const [dropdownVisible, setDropdownVisible] = useState(false); // State for dropdown visibility
+  const [userEmail, setUserEmail] = useState(""); // State for user email
 
   useEffect(() => {
     if (userId || session) {
@@ -42,40 +46,50 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
-      if (isFollowing) {
-        fetchPostsAndEvents(); // Fetch posts and events only if following
-      }
+      getFollowingCount(); // Fetch following count
+      fetchPosts(); // Fetch posts and events
     }
-  }, [userId, session, isFollowing]); // Add isFollowing to dependency array
+  }, [userId, session]); // Only run when userId or session changes
 
   // Fetch posts and events created by the user
-  const fetchPostsAndEvents = async () => {
+  const fetchPosts = async () => {
     try {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
+      // Reset posts, events, and postsCount before fetching
+      setPosts([]);
+      setEvents([]);
+      setPostsCount(0);
+
       // Fetch posts
       const { data: postsData, error: postsError } = await supabase
         .from("posts")
-        .select("*")
+        .select("id, content, likes, comments, is_public, user_id")
         .eq("user_id", profileId);
+
+      if (postsData) {
+        setPosts(postsData);
+        setPostsCount((prevCount) => prevCount + postsData.length);
+      }
 
       if (postsError) throw postsError;
 
       // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
-        .select("*")
+        .select("id, event_name, event_description, event_location, event_date")
         .eq("uid", profileId);
 
-      if (eventsError) throw eventsError;
+      if (eventsData) {
+        setEvents(eventsData); // Store events separately
+        setPostsCount((prevCount) => prevCount + eventsData.length); // Update posts count
+      }
 
-      // Update state with posts and events
-      setPosts(postsData || []);
-      setEvents(eventsData || []);
+      if (eventsError) throw eventsError;
     } catch (error) {
       console.error("Error fetching posts and events:", error);
-      Alert.alert("Error", "Unable to load posts and events.");
+      Alert.alert("Error", "Could not fetch posts or events.");
     }
   };
 
@@ -92,6 +106,22 @@ export default function ProfileScreen() {
       setFollowerCount(data.length);
     } catch (error) {
       console.error("Error fetching follower count:", error);
+    }
+  };
+
+  // Fetching the following count for the profile
+  const getFollowingCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("followed_id")
+        .eq("follower_id", userId);
+
+      if (error) throw error;
+
+      setFollowingCount(data.length);
+    } catch (error) {
+      console.error("Error fetching following count:", error);
     }
   };
 
@@ -135,7 +165,7 @@ export default function ProfileScreen() {
       getFollowing();
       getFollowerCount();
       if (!isFollowing) {
-        fetchPostsAndEvents(); // Fetch posts and events after following
+        fetchPosts(); // Fetch posts and events after following
       }
     } catch (error) {
       Alert.alert("Error", "Something went wrong.");
@@ -173,7 +203,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role` // Add role to the select query
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email` // Add email to the select query
         )
         .eq("id", profileId)
         .single();
@@ -193,6 +223,7 @@ export default function ProfileScreen() {
         setSkills(data.skills);
         setInterests(data.interests);
         setRole(data.role);
+        setUserEmail(data.email); // Set user email
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -218,6 +249,12 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Key extractor for posts
+  const postKeyExtractor = (item) => `post-${item.id}`;
+
+  // Key extractor for events
+  const eventKeyExtractor = (item) => `event-${item.id}`;
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
@@ -236,11 +273,50 @@ export default function ProfileScreen() {
           marginHorizontal: 20,
         }}
       >
-        <ShowingAvatar
-          url={avatarUrl}
-          size={150}
-          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-        />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <ShowingAvatar
+            url={avatarUrl}
+            size={150}
+            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+          />
+          {/* Display Followers, Following, and Posts Count */}
+          <View style={{ flexDirection: "row", marginTop: 10 }}>
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {postsCount}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
+            </View>
+
+            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
+              |
+            </Text>
+
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {followerCount}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+            </View>
+
+            <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
+              |
+            </Text>
+
+            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                {followingCount}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+            </View>
+          </View>
+        </View>
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
@@ -251,9 +327,6 @@ export default function ProfileScreen() {
           {faculty} | {department}
         </Text>
         <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-          Followers: {followerCount}
-        </Text>
       </View>
 
       <View
@@ -303,23 +376,33 @@ export default function ProfileScreen() {
         )}
 
         {userId !== session?.user?.id && isFollowing && (
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#2C3036",
-              padding: 10,
-              borderRadius: 25,
-              flex: 1,
-              alignItems: "center",
-            }}
-          >
-            <Link href={`../user?userId=${userId}`} asChild>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff" }}>Message</Text>
-              )}
-            </Link>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 25,
+                flex: 1,
+                marginLeft: 10,
+                alignItems: "center",
+              }}
+            >
+              <Link href={`../user?userId=${userId}`} asChild>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: "#fff" }}>Message</Text>
+                )}
+              </Link>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setDropdownVisible(true)}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="ellipsis-vertical" size={24} color="black" />
+            </TouchableOpacity>
+          </>
         )}
 
         {!userId && (
@@ -354,12 +437,12 @@ export default function ProfileScreen() {
       {isFollowing && (
         <>
           {/* Posts Section */}
-          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+          <View style={{ marginTop: 10, marginHorizontal: 20, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
             <FlatList
               data={posts}
               renderItem={renderPost}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={postKeyExtractor} // Use unique key extractor
               ListEmptyComponent={
                 <Text style={{ textAlign: "center", marginTop: 10 }}>
                   No posts found.
@@ -369,12 +452,12 @@ export default function ProfileScreen() {
           </View>
 
           {/* Events Section */}
-          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+          <View style={{ marginTop: 10, marginHorizontal: 20, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
             <FlatList
               data={events}
               renderItem={renderEvent}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={eventKeyExtractor} // Use unique key extractor
               ListEmptyComponent={
                 <Text style={{ textAlign: "center", marginTop: 10 }}>
                   No events found.
@@ -384,6 +467,26 @@ export default function ProfileScreen() {
           </View>
         </>
       )}
+
+      {/* Dropdown Modal */}
+      <Modal
+        transparent={true}
+        visible={dropdownVisible}
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <View style={styles.dropdownContainer}>
+          <View style={styles.dropdownMenu}>
+            <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
+            <Text style={styles.dropdownItem}>Email: {userEmail}</Text>
+            <TouchableOpacity
+              onPress={() => setDropdownVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={{ color: "#2C3036" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -426,5 +529,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 5,
+  },
+  dropdownContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  dropdownMenu: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 20,
+    width: 250,
+  },
+  dropdownItem: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  closeButton: {
+    marginTop: 10,
+    alignItems: "center",
   },
 });

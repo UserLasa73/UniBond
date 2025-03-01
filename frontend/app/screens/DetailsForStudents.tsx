@@ -56,16 +56,16 @@ export default function DetailsForStudents() {
 
       if (data) {
         setUsername(data.username);
-        setAvatarUrl(data.avatar_url);
+        setAvatarUrl(data.avatar_url || "");
         setFullname(data.full_name);
         setDob(new Date(data.dob));
-        setContactNumber(data.contact_number);
-        setGender(data.gender);
-        setDepartment(data.department);
-        setFaculty(data.faculty);
-        setCourse(data.course);
-        setSkills(data.skills);
-        setInterests(data.interests);
+        setContactNumber(data.contact_number || "");
+        setGender(data.gender || "");
+        setDepartment(data.department || "");
+        setFaculty(data.faculty || "");
+        setCourse(data.course || "");
+        setSkills(data.skills || "");
+        setInterests(data.interests || "");
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -75,48 +75,20 @@ export default function DetailsForStudents() {
     }
   }
 
-  async function updateProfile() {
+  async function updateProfile(updates) {
     try {
       setLoading(true);
       const profileId = session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      // Check for duplicate username
-      const { data: existingUser, error: checkError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .neq("id", profileId)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-
-      if (existingUser) {
-        Alert.alert("Error", "This username is already taken.");
-        return;
-      }
-
-      const updates = {
-        username,
-        avatar_url: avatarUrl,
-        full_name: fullname,
-        dob: dob.toISOString(),
-        contact_number: contactNumber,
-        gender: gender,
-        department: department,
-        faculty: faculty,
-        course: course,
-        skills: skills,
-        interests: interests,
-        has_completed_details: true,
-        updated_at: new Date().toISOString(),
-      };
-
       const { data, error } = await supabase
         .from("profiles")
-        .update(updates)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", profileId)
-        .select(); // Ensure we get the updated data back if needed
+        .select();
 
       if (error) throw error;
 
@@ -150,7 +122,22 @@ export default function DetailsForStudents() {
             <Avatar
               size={200}
               url={avatarUrl}
-              onUpload={(url) => setAvatarUrl(url)}
+              onUpload={(url) => {
+                setAvatarUrl(url);
+                updateProfile({
+                  username,
+                  avatar_url: url,
+                  full_name: fullname,
+                  dob: dob.toISOString(),
+                  contact_number: contactNumber,
+                  gender: gender,
+                  department: department,
+                  faculty: faculty,
+                  course: course,
+                  skills: skills,
+                  interests: interests,
+                });
+              }}
             />
           </View>
 
@@ -200,7 +187,21 @@ export default function DetailsForStudents() {
 
           <TouchableOpacity
             style={styles.Button}
-            onPress={updateProfile}
+            onPress={() =>
+              updateProfile({
+                username,
+                avatar_url: avatarUrl,
+                full_name: fullname,
+                dob: dob.toISOString(),
+                contact_number: contactNumber,
+                gender: gender,
+                department: department,
+                faculty: faculty,
+                course: course,
+                skills: skills,
+                interests: interests,
+              })
+            }
             disabled={loading}
           >
             <Text style={styles.postButtonText}>
