@@ -29,6 +29,9 @@ export default function DetailsForStudents() {
   const [interests, setInterests] = useState("");
   const [username, setUsername] = useState("");
   const [fullname, setFullname] = useState("");
+  const [github, setGithub] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [portfolio, setPortfolio] = useState("");
   const { session } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -47,7 +50,7 @@ export default function DetailsForStudents() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, github, linkedin, portfolio`
         )
         .eq("id", profileId)
         .single();
@@ -66,6 +69,9 @@ export default function DetailsForStudents() {
         setCourse(data.course || "");
         setSkills(data.skills || "");
         setInterests(data.interests || "");
+        setGithub(data.github || "");
+        setLinkedin(data.linkedin || "");
+        setPortfolio(data.portfolio || "");
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -136,6 +142,9 @@ export default function DetailsForStudents() {
                   course: course,
                   skills: skills,
                   interests: interests,
+                  github: github,
+                  linkedin: linkedin,
+                  portfolio: portfolio,
                 });
               }}
             />
@@ -162,6 +171,24 @@ export default function DetailsForStudents() {
             label="Interests"
             value={interests}
             onChangeText={setInterests}
+          />
+          <Input
+            label="GitHub"
+            value={github}
+            onChangeText={setGithub}
+            placeholder="https://github.com/yourusername"
+          />
+          <Input
+            label="LinkedIn"
+            value={linkedin}
+            onChangeText={setLinkedin}
+            placeholder="https://linkedin.com/in/yourusername"
+          />
+          <Input
+            label="Portfolio"
+            value={portfolio}
+            onChangeText={setPortfolio}
+            placeholder="https://yourportfolio.com"
           />
 
           <View>
@@ -200,6 +227,9 @@ export default function DetailsForStudents() {
                 course: course,
                 skills: skills,
                 interests: interests,
+                github: github,
+                linkedin: linkedin,
+                portfolio: portfolio,
               })
             }
             disabled={loading}
