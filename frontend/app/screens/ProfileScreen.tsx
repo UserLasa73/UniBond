@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
-import { SafeAreaView, FlatList, Modal } from "react-native";
+import { SafeAreaView, FlatList, Modal, Linking } from "react-native";
 import {
   TouchableOpacity,
   View,
@@ -26,19 +26,22 @@ export default function ProfileScreen() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const [role, setRole] = useState<boolean>(false); // State for role
+  const [role, setRole] = useState<boolean>(false);
+  const [linkedin, setLinkedin] = useState("");
+  const [github, setGithub] = useState("");
+  const [portfolio, setPortfolio] = useState("");
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0); // State for following count
-  const [postsCount, setPostsCount] = useState(0); // State for posts count
-  const [posts, setPosts] = useState([]); // State for posts
-  const [events, setEvents] = useState([]); // State for events
-  const [dropdownVisible, setDropdownVisible] = useState(false); // State for dropdown visibility
-  const [userEmail, setUserEmail] = useState(""); // State for user email
+  const [followingCount, setFollowingCount] = useState(0);
+  const [postsCount, setPostsCount] = useState(0);
+  const [posts, setPosts] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
     if (userId || session) {
@@ -46,155 +49,12 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
-      getFollowingCount(); // Fetch following count
-      fetchPosts(); // Fetch posts and events
+      getFollowingCount();
+      fetchPosts();
     }
-  }, [userId, session]); // Only run when userId or session changes
+  }, [userId, session]);
 
-  // Fetch posts and events created by the user
-  const fetchPosts = async () => {
-    try {
-      const profileId = userId || session?.user?.id;
-      if (!profileId) throw new Error("No user on the session!");
-
-      // Reset posts, events, and postsCount before fetching
-      setPosts([]);
-      setEvents([]);
-      setPostsCount(0);
-
-      // Fetch posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("posts")
-        .select("id, content, likes, comments, is_public, user_id")
-        .eq("user_id", profileId);
-
-      if (postsData) {
-        setPosts(postsData);
-        setPostsCount((prevCount) => prevCount + postsData.length);
-      }
-
-      if (postsError) throw postsError;
-
-      // Fetch events
-      const { data: eventsData, error: eventsError } = await supabase
-        .from("events")
-        .select("id, event_name, event_description, event_location, event_date")
-        .eq("uid", profileId);
-
-      if (eventsData) {
-        setEvents(eventsData); // Store events separately
-        setPostsCount((prevCount) => prevCount + eventsData.length); // Update posts count
-      }
-
-      if (eventsError) throw eventsError;
-    } catch (error) {
-      console.error("Error fetching posts and events:", error);
-      Alert.alert("Error", "Could not fetch posts or events.");
-    }
-  };
-
-  // Fetching the follower count for the profile
-  const getFollowerCount = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("followers")
-        .select("follower_id")
-        .eq("followed_id", userId);
-
-      if (error) throw error;
-
-      setFollowerCount(data.length);
-    } catch (error) {
-      console.error("Error fetching follower count:", error);
-    }
-  };
-
-  // Fetching the following count for the profile
-  const getFollowingCount = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("followers")
-        .select("followed_id")
-        .eq("follower_id", userId);
-
-      if (error) throw error;
-
-      setFollowingCount(data.length);
-    } catch (error) {
-      console.error("Error fetching following count:", error);
-    }
-  };
-
-  // Check if the current user is following this profile
-  const checkFollowingStatus = async () => {
-    const profileId = session?.user?.id;
-    const { data, error } = await supabase
-      .from("followers")
-      .select("follower_id")
-      .eq("follower_id", profileId)
-      .eq("followed_id", userId);
-
-    if (error) {
-      console.error("Error fetching following status:", error);
-    } else {
-      setIsFollowing(data.length > 0);
-    }
-  };
-
-  // Fetching the list of followed users with their profile details
-  const getFollowing = async () => {
-    const profileId = session?.user?.id;
-    const { data, error } = await supabase
-      .from("followers")
-      .select("followed_id, profiles(*)")
-      .eq("follower_id", profileId);
-
-    if (error) {
-      console.error("Error fetching following list:", error);
-    } else {
-      setFollowingList(data);
-    }
-  };
-
-  const toggleFollow = async (followedId) => {
-    setLoading(true);
-    try {
-      const action = isFollowing ? unfollowUser : followUser;
-      await action(followedId);
-      setIsFollowing((prev) => !prev);
-      getFollowing();
-      getFollowerCount();
-      if (!isFollowing) {
-        fetchPosts(); // Fetch posts and events after following
-      }
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const followUser = async (followedId) => {
-    const profileId = session?.user?.id;
-    const { error } = await supabase
-      .from("followers")
-      .insert([{ follower_id: profileId, followed_id: followedId }]);
-
-    if (error) throw new Error("Error following user.");
-  };
-
-  const unfollowUser = async (followedId) => {
-    const profileId = session?.user?.id;
-    const { error } = await supabase
-      .from("followers")
-      .delete()
-      .eq("follower_id", profileId)
-      .eq("followed_id", followedId);
-
-    if (error) throw new Error("Error unfollowing user.");
-  };
-
-  // Fetching the profile data
+  // Fetch profile data
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -203,7 +63,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email` // Add email to the select query
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, linkedin, github, portfolio`
         )
         .eq("id", profileId)
         .single();
@@ -223,7 +83,10 @@ export default function ProfileScreen() {
         setSkills(data.skills);
         setInterests(data.interests);
         setRole(data.role);
-        setUserEmail(data.email); // Set user email
+        setUserEmail(data.email);
+        setLinkedin(data.linkedin || "");
+        setGithub(data.github || "");
+        setPortfolio(data.portfolio || "");
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -231,7 +94,7 @@ export default function ProfileScreen() {
     }
   }
 
-  // Render a single post
+  // Render posts and events
   const renderPost = ({ item }) => (
     <View style={styles.postContainer}>
       <Text style={styles.postContent}>{item.content}</Text>
@@ -239,7 +102,6 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // Render a single event
   const renderEvent = ({ item }) => (
     <View style={styles.eventContainer}>
       <Text style={styles.eventName}>{item.event_name}</Text>
@@ -249,14 +111,9 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // Key extractor for posts
-  const postKeyExtractor = (item) => `post-${item.id}`;
-
-  // Key extractor for events
-  const eventKeyExtractor = (item) => `event-${item.id}`;
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      {/* Header and Profile Details */}
       <View style={{ flexDirection: "row", justifyContent: "center" }}>
         <TouchableOpacity
           style={{ position: "absolute", left: 0, top: 20 }}
@@ -285,7 +142,6 @@ export default function ProfileScreen() {
             size={150}
             onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
-          {/* Display Followers, Following, and Posts Count */}
           <View style={{ flexDirection: "row", marginTop: 10 }}>
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
@@ -293,22 +149,18 @@ export default function ProfileScreen() {
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
             </View>
-
             <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
               |
             </Text>
-
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followerCount}
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
             </View>
-
             <Text style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}>
               |
             </Text>
-
             <View style={{ alignItems: "center", marginHorizontal: 5 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followingCount}
@@ -329,6 +181,7 @@ export default function ProfileScreen() {
         <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
       </View>
 
+      {/* Follow/Edit Buttons */}
       <View
         style={{
           flexDirection: "row",
@@ -433,41 +286,6 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Conditionally render posts and events only if following */}
-      {isFollowing && (
-        <>
-          {/* Posts Section */}
-          <View style={{ marginTop: 10, marginHorizontal: 20, flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
-            <FlatList
-              data={posts}
-              renderItem={renderPost}
-              keyExtractor={postKeyExtractor} // Use unique key extractor
-              ListEmptyComponent={
-                <Text style={{ textAlign: "center", marginTop: 10 }}>
-                  No posts found.
-                </Text>
-              }
-            />
-          </View>
-
-          {/* Events Section */}
-          <View style={{ marginTop: 10, marginHorizontal: 20, flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
-            <FlatList
-              data={events}
-              renderItem={renderEvent}
-              keyExtractor={eventKeyExtractor} // Use unique key extractor
-              ListEmptyComponent={
-                <Text style={{ textAlign: "center", marginTop: 10 }}>
-                  No events found.
-                </Text>
-              }
-            />
-          </View>
-        </>
-      )}
-
       {/* Dropdown Modal */}
       <Modal
         transparent={true}
@@ -478,6 +296,30 @@ export default function ProfileScreen() {
           <View style={styles.dropdownMenu}>
             <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
             <Text style={styles.dropdownItem}>Email: {userEmail}</Text>
+            {linkedin && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(linkedin)}
+                style={styles.dropdownItem}
+              >
+                <Text style={{ color: "#0077B5" }}>LinkedIn</Text>
+              </TouchableOpacity>
+            )}
+            {github && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(github)}
+                style={styles.dropdownItem}
+              >
+                <Text style={{ color: "#333" }}>GitHub</Text>
+              </TouchableOpacity>
+            )}
+            {portfolio && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(portfolio)}
+                style={styles.dropdownItem}
+              >
+                <Text style={{ color: "#2C3036" }}>Portfolio</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={() => setDropdownVisible(false)}
               style={styles.closeButton}
