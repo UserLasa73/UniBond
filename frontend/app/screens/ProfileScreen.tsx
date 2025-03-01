@@ -31,20 +31,22 @@ export default function ProfileScreen() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const [role, setRole] = useState<boolean>(false);
+  const [role, setRole] = useState<boolean>(false); // State for role
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [posts, setPosts] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
+  const [posts, setPosts] = useState([]); // State for posts
+  const [events, setEvents] = useState([]); // State for events
+  const [postCount, setPostCount] = useState(0); // State for post count
+  const [followingCount, setFollowingCount] = useState(0); // State for following count
   const [email, setEmail] = useState(""); // State for email
   const [github, setGithub] = useState(""); // State for GitHub
   const [linkedin, setLinkedin] = useState(""); // State for LinkedIn
   const [portfolio, setPortfolio] = useState(""); // State for portfolio
+  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
 
   useEffect(() => {
     if (userId || session) {
@@ -52,11 +54,55 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
+      fetchPostCount(); // Fetch post count
+      fetchFollowingCount(); // Fetch following count
       if (isFollowing) {
-        fetchPostsAndEvents();
+        fetchPostsAndEvents(); // Fetch posts and events only if following
       }
     }
-  }, [userId, session, isFollowing]);
+  }, [userId, session, isFollowing]); // Add isFollowing to dependency array
+
+  // Fetch post count
+  const fetchPostCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      console.log("Fetching post count for profileId:", profileId); // Debugging
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id")
+        .eq("user_id", profileId);
+
+      if (error) throw error;
+
+      console.log("Posts data:", data); // Debugging
+
+      setPostCount(data.length); // Set post count
+    } catch (error) {
+      console.error("Error fetching post count:", error);
+    }
+  };
+
+  // Fetch following count
+  const fetchFollowingCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("followers")
+        .select("followed_id")
+        .eq("follower_id", profileId);
+
+      if (error) throw error;
+
+      setFollowingCount(data.length); // Set following count
+    } catch (error) {
+      console.error("Error fetching following count:", error);
+    }
+  };
 
   // Fetch posts and events created by the user
   const fetchPostsAndEvents = async () => {
@@ -83,12 +129,21 @@ export default function ProfileScreen() {
       // Update state with posts and events
       setPosts(postsData || []);
       setEvents(eventsData || []);
+
+      // Calculate total count (posts + events)
+      const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
+
+      // Update post count
+      setPostCount(totalCount);
+
+      console.log("Posts data:", postsData); // Debugging
+      console.log("Events data:", eventsData); // Debugging
+      console.log("Total count:", totalCount); // Debugging
     } catch (error) {
       console.error("Error fetching posts and events:", error);
       Alert.alert("Error", "Unable to load posts and events.");
     }
   };
-
   // Fetching the follower count for the profile
   const getFollowerCount = async () => {
     try {
@@ -183,7 +238,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, github, linkedin, portfolio`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role`
         )
         .eq("id", profileId)
         .single();
@@ -232,7 +287,6 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // Toggle dropdown visibility
   const toggleDropdown = () => {
     setShowDropdown((prev) => !prev);
   };
@@ -277,11 +331,57 @@ export default function ProfileScreen() {
           marginHorizontal: 20,
         }}
       >
-        <ShowingAvatar
-          url={avatarUrl}
-          size={150}
-          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-        />
+        <View style={{ flexDirection: "row", marginTop: 20 }}>
+          <ShowingAvatar
+            url={avatarUrl}
+            size={150}
+            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+          />
+          {/* Add post, followers, and following counts */}
+          <View
+            style={{
+              flexDirection: "row",
+              marginBottom: 20,
+              marginRight: 10,
+              marginLeft: 10,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {postCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
+              </View>
+
+              <Text
+                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
+              >
+                |
+              </Text>
+
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {followerCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+              </View>
+
+              <Text
+                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
+              >
+                |
+              </Text>
+
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {followingCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+              </View>
+            </View>
+          </View>
+        </View>
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
@@ -292,9 +392,6 @@ export default function ProfileScreen() {
           {faculty} | {department}
         </Text>
         <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-          Followers: {followerCount}
-        </Text>
       </View>
 
       <View
@@ -406,10 +503,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Dropdown Menu */}
       {renderDropdown()}
-
       {/* Conditionally render posts and events only if following */}
       {isFollowing && (
         <>
@@ -429,7 +523,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* Events Section */}
-          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+          <View style={{ marginTop: 30, marginHorizontal: 20, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
             <FlatList
               data={events}
