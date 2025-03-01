@@ -6,6 +6,7 @@ import {
   FlatList,
   Modal,
   TouchableWithoutFeedback,
+  Linking,
 } from "react-native";
 import {
   TouchableOpacity,
@@ -238,7 +239,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, github, linkedin, portfolio`
         )
         .eq("id", profileId)
         .single();
@@ -291,7 +292,6 @@ export default function ProfileScreen() {
     setShowDropdown((prev) => !prev);
   };
 
-  // Render the dropdown menu
   const renderDropdown = () => (
     <Modal
       transparent={true}
@@ -304,9 +304,54 @@ export default function ProfileScreen() {
             <Text style={styles.dropdownHeader}>Contact Info</Text>
             <Text style={styles.dropdownItem}>Email: {email}</Text>
             <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
-            <Text style={styles.dropdownItem}>GitHub: {github}</Text>
-            <Text style={styles.dropdownItem}>LinkedIn: {linkedin}</Text>
-            <Text style={styles.dropdownItem}>Portfolio: {portfolio}</Text>
+
+            {/* Clickable GitHub Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (github) Linking.openURL(github);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: github ? "blue" : "black" },
+                ]}
+              >
+                GitHub: {github || "Not provided"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Clickable LinkedIn Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (linkedin) Linking.openURL(linkedin);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: linkedin ? "blue" : "black" },
+                ]}
+              >
+                LinkedIn: {linkedin || "Not provided"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Clickable Portfolio Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (portfolio) Linking.openURL(portfolio);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: portfolio ? "blue" : "black" },
+                ]}
+              >
+                Portfolio: {portfolio || "Not provided"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -386,12 +431,15 @@ export default function ProfileScreen() {
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
-          {username} | {contactNumber}
+          {username} | {faculty}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
-          {faculty} | {department}
+          {department} | {course}
         </Text>
-        <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
+        <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
+          Skills :
+        </Text>
+        <Text style={{ fontSize: 14 }}>{skills}</Text>
       </View>
 
       <View
@@ -411,6 +459,7 @@ export default function ProfileScreen() {
               backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
               padding: 10,
               borderRadius: 25,
+              marginRight: 10,
               flex: 1,
               alignItems: "center",
             }}
@@ -432,6 +481,7 @@ export default function ProfileScreen() {
               backgroundColor: "#2C3036",
               padding: 10,
               borderRadius: 25,
+              marginLeft: 5,
               flex: 1,
               alignItems: "center",
             }}
