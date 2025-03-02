@@ -6,6 +6,7 @@ import {
   FlatList,
   Modal,
   TouchableWithoutFeedback,
+  Linking,
 } from "react-native";
 import {
   TouchableOpacity,
@@ -15,7 +16,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons"; // Add MaterialIcons
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
 
@@ -31,20 +32,22 @@ export default function ProfileScreen() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const [role, setRole] = useState<boolean>(false);
+  const [role, setRole] = useState<boolean>(false); // State for role
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [posts, setPosts] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
+  const [posts, setPosts] = useState([]); // State for posts
+  const [events, setEvents] = useState([]); // State for events
+  const [postCount, setPostCount] = useState(0); // State for post count
+  const [followingCount, setFollowingCount] = useState(0); // State for following count
   const [email, setEmail] = useState(""); // State for email
   const [github, setGithub] = useState(""); // State for GitHub
   const [linkedin, setLinkedin] = useState(""); // State for LinkedIn
   const [portfolio, setPortfolio] = useState(""); // State for portfolio
+  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
 
   useEffect(() => {
     if (userId || session) {
@@ -52,11 +55,51 @@ export default function ProfileScreen() {
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
+      fetchPostCount(); // Fetch post count
+      fetchFollowingCount(); // Fetch following count
       if (isFollowing) {
-        fetchPostsAndEvents();
+        fetchPostsAndEvents(); // Fetch posts and events only if following
       }
     }
-  }, [userId, session, isFollowing]);
+  }, [userId, session, isFollowing]); // Add isFollowing to dependency array
+
+  // Fetch post count
+  const fetchPostCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id")
+        .eq("user_id", profileId);
+
+      if (error) throw error;
+
+      setPostCount(data.length); // Set post count
+    } catch (error) {
+      console.error("Error fetching post count:", error);
+    }
+  };
+
+  // Fetch following count
+  const fetchFollowingCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("followers")
+        .select("followed_id")
+        .eq("follower_id", profileId);
+
+      if (error) throw error;
+
+      setFollowingCount(data.length); // Set following count
+    } catch (error) {
+      console.error("Error fetching following count:", error);
+    }
+  };
 
   // Fetch posts and events created by the user
   const fetchPostsAndEvents = async () => {
@@ -83,6 +126,12 @@ export default function ProfileScreen() {
       // Update state with posts and events
       setPosts(postsData || []);
       setEvents(eventsData || []);
+
+      // Calculate total count (posts + events)
+      const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
+
+      // Update post count
+      setPostCount(totalCount);
     } catch (error) {
       console.error("Error fetching posts and events:", error);
       Alert.alert("Error", "Unable to load posts and events.");
@@ -222,22 +271,141 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Function to handle toggling interest in an event
+  const handleInterestToggle = async (eventId: number) => {
+    try {
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // Check if the user is already interested
+      const { data: interestData, error: interestError } = await supabase
+        .from("event_interests")
+        .select("*")
+        .eq("event_id", eventId)
+        .eq("user_id", profileId);
+
+      if (interestError) throw interestError;
+
+      const isInterested = interestData.length > 0;
+
+      if (isInterested) {
+        // Remove interest
+        const { error: removeError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", profileId);
+
+        if (removeError) throw removeError;
+
+        // Decrement the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count - 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event.id === eventId
+              ? {
+                  ...event,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: false,
+                }
+              : event
+          )
+        );
+      } else {
+        // Add interest
+        const { error: addError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: profileId }]);
+
+        if (addError) throw addError;
+
+        // Increment the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count + 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event.id === eventId
+              ? {
+                  ...event,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: true,
+                }
+              : event
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Could not toggle interest.");
+    }
+  };
+
   // Render a single event
   const renderEvent = ({ item }) => (
-    <View style={styles.eventContainer}>
+    <View style={styles.eventItem}>
       <Text style={styles.eventName}>{item.event_name}</Text>
       <Text style={styles.eventDescription}>{item.event_description}</Text>
       <Text style={styles.eventLocation}>Location: {item.event_location}</Text>
       <Text style={styles.eventDate}>Date: {item.event_date}</Text>
+      <Text style={styles.eventInterested}>
+        Interested: {item.interested_count}
+      </Text>
+      <View style={styles.divider} />
+
+      {/* Interested Button */}
+      <TouchableOpacity
+        style={styles.interestedButton}
+        onPress={() => handleInterestToggle(item.id)}
+      >
+        <MaterialIcons
+          name={item.isInterestedByCurrentUser ? "remove" : "add"}
+          size={20}
+          color="#000"
+        />
+        <Text style={styles.interestedButtonText}>
+          {item.isInterestedByCurrentUser ? "Not Interested" : "Interested"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
-  // Toggle dropdown visibility
   const toggleDropdown = () => {
     setShowDropdown((prev) => !prev);
   };
 
-  // Render the dropdown menu
   const renderDropdown = () => (
     <Modal
       transparent={true}
@@ -250,9 +418,54 @@ export default function ProfileScreen() {
             <Text style={styles.dropdownHeader}>Contact Info</Text>
             <Text style={styles.dropdownItem}>Email: {email}</Text>
             <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
-            <Text style={styles.dropdownItem}>GitHub: {github}</Text>
-            <Text style={styles.dropdownItem}>LinkedIn: {linkedin}</Text>
-            <Text style={styles.dropdownItem}>Portfolio: {portfolio}</Text>
+
+            {/* Clickable GitHub Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (github) Linking.openURL(github);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: github ? "blue" : "black" },
+                ]}
+              >
+                GitHub: {github || "Not provided"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Clickable LinkedIn Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (linkedin) Linking.openURL(linkedin);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: linkedin ? "blue" : "black" },
+                ]}
+              >
+                LinkedIn: {linkedin || "Not provided"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Clickable Portfolio Link */}
+            <TouchableOpacity
+              onPress={() => {
+                if (portfolio) Linking.openURL(portfolio);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownItem,
+                  { color: portfolio ? "blue" : "black" },
+                ]}
+              >
+                Portfolio: {portfolio || "Not provided"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -277,24 +490,70 @@ export default function ProfileScreen() {
           marginHorizontal: 20,
         }}
       >
-        <ShowingAvatar
-          url={avatarUrl}
-          size={150}
-          onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-        />
+        <View style={{ flexDirection: "row", marginTop: 20 }}>
+          <ShowingAvatar
+            url={avatarUrl}
+            size={150}
+            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+          />
+          {/* Add post, followers, and following counts */}
+          <View
+            style={{
+              flexDirection: "row",
+              marginBottom: 20,
+              marginRight: 10,
+              marginLeft: 10,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {postCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
+              </View>
+
+              <Text
+                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
+              >
+                |
+              </Text>
+
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {followerCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+              </View>
+
+              <Text
+                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
+              >
+                |
+              </Text>
+
+              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                  {followingCount}
+                </Text>
+                <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+              </View>
+            </View>
+          </View>
+        </View>
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
-          {username} | {contactNumber}
+          {username} | {faculty}
         </Text>
         <Text style={{ fontSize: 16, color: "#555" }}>
-          {faculty} | {department}
+          {department} | {course}
         </Text>
-        <Text style={{ fontSize: 16, marginTop: 10 }}>{skills}</Text>
-        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-          Followers: {followerCount}
+        <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
+          Skills :
         </Text>
+        <Text style={{ fontSize: 14 }}>{skills}</Text>
       </View>
 
       <View
@@ -314,6 +573,7 @@ export default function ProfileScreen() {
               backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
               padding: 10,
               borderRadius: 25,
+              marginRight: 10,
               flex: 1,
               alignItems: "center",
             }}
@@ -335,6 +595,7 @@ export default function ProfileScreen() {
               backgroundColor: "#2C3036",
               padding: 10,
               borderRadius: 25,
+              marginLeft: 5,
               flex: 1,
               alignItems: "center",
             }}
@@ -406,10 +667,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Dropdown Menu */}
       {renderDropdown()}
-
       {/* Conditionally render posts and events only if following */}
       {isFollowing && (
         <>
@@ -429,7 +687,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* Events Section */}
-          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+          <View style={{ marginTop: 30, marginHorizontal: 20, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
             <FlatList
               data={events}
@@ -463,7 +721,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 5,
   },
-  eventContainer: {
+  eventItem: {
     padding: 15,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
@@ -486,6 +744,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 5,
+  },
+  eventInterested: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#2C3036",
+    marginVertical: 5,
+  },
+  interestedButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "transparent",
+    borderRadius: 5,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  interestedButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+    marginLeft: 5,
   },
   dropdownOverlay: {
     flex: 1,
