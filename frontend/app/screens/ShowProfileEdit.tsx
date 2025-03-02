@@ -11,7 +11,7 @@ import {
   StyleSheet,
   Modal,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { router, useLocalSearchParams } from "expo-router";
 import PostItem from "./PostItem"; // Import PostItem component
@@ -24,6 +24,19 @@ type Post = {
   comments: { username: string; comment: string }[];
   is_public: boolean;
   user_id: string;
+};
+
+// Define the Event type
+type Event = {
+  id: number;
+  event_name: string;
+  event_description: string;
+  event_location: string;
+  event_date: string;
+  uid: string; // User ID of the event creator
+  interested_count: number; // Add this field
+  is_event: boolean; // To differentiate between posts and events
+  isInterestedByCurrentUser?: boolean; // Add this field
 };
 
 export default function ShowProfileEdit() {
@@ -40,7 +53,7 @@ export default function ShowProfileEdit() {
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
   const [role, setRole] = useState<boolean>(false); // State for role
-  const [posts, setPosts] = useState<Post[]>([]); // State for posts
+  const [posts, setPosts] = useState<(Post | Event)[]>([]); // State for posts and events
   const { userId } = useLocalSearchParams();
 
   const [followersList, setFollowersList] = useState([]); // Store followers list
@@ -51,7 +64,7 @@ export default function ShowProfileEdit() {
 
   // State for dropdown menu
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null); // Store selected event for dropdown
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Store selected event for dropdown
 
   useEffect(() => {
     if (userId || session) {
@@ -159,21 +172,35 @@ export default function ShowProfileEdit() {
 
       if (postsError) throw postsError;
 
-      // Fetch events
+      // Fetch events with interested_count
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
-        .select("id, event_name, event_description, event_location, event_date")
+        .select(
+          "id, event_name, event_description, event_location, event_date, uid, interested_count"
+        )
         .eq("uid", profileId);
 
       if (eventsData) {
-        setPosts((prevPosts) => [
-          ...prevPosts,
-          ...eventsData.map((event) => ({
-            ...event,
-            content: event.description,
-            is_event: true,
-          })),
-        ]);
+        // Fetch interest status for each event
+        const eventsWithInterest = await Promise.all(
+          eventsData.map(async (event) => {
+            const { data: interestData, error: interestError } = await supabase
+              .from("event_interests")
+              .select("*")
+              .eq("event_id", event.id)
+              .eq("user_id", profileId);
+
+            if (interestError) throw interestError;
+
+            return {
+              ...event,
+              is_event: true,
+              isInterestedByCurrentUser: interestData.length > 0,
+            };
+          })
+        );
+
+        setPosts((prevPosts) => [...prevPosts, ...eventsWithInterest]);
         setPostsCount((prevCount) => prevCount + eventsData.length);
       }
 
@@ -266,7 +293,7 @@ export default function ShowProfileEdit() {
   };
 
   // Function to handle editing an event
-  const handleEditEvent = (event) => {
+  const handleEditEvent = (event: Event) => {
     router.push({
       pathname: "/screens/EditEventScreen",
       params: {
@@ -280,9 +307,111 @@ export default function ShowProfileEdit() {
   };
 
   // Function to open dropdown menu for an event
-  const openDropdown = (event) => {
+  const openDropdown = (event: Event) => {
     setSelectedEvent(event);
     setDropdownVisible(true);
+  };
+
+  // Function to handle toggling interest in an event
+  const handleInterestToggle = async (eventId: number) => {
+    try {
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // Check if the user is already interested
+      const { data: interestData, error: interestError } = await supabase
+        .from("event_interests")
+        .select("*")
+        .eq("event_id", eventId)
+        .eq("user_id", profileId);
+
+      if (interestError) throw interestError;
+
+      const isInterested = interestData.length > 0;
+
+      if (isInterested) {
+        // Remove interest
+        const { error: removeError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", profileId);
+
+        if (removeError) throw removeError;
+
+        // Decrement the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count - 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.is_event && post.id === eventId
+              ? {
+                  ...post,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: false,
+                }
+              : post
+          )
+        );
+      } else {
+        // Add interest
+        const { error: addError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: profileId }]);
+
+        if (addError) throw addError;
+
+        // Increment the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count + 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.is_event && post.id === eventId
+              ? {
+                  ...post,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: true,
+                }
+              : post
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Could not toggle interest.");
+    }
   };
 
   return (
@@ -439,6 +568,25 @@ export default function ShowProfileEdit() {
                   <Text>Description: {item.event_description}</Text>
                   <Text>Location: {item.event_location}</Text>
                   <Text>Date: {item.event_date}</Text>
+                  <Text>Interested: {item.interested_count}</Text>
+                  <View style={styles.divider} />
+
+                  {/* Updated Interested Button */}
+                  <TouchableOpacity
+                    style={styles.interestedButton}
+                    onPress={() => handleInterestToggle(item.id)}
+                  >
+                    <MaterialIcons
+                      name={item.isInterestedByCurrentUser ? "remove" : "add"}
+                      size={20}
+                      color="#000"
+                    />
+                    <Text style={styles.interestedButtonText}>
+                      {item.isInterestedByCurrentUser
+                        ? "Not Interested"
+                        : "Interested"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <PostItem
@@ -466,7 +614,7 @@ export default function ShowProfileEdit() {
           <View style={styles.dropdownMenu}>
             <TouchableOpacity
               onPress={() => {
-                handleEditEvent(selectedEvent);
+                handleEditEvent(selectedEvent!);
                 setDropdownVisible(false);
               }}
               style={styles.dropdownItem}
@@ -475,7 +623,7 @@ export default function ShowProfileEdit() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
-                handleDeleteEvent(selectedEvent.id);
+                handleDeleteEvent(selectedEvent!.id);
                 setDropdownVisible(false);
               }}
               style={styles.dropdownItem}
@@ -514,5 +662,24 @@ const styles = StyleSheet.create({
   },
   dropdownItem: {
     padding: 10,
+  },
+  interestedButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "transparent",
+    borderRadius: 5,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  interestedButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+    marginLeft: 5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#2C3036",
+    marginVertical: 5,
   },
 });
