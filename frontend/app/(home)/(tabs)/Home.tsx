@@ -40,7 +40,8 @@ type Event = {
   posted_date: string;
   avatar_url: string;
   role: boolean;
-  interested_count: number; // Ensure this is included
+  interested_count: number;
+  isInterestedByCurrentUser: boolean; // Added field
 };
 
 const HomeScreen: React.FC = () => {
@@ -127,10 +128,22 @@ const HomeScreen: React.FC = () => {
         })
       );
 
-      // Fetch user profile data for each event
+      // Fetch user profile data and interest status for each event
       const eventsWithUserData = await Promise.all(
         eventsData.map(async (event: Event) => {
           const userProfile = await fetchUserProfile(event.uid);
+
+          // Check if the current user is interested in this event
+          const { data: interestData, error: interestError } = await supabase
+            .from("event_interests")
+            .select("*")
+            .eq("event_id", event.id)
+            .eq("user_id", session?.user?.id);
+
+          if (interestError) throw interestError;
+
+          const isInterestedByCurrentUser = interestData.length > 0;
+
           return {
             ...event,
             type: "event",
@@ -138,6 +151,7 @@ const HomeScreen: React.FC = () => {
             avatar_url: userProfile.avatar_url,
             role: userProfile.role,
             posted_date: new Date(event.created_at).toISOString(),
+            isInterestedByCurrentUser, // Add this field
           };
         })
       );
@@ -238,16 +252,14 @@ const HomeScreen: React.FC = () => {
 
   const handleInterestToggle = async (eventId: number) => {
     try {
-      // Check if the user is already interested
-      const { data: interestData, error: interestError } = await supabase
-        .from("event_interests")
-        .select("*")
-        .eq("event_id", eventId)
-        .eq("user_id", session?.user?.id);
+      // Find the event in the combinedData array
+      const event = combinedData.find(
+        (item) => item.type === "event" && item.id === eventId
+      ) as Event;
 
-      if (interestError) throw interestError;
+      if (!event) throw new Error("Event not found");
 
-      const isInterested = interestData.length > 0;
+      const isInterested = event.isInterestedByCurrentUser;
 
       if (isInterested) {
         // Remove interest
@@ -260,15 +272,7 @@ const HomeScreen: React.FC = () => {
         if (removeError) throw removeError;
 
         // Decrement the interested count in the events table
-        const { data: eventData, error: fetchError } = await supabase
-          .from("events")
-          .select("interested_count")
-          .eq("id", eventId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const newInterestedCount = eventData.interested_count - 1;
+        const newInterestedCount = event.interested_count - 1;
 
         const { error: updateError } = await supabase
           .from("events")
@@ -277,11 +281,15 @@ const HomeScreen: React.FC = () => {
 
         if (updateError) throw updateError;
 
-        // Update the local state directly
+        // Update the local state
         setCombinedData((prev) =>
           prev.map((item) =>
             item.type === "event" && item.id === eventId
-              ? { ...item, interested_count: newInterestedCount }
+              ? {
+                  ...item,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: false, // Update this field
+                }
               : item
           )
         );
@@ -294,15 +302,7 @@ const HomeScreen: React.FC = () => {
         if (addError) throw addError;
 
         // Increment the interested count in the events table
-        const { data: eventData, error: fetchError } = await supabase
-          .from("events")
-          .select("interested_count")
-          .eq("id", eventId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const newInterestedCount = eventData.interested_count + 1;
+        const newInterestedCount = event.interested_count + 1;
 
         const { error: updateError } = await supabase
           .from("events")
@@ -311,11 +311,15 @@ const HomeScreen: React.FC = () => {
 
         if (updateError) throw updateError;
 
-        // Update the local state directly
+        // Update the local state
         setCombinedData((prev) =>
           prev.map((item) =>
             item.type === "event" && item.id === eventId
-              ? { ...item, interested_count: newInterestedCount }
+              ? {
+                  ...item,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: true, // Update this field
+                }
               : item
           )
         );
@@ -369,13 +373,27 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.eventDetails}>
             Description: {event.event_description}
           </Text>
+          <Text style={styles.eventDetails}>
+            Interested People: ({event.interested_count})
+          </Text>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Interested Button with Icon */}
           <TouchableOpacity
             style={styles.interestedButton}
             onPress={() => handleInterestToggle(event.id)}
           >
+            <MaterialIcons
+              name={event.isInterestedByCurrentUser ? "remove" : "add"}
+              size={20}
+              color="#000"
+            />
             <Text style={styles.interestedButtonText}>
-              {event.interested_count > 0 ? "Not Interested" : " Interested"} (
-              {event.interested_count})
+              {event.isInterestedByCurrentUser
+                ? "Not Interested"
+                : "Interested"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -511,15 +529,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   interestedButton: {
-    marginTop: 10,
+    marginTop: 5,
     padding: 10,
-    backgroundColor: "#007BFF",
+    backgroundColor: "Transaprent",
     borderRadius: 5,
     alignItems: "center",
   },
   interestedButtonText: {
-    color: "#FFF",
+    color: "#000",
     fontWeight: "bold",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#2C3036",
+    marginVertical: 5,
   },
 });
 
