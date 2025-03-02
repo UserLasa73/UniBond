@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons"; // Add MaterialIcons
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
 
@@ -69,16 +69,12 @@ export default function ProfileScreen() {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      console.log("Fetching post count for profileId:", profileId); // Debugging
-
       const { data, error } = await supabase
         .from("posts")
         .select("id")
         .eq("user_id", profileId);
 
       if (error) throw error;
-
-      console.log("Posts data:", data); // Debugging
 
       setPostCount(data.length); // Set post count
     } catch (error) {
@@ -136,15 +132,12 @@ export default function ProfileScreen() {
 
       // Update post count
       setPostCount(totalCount);
-
-      console.log("Posts data:", postsData); // Debugging
-      console.log("Events data:", eventsData); // Debugging
-      console.log("Total count:", totalCount); // Debugging
     } catch (error) {
       console.error("Error fetching posts and events:", error);
       Alert.alert("Error", "Unable to load posts and events.");
     }
   };
+
   // Fetching the follower count for the profile
   const getFollowerCount = async () => {
     try {
@@ -278,13 +271,134 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Function to handle toggling interest in an event
+  const handleInterestToggle = async (eventId: number) => {
+    try {
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // Check if the user is already interested
+      const { data: interestData, error: interestError } = await supabase
+        .from("event_interests")
+        .select("*")
+        .eq("event_id", eventId)
+        .eq("user_id", profileId);
+
+      if (interestError) throw interestError;
+
+      const isInterested = interestData.length > 0;
+
+      if (isInterested) {
+        // Remove interest
+        const { error: removeError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", profileId);
+
+        if (removeError) throw removeError;
+
+        // Decrement the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count - 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event.id === eventId
+              ? {
+                  ...event,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: false,
+                }
+              : event
+          )
+        );
+      } else {
+        // Add interest
+        const { error: addError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: profileId }]);
+
+        if (addError) throw addError;
+
+        // Increment the interested count
+        const { data: eventData, error: fetchError } = await supabase
+          .from("events")
+          .select("interested_count")
+          .eq("id", eventId)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newInterestedCount = eventData.interested_count + 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event.id === eventId
+              ? {
+                  ...event,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: true,
+                }
+              : event
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Could not toggle interest.");
+    }
+  };
+
   // Render a single event
   const renderEvent = ({ item }) => (
-    <View style={styles.eventContainer}>
+    <View style={styles.eventItem}>
       <Text style={styles.eventName}>{item.event_name}</Text>
       <Text style={styles.eventDescription}>{item.event_description}</Text>
       <Text style={styles.eventLocation}>Location: {item.event_location}</Text>
       <Text style={styles.eventDate}>Date: {item.event_date}</Text>
+      <Text style={styles.eventInterested}>
+        Interested: {item.interested_count}
+      </Text>
+      <View style={styles.divider} />
+
+      {/* Interested Button */}
+      <TouchableOpacity
+        style={styles.interestedButton}
+        onPress={() => handleInterestToggle(item.id)}
+      >
+        <MaterialIcons
+          name={item.isInterestedByCurrentUser ? "remove" : "add"}
+          size={20}
+          color="#000"
+        />
+        <Text style={styles.interestedButtonText}>
+          {item.isInterestedByCurrentUser ? "Not Interested" : "Interested"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -607,7 +721,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 5,
   },
-  eventContainer: {
+  eventItem: {
     padding: 15,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
@@ -630,6 +744,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginTop: 5,
+  },
+  eventInterested: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#2C3036",
+    marginVertical: 5,
+  },
+  interestedButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "transparent",
+    borderRadius: 5,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  interestedButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+    marginLeft: 5,
   },
   dropdownOverlay: {
     flex: 1,
