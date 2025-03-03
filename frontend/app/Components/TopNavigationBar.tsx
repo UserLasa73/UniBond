@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
-import ShowingAvatar from "./ShowingAvatar";
+import { MaterialIcons } from "@expo/vector-icons";
+import { Image } from "react-native";
 import { supabase } from "../lib/supabse";
 import { useAuth } from "../providers/AuthProvider";
-import { Image } from "react-native";
 
 interface TopNavigationBarProps {
   userName: string;
@@ -19,17 +18,22 @@ const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
   onNotificationPress,
   onPostPress,
 }) => {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const { profile } = useAuth();
+
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+  const imageUrl = avatarUrl ? `${storageUrl}${avatarUrl}` : null;
+
   useEffect(() => {
     if (session) getProfile();
   }, [session]);
-  const storageUrl =
-    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-  const imageUrl = profile.avatar_url
-    ? `${storageUrl}${profile.avatar_url}`
-    : null;
+
+  useEffect(() => {
+    if (profile?.avatar_url) {
+      setAvatarUrl(profile.avatar_url);
+    }
+  }, [profile?.avatar_url]);
 
   async function getProfile() {
     try {
@@ -97,9 +101,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
   },
   profileImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#ccc",
     justifyContent: "center",
     alignItems: "center",
