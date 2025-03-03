@@ -55,13 +55,13 @@ export default function ShowProfileEdit() {
   const [role, setRole] = useState<boolean>(false); // State for role
   const [posts, setPosts] = useState<(Post | Event)[]>([]); // State for posts and events
   const { userId } = useLocalSearchParams();
-
+  const [jobtitle, setJobtitle] = useState([]); // Store followers list
   const [followersList, setFollowersList] = useState([]); // Store followers list
   const [followersCount, setFollowersCount] = useState(0); // Store number of followers
   const [followingList, setFollowingList] = useState([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
   const [postsCount, setPostsCount] = useState(0); // Store number of posts made by the user
-
+  const [graduationyear, setgraduationyear] = useState(); // Store number of events created by the user
   // State for dropdown menu
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Store selected event for dropdown
@@ -126,7 +126,7 @@ export default function ShowProfileEdit() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, job_title,graduation_year`
         )
         .eq("id", profileId)
         .single();
@@ -143,7 +143,9 @@ export default function ShowProfileEdit() {
         setCourse(data.course);
         setSkills(data.skills);
         setInterests(data.interests);
-        setRole(data.role); // Set role state
+        setRole(data.role);
+        setJobtitle(data.job_title);
+        setgraduationyear(data.graduation_year);
       }
 
       if (error) throw error;
@@ -427,7 +429,7 @@ export default function ShowProfileEdit() {
       </View>
 
       {/* Profile Header */}
-      <View style={{ marginTop: 40, marginHorizontal: 20 }}>
+      <View style={{ marginTop: 30, marginHorizontal: 20 }}>
         <View
           style={{
             flexDirection: "row",
@@ -437,13 +439,24 @@ export default function ShowProfileEdit() {
         >
           <ShowingAvatar
             url={avatarUrl}
-            size={50}
+            size={40}
             onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
 
           {/* Followers, Following, and Posts Count */}
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginRight: 20,
+            }}
+          >
+            <View
+              style={{
+                alignItems: "center",
+                marginHorizontal: 10,
+              }}
+            >
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {postsCount}
               </Text>
@@ -475,10 +488,23 @@ export default function ShowProfileEdit() {
         </View>
 
         {/* Profile Details */}
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: 10 }}>
           <Text style={{ fontSize: 20, fontWeight: "bold" }}>
             {fullname || "Profile"} ({role ? "Alumni" : "Student"})
           </Text>
+          {role && (
+            <View>
+              <Text style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}>
+                {jobtitle}
+              </Text>
+              <Text style={{ fontSize: 16, color: "#666" }}>
+                Graduated Year:{" "}
+                {new Date(graduationyear).toLocaleString("default", {
+                  year: "numeric",
+                })}
+              </Text>
+            </View>
+          )}
           <Text style={{ fontSize: 16, color: "#666" }}>
             {faculty} | {department}
           </Text>
