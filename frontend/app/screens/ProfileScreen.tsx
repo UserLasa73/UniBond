@@ -48,7 +48,8 @@ export default function ProfileScreen() {
   const [linkedin, setLinkedin] = useState(""); // State for LinkedIn
   const [portfolio, setPortfolio] = useState(""); // State for portfolio
   const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
-
+  const [jobtitle, setJobtitle] = useState([]);
+  const [graduationyear, setgraduationyear] = useState();
   useEffect(() => {
     if (userId || session) {
       getProfile();
@@ -232,7 +233,7 @@ export default function ProfileScreen() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, github, linkedin, portfolio`
+          `username, avatar_url, full_name, dob, contact_number, gender, department, faculty, course, skills, interests, role, email, github, linkedin, portfolio,job_title,graduation_year`
         )
         .eq("id", profileId)
         .single();
@@ -255,7 +256,9 @@ export default function ProfileScreen() {
         setEmail(data.email); // Set email
         setGithub(data.github); // Set GitHub
         setLinkedin(data.linkedin); // Set LinkedIn
-        setPortfolio(data.portfolio); // Set portfolio
+        setPortfolio(data.portfolio);
+        setJobtitle(data.job_title);
+        setgraduationyear(data.graduation_year);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -544,6 +547,19 @@ export default function ProfileScreen() {
         <Text style={{ fontSize: 20, fontWeight: "bold" }}>
           {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
         </Text>
+        {role && (
+          <View>
+            <Text style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}>
+              {jobtitle}
+            </Text>
+            <Text style={{ fontSize: 16, color: "#666" }}>
+              Graduated Year:{" "}
+              {new Date(graduationyear).toLocaleString("default", {
+                year: "numeric",
+              })}
+            </Text>
+          </View>
+        )}
         <Text style={{ fontSize: 16, color: "#555" }}>
           {username} | {faculty}
         </Text>
