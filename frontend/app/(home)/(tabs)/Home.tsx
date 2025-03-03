@@ -41,7 +41,7 @@ type Event = {
   avatar_url: string;
   role: boolean;
   interested_count: number;
-  isInterestedByCurrentUser: boolean; // Added field
+  isInterestedByCurrentUser: boolean;
 };
 
 const HomeScreen: React.FC = () => {
@@ -50,6 +50,9 @@ const HomeScreen: React.FC = () => {
   const [username, setUsername] = useState<string>("");
   const [combinedData, setCombinedData] = useState<(Post | Event)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [filter, setFilter] = useState<"all" | "posts" | "events">("all");
+  const [sortBy, setSortBy] = useState<"date" | "likes" | "interested">("date");
+  const [isDateSorted, setIsDateSorted] = useState<boolean>(false); // New state for toggling sort
 
   useEffect(() => {
     if (session) {
@@ -151,7 +154,7 @@ const HomeScreen: React.FC = () => {
             avatar_url: userProfile.avatar_url,
             role: userProfile.role,
             posted_date: new Date(event.created_at).toISOString(),
-            isInterestedByCurrentUser, // Add this field
+            isInterestedByCurrentUser,
           };
         })
       );
@@ -187,18 +190,15 @@ const HomeScreen: React.FC = () => {
 
   const handleLike = async (postId: number) => {
     try {
-      // Find the post in the combinedData array
       const post = combinedData.find(
         (item) => item.type === "post" && item.id === postId
       ) as Post;
 
       if (!post) throw new Error("Post not found");
 
-      // Toggle like state
-      const isLiked = post.likes > 0; // Assuming likes > 0 means the user has liked the post
+      const isLiked = post.likes > 0;
       const newLikes = isLiked ? post.likes - 1 : post.likes + 1;
 
-      // Update the database
       const { error } = await supabase
         .from("posts")
         .update({ likes: newLikes })
@@ -206,7 +206,6 @@ const HomeScreen: React.FC = () => {
 
       if (error) throw error;
 
-      // Update the local state
       setCombinedData((prev) =>
         prev.map((item) =>
           item.type === "post" && item.id === postId
@@ -252,7 +251,6 @@ const HomeScreen: React.FC = () => {
 
   const handleInterestToggle = async (eventId: number) => {
     try {
-      // Find the event in the combinedData array
       const event = combinedData.find(
         (item) => item.type === "event" && item.id === eventId
       ) as Event;
@@ -262,7 +260,6 @@ const HomeScreen: React.FC = () => {
       const isInterested = event.isInterestedByCurrentUser;
 
       if (isInterested) {
-        // Remove interest
         const { error: removeError } = await supabase
           .from("event_interests")
           .delete()
@@ -271,7 +268,6 @@ const HomeScreen: React.FC = () => {
 
         if (removeError) throw removeError;
 
-        // Decrement the interested count in the events table
         const newInterestedCount = event.interested_count - 1;
 
         const { error: updateError } = await supabase
@@ -281,27 +277,24 @@ const HomeScreen: React.FC = () => {
 
         if (updateError) throw updateError;
 
-        // Update the local state
         setCombinedData((prev) =>
           prev.map((item) =>
             item.type === "event" && item.id === eventId
               ? {
                   ...item,
                   interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: false, // Update this field
+                  isInterestedByCurrentUser: false,
                 }
               : item
           )
         );
       } else {
-        // Add interest
         const { error: addError } = await supabase
           .from("event_interests")
           .insert([{ event_id: eventId, user_id: session?.user?.id }]);
 
         if (addError) throw addError;
 
-        // Increment the interested count in the events table
         const newInterestedCount = event.interested_count + 1;
 
         const { error: updateError } = await supabase
@@ -311,14 +304,13 @@ const HomeScreen: React.FC = () => {
 
         if (updateError) throw updateError;
 
-        // Update the local state
         setCombinedData((prev) =>
           prev.map((item) =>
             item.type === "event" && item.id === eventId
               ? {
                   ...item,
                   interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: true, // Update this field
+                  isInterestedByCurrentUser: true,
                 }
               : item
           )
@@ -329,6 +321,46 @@ const HomeScreen: React.FC = () => {
       Alert.alert("Error", "Could not toggle interest.");
     }
   };
+
+  const handleFilterChange = (newFilter: "all" | "posts" | "events") => {
+    setFilter(newFilter);
+  };
+
+  const handleSortChange = (newSort: "date" | "likes" | "interested") => {
+    if (newSort === "date") {
+      // Toggle the date sorting
+      setIsDateSorted((prev) => !prev);
+      setSortBy("date");
+    } else {
+      // Handle other sorting options
+      setIsDateSorted(false); // Reset date sorting
+      setSortBy(newSort);
+    }
+  };
+
+  const filteredData = combinedData.filter((item) => {
+    if (filter === "posts") return item.type === "post";
+    if (filter === "events") return item.type === "event";
+    return true; // 'all'
+  });
+
+  const sortedData = filteredData.sort((a, b) => {
+    if (sortBy === "date" && isDateSorted) {
+      // Apply date sorting only if isDateSorted is true
+      return (
+        new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
+      );
+    } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
+      return b.likes - a.likes;
+    } else if (
+      sortBy === "interested" &&
+      a.type === "event" &&
+      b.type === "event"
+    ) {
+      return b.interested_count - a.interested_count;
+    }
+    return 0; // No sorting
+  });
 
   const renderItem = ({ item }: { item: Post | Event }) => {
     if (item.type === "event") {
@@ -377,10 +409,8 @@ const HomeScreen: React.FC = () => {
             Interested People: ({event.interested_count})
           </Text>
 
-          {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Interested Button with Icon */}
           <TouchableOpacity
             style={styles.interestedButton}
             onPress={() => handleInterestToggle(event.id)}
@@ -442,14 +472,51 @@ const HomeScreen: React.FC = () => {
         onPostPress={() => router.push("/screens/PostScreen")}
       />
 
+      <View style={styles.filterSortContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === "all" && styles.activeFilter]}
+          onPress={() => handleFilterChange("all")}
+        >
+          <Text style={styles.filterButtonText}>All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "posts" && styles.activeFilter,
+          ]}
+          onPress={() => handleFilterChange("posts")}
+        >
+          <Text style={styles.filterButtonText}>Posts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "events" && styles.activeFilter,
+          ]}
+          onPress={() => handleFilterChange("events")}
+        >
+          <Text style={styles.filterButtonText}>Events</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.sortButton, isDateSorted && styles.activeSort]}
+          onPress={() => handleSortChange("date")}
+        >
+          <Text style={styles.sortButtonText}>
+            {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
-        data={combinedData}
+        data={sortedData}
         renderItem={renderItem}
         keyExtractor={(item) =>
           `${item.type === "event" ? "event" : "post"}-${item.id}`
         }
         contentContainerStyle={styles.combinedList}
       />
+
       <TouchableOpacity
         style={styles.DonateButton}
         onPress={() => {
@@ -543,6 +610,38 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#2C3036",
     marginVertical: 5,
+  },
+  filterSortContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    padding: 10,
+    backgroundColor: "#fff",
+  },
+  filterButton: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#ddd",
+    margin: 5,
+  },
+  activeFilter: {
+    backgroundColor: "#2C3036",
+  },
+  filterButtonText: {
+    color: "#fff",
+  },
+  sortButton: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#ddd",
+    margin: 5,
+    marginRight: 20,
+  },
+  activeSort: {
+    backgroundColor: "#2C3036",
+  },
+  sortButtonText: {
+    color: "#FFF",
   },
 });
 
