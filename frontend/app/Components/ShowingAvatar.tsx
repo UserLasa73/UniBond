@@ -7,9 +7,15 @@ interface Props {
   size: number;
   url: string | null;
   onUpload: (filePath: string) => void;
+  gender?: "male" | "female"; // Add gender as a prop
 }
 
-export default function ShowingAvatar({ url, size = 150, onUpload }: Props) {
+export default function ShowingAvatar({
+  url,
+  size = 150,
+  onUpload,
+  gender = "male", // Default to male if gender is not provided
+}: Props) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarSize = { height: size, width: size };
 
@@ -39,6 +45,10 @@ export default function ShowingAvatar({ url, size = 150, onUpload }: Props) {
     }
   }
 
+  // Default avatar images based on gender
+  const defaultMaleAvatar = require("../Constatnts/Male.jpg"); // Replace with your male avatar path
+  const defaultFemaleAvatar = require("../Constatnts/Female.jpg"); // Replace with your female avatar path
+
   return (
     <View>
       {avatarUrl ? (
@@ -48,7 +58,11 @@ export default function ShowingAvatar({ url, size = 150, onUpload }: Props) {
           style={[avatarSize, styles.avatar, styles.image]}
         />
       ) : (
-        <View style={[avatarSize, styles.avatar, styles.noImage]} />
+        <Image
+          source={gender === "male" ? defaultMaleAvatar : defaultFemaleAvatar}
+          accessibilityLabel="Default Avatar"
+          style={[avatarSize, styles.avatar, styles.image]}
+        />
       )}
     </View>
   );
@@ -59,7 +73,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     overflow: "hidden",
     maxWidth: "100%",
-    resizeMode: "contain",
+    resizeMode: "stretch",
     height: 150,
     width: 150,
     marginBottom: 20,
