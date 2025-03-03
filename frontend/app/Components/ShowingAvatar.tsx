@@ -70,8 +70,8 @@ export default function ShowingAvatar({
 
 const styles = StyleSheet.create({
   avatar: {
-    borderRadius: 5,
-    overflow: "hidden",
+    borderRadius: 999, // Fully circular
+    overflow: "hidden", // Hide the overflow
     maxWidth: "100%",
     resizeMode: "stretch",
     height: 150,
@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     objectFit: "cover",
     paddingTop: 0,
     borderRadius: 999,
+    resizeMode: "repeat",
   },
   noImage: {
     backgroundColor: "#333",
