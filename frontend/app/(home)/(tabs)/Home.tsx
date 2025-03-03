@@ -15,6 +15,7 @@ import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
 import { MaterialIcons } from "@expo/vector-icons";
+import RandomUserCards from "@/app/Components/renderUserCard ";
 
 type Post = {
   id: number;
@@ -52,7 +53,7 @@ const HomeScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [filter, setFilter] = useState<"all" | "posts" | "events">("all");
   const [sortBy, setSortBy] = useState<"date" | "likes" | "interested">("date");
-  const [isDateSorted, setIsDateSorted] = useState<boolean>(false); // New state for toggling sort
+  const [isDateSorted, setIsDateSorted] = useState<boolean>(false);
 
   useEffect(() => {
     if (session) {
@@ -107,7 +108,7 @@ const HomeScreen: React.FC = () => {
 
       if (postsError) throw postsError;
 
-      // Fetch events (include interested_count)
+      // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
         .select(
@@ -328,12 +329,10 @@ const HomeScreen: React.FC = () => {
 
   const handleSortChange = (newSort: "date" | "likes" | "interested") => {
     if (newSort === "date") {
-      // Toggle the date sorting
       setIsDateSorted((prev) => !prev);
       setSortBy("date");
     } else {
-      // Handle other sorting options
-      setIsDateSorted(false); // Reset date sorting
+      setIsDateSorted(false);
       setSortBy(newSort);
     }
   };
@@ -346,7 +345,6 @@ const HomeScreen: React.FC = () => {
 
   const sortedData = filteredData.sort((a, b) => {
     if (sortBy === "date" && isDateSorted) {
-      // Apply date sorting only if isDateSorted is true
       return (
         new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
       );
@@ -455,6 +453,12 @@ const HomeScreen: React.FC = () => {
     return null;
   };
 
+  const renderHeader = () => (
+    <View style={styles.randomUserCardsContainer}>
+      <RandomUserCards currentUserId={session?.user?.id} />
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -514,6 +518,8 @@ const HomeScreen: React.FC = () => {
         keyExtractor={(item) =>
           `${item.type === "event" ? "event" : "post"}-${item.id}`
         }
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderHeader}
         contentContainerStyle={styles.combinedList}
       />
 
@@ -642,6 +648,10 @@ const styles = StyleSheet.create({
   },
   sortButtonText: {
     color: "#FFF",
+  },
+  randomUserCardsContainer: {
+    padding: 10,
+    marginBottom: 10,
   },
 });
 
