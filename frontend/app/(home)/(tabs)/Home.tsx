@@ -524,7 +524,7 @@ const HomeScreen: React.FC = () => {
             `${item.type === "event" ? "event" : "post"}-${item.id}`
           }
           ListHeaderComponent={renderHeader}
-          ListFooterComponent={renderHeader}
+          ListEmptyComponent={renderHeader}
           contentContainerStyle={styles.combinedList}
         />
 
