@@ -16,6 +16,7 @@ import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
 import { MaterialIcons } from "@expo/vector-icons";
 import RandomUserCards from "@/app/Components/renderUserCard ";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Post = {
   id: number;
@@ -469,69 +470,74 @@ const HomeScreen: React.FC = () => {
 
   return (
     <>
-      <TopNavigationBar
-        userName={username}
-        onProfilePress={() => router.push("/screens/ShowProfileEdit")}
-        onNotificationPress={() => router.push("/screens/NotificationScreen")}
-        onPostPress={() => router.push("/screens/PostScreen")}
-      />
+      <SafeAreaView>
+        <TopNavigationBar
+          userName={username}
+          onProfilePress={() => router.push("/screens/ShowProfileEdit")}
+          onNotificationPress={() => router.push("/screens/NotificationScreen")}
+          onPostPress={() => router.push("/screens/PostScreen")}
+        />
 
-      <View style={styles.filterSortContainer}>
-        <TouchableOpacity
-          style={[styles.filterButton, filter === "all" && styles.activeFilter]}
-          onPress={() => handleFilterChange("all")}
-        >
-          <Text style={styles.filterButtonText}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === "posts" && styles.activeFilter,
-          ]}
-          onPress={() => handleFilterChange("posts")}
-        >
-          <Text style={styles.filterButtonText}>Posts</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === "events" && styles.activeFilter,
-          ]}
-          onPress={() => handleFilterChange("events")}
-        >
-          <Text style={styles.filterButtonText}>Events</Text>
-        </TouchableOpacity>
+        <View style={styles.filterSortContainer}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filter === "all" && styles.activeFilter,
+            ]}
+            onPress={() => handleFilterChange("all")}
+          >
+            <Text style={styles.filterButtonText}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filter === "posts" && styles.activeFilter,
+            ]}
+            onPress={() => handleFilterChange("posts")}
+          >
+            <Text style={styles.filterButtonText}>Posts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filter === "events" && styles.activeFilter,
+            ]}
+            onPress={() => handleFilterChange("events")}
+          >
+            <Text style={styles.filterButtonText}>Events</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sortButton, isDateSorted && styles.activeSort]}
+            onPress={() => handleSortChange("date")}
+          >
+            <Text style={styles.sortButtonText}>
+              {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={sortedData}
+          renderItem={renderItem}
+          keyExtractor={(item) =>
+            `${item.type === "event" ? "event" : "post"}-${item.id}`
+          }
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderHeader}
+          contentContainerStyle={styles.combinedList}
+        />
 
         <TouchableOpacity
-          style={[styles.sortButton, isDateSorted && styles.activeSort]}
-          onPress={() => handleSortChange("date")}
+          style={styles.DonateButton}
+          onPress={() => {
+            router.push("/screens/DonationScreen");
+          }}
         >
-          <Text style={styles.sortButtonText}>
-            {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
-          </Text>
+          <Image source={require("../../Constatnts/Donate Icon.png")} />
+          <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
         </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={sortedData}
-        renderItem={renderItem}
-        keyExtractor={(item) =>
-          `${item.type === "event" ? "event" : "post"}-${item.id}`
-        }
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderHeader}
-        contentContainerStyle={styles.combinedList}
-      />
-
-      <TouchableOpacity
-        style={styles.DonateButton}
-        onPress={() => {
-          router.push("/screens/DonationScreen");
-        }}
-      >
-        <Image source={require("../../Constatnts/Donate Icon.png")} />
-        <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
-      </TouchableOpacity>
+      </SafeAreaView>
     </>
   );
 };
