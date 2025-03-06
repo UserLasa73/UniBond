@@ -1,71 +1,219 @@
-import { useState } from "react";
-import { supabase } from "../lib/supabse";
-import { useAuth } from "../providers/AuthProvider";
-import { Alert, View, Text, TextInput, Button, StyleSheet } from "react-native";
-import PostImage from "../Components/PostImage";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  KeyboardAvoidingView,
+  FlatList,
+  Animated,
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "../lib/supabse"; // Import the Supabase client
 
-export default function CreatePostScreen() {
-  const { session } = useAuth();
-  const [content, setContent] = useState<string>("");
-  const [mediaUrl, setMediaUrl] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+const PostItem = ({ post, username, onLike, onCommentSubmit }) => {
+  const [newComment, setNewComment] = useState("");
+  const [showComments, setShowComments] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.likes);
+  const bounceAnim = new Animated.Value(1);
+  const [imageUrl, setImageUrl] = useState(null);
+  const postImageSize = 300;
 
-  // Handle post creation
-  async function createPost() {
-    try {
-      setLoading(true);
-      if (!session) {
-        throw new Error("User not authenticated");
-      }
-
-      const { user } = session;
-
-      const { data, error } = await supabase.from("posts").insert([
-        {
-          user_id: user?.id,
-          content,
-          media_url: mediaUrl,
-          likes: 0,
-          comments: [],
-          is_public: true,
-        },
-      ]);
-
-      if (error) throw error;
-
-      Alert.alert("Post created successfully!");
-      setContent("");  // Clear the content input field
-      setMediaUrl("");  // Clear the image URL
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert("Error", error.message);
-      }
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (post.media_url) {
+      fetchImageUrl(post.media_url);
     }
-  }
+  }, [post.media_url]);
+
+  // Fetch the image URL directly from Supabase Storage
+  const fetchImageUrl = async (filePath) => {
+    const { data, error } = await supabase.storage
+      .from("post_images")
+      .getPublicUrl(filePath);
+
+    if (error) {
+      console.error("Error fetching image:", error);
+    } else {
+      setImageUrl(data.publicUrl);
+    }
+  };
+
+  const handleCommentSubmit = () => {
+    if (!newComment.trim()) {
+      alert("Comment cannot be empty!");
+      return;
+    }
+
+    try {
+      onCommentSubmit(post.id, newComment);
+      setNewComment("");
+      setShowComments(false);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      alert("Failed to add comment. Please try again.");
+    }
+  };
+
+  const handleLikeToggle = () => {
+    const newHasLiked = !hasLiked;
+    const newLikeCount = newHasLiked ? likeCount + 1 : likeCount - 1;
+
+    setHasLiked(newHasLiked);
+    setLikeCount(newLikeCount);
+
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1.2,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    try {
+      onLike(post.id, newHasLiked);
+    } catch (error) {
+      console.error("Error updating like count:", error);
+      setHasLiked(!newHasLiked);
+      setLikeCount(likeCount);
+      alert("Failed to update like. Please try again.");
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create a Post</Text>
+    <View style={styles.postContainer}>
+      {/* Display the content of the post */}
+      <Text style={styles.postContent}>{post.content}</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Write something..."
-        value={content}
-        onChangeText={setContent}
-      />
+      {/* Display the post image if media_url is present */}
+      <View>
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={[{ height: postImageSize, width: postImageSize }, styles.image]}
+            accessibilityLabel="Post Image"
+          />
+        ) : (
+          <View style={[{ height: postImageSize, width: postImageSize }, styles.noImage]}>
+            <Text style={styles.noImageText}>No Image</Text>
+          </View>
+        )}
+      </View>
 
-      <PostImage onUpload={(url) => setMediaUrl(url)} />
+      <View style={styles.postActions}>
+        {/* Like button */}
+        <TouchableOpacity onPress={handleLikeToggle} style={styles.actionButton}>
+          <Animated.View style={{ transform: [{ scale: bounceAnim }] }}>
+            <Ionicons name="heart" size={24} color={hasLiked ? "red" : "gray"} />
+          </Animated.View>
+          <Text>{likeCount}</Text>
+        </TouchableOpacity>
 
-      <Button title={loading ? "Creating..." : "Create Post"} onPress={createPost} disabled={loading || !content || !mediaUrl} />
+        {/* Comment button */}
+        <TouchableOpacity onPress={() => setShowComments(!showComments)} style={styles.actionButton}>
+          <Ionicons name="chatbubble" size={24} color="gray" />
+          <Text>{post.comments.length}</Text>
+        </TouchableOpacity>
+      </View>
 
+      {/* Comments Section */}
+      {showComments && (
+        <View style={styles.commentsContainer}>
+          <FlatList
+            data={post.comments}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.comment}>
+                <Text style={styles.commentUsername}>{item.username}</Text>
+                <Text style={styles.commentText}>{item.comment}</Text>
+              </View>
+            )}
+          />
+
+          {/* New Comment Input */}
+          <KeyboardAvoidingView behavior="padding">
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Write a comment..."
+              value={newComment}
+              onChangeText={setNewComment}
+              onSubmitEditing={handleCommentSubmit}
+            />
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  input: { height: 100, borderColor: "#ccc", borderWidth: 1, padding: 10, marginBottom: 20, textAlignVertical: "top" },
+  postContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  postContent: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: "#333",
+  },
+  image: {
+    borderRadius: 8,
+    resizeMode: "cover",
+  },
+  noImage: {
+    backgroundColor: "#f0f0f0",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noImageText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  postActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  commentsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  comment: {
+    marginBottom: 8,
+  },
+  commentUsername: {
+    fontWeight: "bold",
+    marginBottom: 4,
+    color: "#444",
+  },
+  commentText: {
+    fontSize: 14,
+    color: "#555",
+  },
+  commentInput: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#f9f9f9",
+  },
 });
+
+export default PostItem;
