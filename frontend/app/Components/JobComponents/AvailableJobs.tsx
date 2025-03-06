@@ -18,18 +18,19 @@ interface JobListing {
   job_phone: string;
   job_website: string;
   job_email: string;
-  image_url: string | null; // Add image_url field to JobListing type
+  image_url: string | null;
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null); // Store authenticated user
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
+  const [user, setUser] = useState<any>(null);
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]); // Store saved job IDs
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchJobs = async () => {
-      setIsLoading(true); // Set loading state to true
+      setIsLoading(true);
       try {
         const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
         if (error) {
@@ -40,65 +41,66 @@ const AvailableJobs: React.FC = () => {
       } catch (error) {
         console.error("Unexpected error:", error);
       } finally {
-        setIsLoading(false); // Set loading state to false once data is fetched
+        setIsLoading(false);
       }
     };
 
     fetchJobs();
 
-    // Fetch current user
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Error fetching user:", error.message);
-      } else {
-        setUser(data?.user); // Store the user
+    // Fetch user and their saved jobs
+    const getUserAndSavedJobs = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("Error fetching user:", userError.message);
+        return;
+      }
+      setUser(userData?.user);
+
+      if (userData?.user) {
+        const { data: savedJobs, error: savedJobsError } = await supabase
+          .from("saved_jobs")
+          .select("job_id")
+          .eq("user_id", userData.user.id);
+
+        if (savedJobsError) {
+          console.error("Error fetching saved jobs:", savedJobsError.message);
+        } else {
+          setSavedJobIds(savedJobs.map((job) => job.job_id)); // Store saved job IDs
+        }
       }
     };
 
-    getUser();
+    getUserAndSavedJobs();
   }, []);
 
   const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+    setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
   const saveJob = async (jobId: string) => {
-    if (user) {
-      try {
-        // Check if the job is already saved
-        const { data, error } = await supabase
-          .from("saved_jobs")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("job_id", jobId);
-
-        if (data && data.length > 0) {
-          Alert.alert("Already Saved", "You have already saved this job.");
-          return;
-        }
-
-        const { insertData, insertError } = await supabase
-          .from("saved_jobs")
-          .insert([
-            {
-              user_id: user.id,
-              job_id: jobId,
-            },
-          ]);
-
-        if (insertError) {
-          console.error("Error saving job:", insertError.message);
-          Alert.alert("Error", insertError.message);
-        } else {
-          console.log("Job saved!", insertData);
-          Alert.alert("Success", "The job has been saved successfully.");
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-      }
-    } else {
+    if (!user) {
       Alert.alert("Authentication Required", "Please log in to save jobs.");
+      return;
+    }
+
+    try {
+      // Check if the job is already saved
+      if (savedJobIds.includes(jobId)) {
+        Alert.alert("Already Saved", "You have already saved this job.");
+        return;
+      }
+
+      const { error } = await supabase.from("saved_jobs").insert([{ user_id: user.id, job_id: jobId }]);
+
+      if (error) {
+        console.error("Error saving job:", error.message);
+        Alert.alert("Error", error.message);
+      } else {
+        setSavedJobIds((prev) => [...prev, jobId]); // Update state to reflect saved job
+        Alert.alert("Success", "The job has been saved successfully.");
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
     }
   };
 
@@ -112,13 +114,9 @@ const AvailableJobs: React.FC = () => {
         </View>
       </View>
 
-      {/* Conditionally render image if image_url exists */}
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.image} />
-      )}
+      {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
 
       <View style={styles.details}>
-        
         {item.location && (
           <View style={styles.row}>
             <MaterialIcons name="location-on" size={20} color="gray" />
@@ -162,10 +160,7 @@ const AvailableJobs: React.FC = () => {
       {item.description && (
         <View style={styles.additionalDetails}>
           {expandedJobId === item.id ? (
-            <Text style={styles.description}>
-              <Text style={styles.descriptionTitle}>Description - </Text>
-              {item.description}
-            </Text>
+            <Text style={styles.description}>{item.description}</Text>
           ) : (
             <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
               <Text style={styles.readMoreText}>Read More</Text>
@@ -180,11 +175,9 @@ const AvailableJobs: React.FC = () => {
         </TouchableOpacity>
       )}
 
-
       <View style={styles.buttonGroup}>
-        {/* Save Icon */}
         <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.iconButton}>
-          <Ionicons name="bookmark-outline" size={30} color="#000" />
+          <Ionicons name={savedJobIds.includes(item.id) ? "bookmark" : "bookmark-outline"} size={30} color="#000" />
         </TouchableOpacity>
       </View>
     </View>
