@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -7,14 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { supabase } from "../lib/supabse";
 
-export default function DonationDetailsScreen({ route }) {
-  const donationId = route?.params?.donationId || null;
-  // const donationId = "c40d6774-e604-4237-9a6d-564fe71bcdb5"; // Replace with a valid ID
-  console.log("Received donationId:", donationId); // Debugging
+export default function DonationDetailsScreen() {
+  const { donationId } = useLocalSearchParams();
 
   const [donation, setDonation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +39,6 @@ export default function DonationDetailsScreen({ route }) {
         } else if (!data) {
           setError("No donation found with the provided ID.");
         } else {
-          console.log("Fetched donation details:", data); // Debugging
           setDonation(data);
         }
       } catch (error) {
@@ -107,7 +103,10 @@ export default function DonationDetailsScreen({ route }) {
           borderRadius: 8,
           padding: 24,
           marginBottom: 24,
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         }}
       >
         <Text
