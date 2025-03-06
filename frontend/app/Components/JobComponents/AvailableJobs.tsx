@@ -66,30 +66,39 @@ const AvailableJobs: React.FC = () => {
   const saveJob = async (jobId: string) => {
     if (user) {
       try {
-        const { data, error } = await supabase.from("saved_jobs").insert([
-          {
-            user_id: user.id,
-            job_id: jobId,
-          },
-        ]);
+        // Check if the job is already saved
+        const { data, error } = await supabase
+          .from("saved_jobs")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("job_id", jobId);
 
-        if (error) {
-          console.error("Error saving job:", error.message);
-          Alert.alert("Already Saved");
+        if (data && data.length > 0) {
+          Alert.alert("Already Saved", "You have already saved this job.");
+          return;
+        }
+
+        const { insertData, insertError } = await supabase
+          .from("saved_jobs")
+          .insert([
+            {
+              user_id: user.id,
+              job_id: jobId,
+            },
+          ]);
+
+        if (insertError) {
+          console.error("Error saving job:", insertError.message);
+          Alert.alert("Error", insertError.message);
         } else {
-          console.log("Job saved!", data);
-          Alert.alert(
-            "Success",
-            "The job has been saved successfully.",
-            [{ text: "OK" }],
-            { cancelable: true }
-          );
+          console.log("Job saved!", insertData);
+          Alert.alert("Success", "The job has been saved successfully.");
         }
       } catch (error) {
         console.error("Unexpected error:", error);
       }
     } else {
-      console.error("User not authenticated");
+      Alert.alert("Authentication Required", "Please log in to save jobs.");
     }
   };
 
@@ -104,12 +113,12 @@ const AvailableJobs: React.FC = () => {
       </View>
 
       {/* Conditionally render image if image_url exists */}
-      {item.image_url ? (
+      {item.image_url && (
         <Image source={{ uri: item.image_url }} style={styles.image} />
-      ) : null}
+      )}
 
       <View style={styles.details}>
-        {/* Conditionally render items only if values exist */}
+        
         {item.location && (
           <View style={styles.row}>
             <MaterialIcons name="location-on" size={20} color="gray" />
@@ -117,7 +126,7 @@ const AvailableJobs: React.FC = () => {
           </View>
         )}
 
-        {item.type || item.level && (
+        {(item.type || item.level) && (
           <View style={styles.row}>
             <Ionicons name="briefcase-outline" size={20} color="gray" />
             <Text style={styles.detailText}>
@@ -150,21 +159,26 @@ const AvailableJobs: React.FC = () => {
         )}
       </View>
 
-
-      {expandedJobId === item.id && (
+      {item.description && (
         <View style={styles.additionalDetails}>
-          <Text style={styles.description}>
-            <Text style={styles.descriptionTitle}>Description - </Text>
-            {item.description}
-          </Text>
+          {expandedJobId === item.id ? (
+            <Text style={styles.description}>
+              <Text style={styles.descriptionTitle}>Description - </Text>
+              {item.description}
+            </Text>
+          ) : (
+            <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+              <Text style={styles.readMoreText}>Read More</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
-        <Text style={styles.readMoreText}>
-          {expandedJobId === item.id ? "Read Less" : "Read More"}
-        </Text>
-      </TouchableOpacity>
+      {expandedJobId === item.id && item.description && (
+        <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+          <Text style={styles.readMoreText}>Read Less</Text>
+        </TouchableOpacity>
+      )}
 
 
       <View style={styles.buttonGroup}>
@@ -291,9 +305,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "gray",
-    textAlign: "center",
   },
 });
 
