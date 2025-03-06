@@ -14,7 +14,11 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
-  image_url: string;  // Add image_url to the JobListing interface
+  deadline: string;
+  job_phone: string;
+  job_website: string;
+  job_email: string;
+  image_url: string | null; // Add image_url field to JobListing type
 }
 
 const SavedJobs: React.FC = () => {
@@ -97,102 +101,93 @@ const SavedJobs: React.FC = () => {
     }
   };
 
-  const applyJob = async (jobId: string) => {
-    if (user) {
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError.message);
-        } else {
-          const applicantName = profile.full_name;
-
-          // Insert application details into applications table
-          const { data, error } = await supabase.from('applications').insert([{
-            job_id: jobId,
-            user_id: user.id,
-            applicant_name: applicantName, // Store applicant's name
-            status: 'applied', // Set initial status to 'applied'
-          }]);
-
-          if (error) {
-            console.error("Error applying for job:", error.message);
-            Alert.alert("Already Applied");
-          } else {
-            console.log("Application submitted successfully:", data);
-            Alert.alert(
-              "Application Submitted",
-              "You have successfully applied for the job.",
-              [{ text: "OK" }],
-              { cancelable: true }
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-      }
-    } else {
-      console.error("User not authenticated");
-    }
-  };
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
-      
-
       <Text style={styles.title}>{item.title}</Text>
+
       <View style={styles.userInfo}>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
-          <Text style={styles.location}>{item.location}</Text>
-          <Text style={styles.date}>{item.time}</Text>
-        </View>
-      </View>
-      <View style={styles.details}>
-        <View style={styles.row}>
-          <Ionicons name="briefcase-outline" size={20} color="gray" />
-          <Text style={styles.detailText}>
-            {item.type} - {item.level}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <MaterialIcons name="article" size={20} color="gray" />
-          <Text style={styles.detailText}>Skills: {item.skills}</Text>
         </View>
       </View>
 
-      {expandedJobId === item.id && (
+      {/* Conditionally render image if image_url exists */}
+      {item.image_url && (
+        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
+      )}
+
+      <View style={styles.details}>
+        
+        {item.location && (
+          <View style={styles.row}>
+            <MaterialIcons name="location-on" size={20} color="gray" />
+            <Text style={styles.detailText}>Location: {item.location}</Text>
+          </View>
+        )}
+
+        {(item.type || item.level) && (
+          <View style={styles.row}>
+            <Ionicons name="briefcase-outline" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Type: {item.type} Level: {item.level}
+            </Text>
+          </View>
+        )}
+
+        {item.skills && (
+          <View style={styles.row}>
+            <MaterialIcons name="article" size={20} color="gray" />
+            <Text style={styles.detailText}>Skills: {item.skills}</Text>
+          </View>
+        )}
+
+        {item.deadline && (
+          <View style={styles.row}>
+            <MaterialIcons name="event" size={20} color="gray" />
+            <Text style={styles.detailText}>Deadline: {item.deadline}</Text>
+          </View>
+        )}
+
+        {(item.job_phone || item.job_email || item.job_website) && (
+          <View style={styles.row}>
+            <MaterialIcons name="person" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Contact: {item.job_phone} | {item.job_email} | {item.job_website}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {item.description && (
         <View style={styles.additionalDetails}>
-          <Text style={styles.description}>
-            <Text style={styles.descriptionTitle}>Description - </Text>
-            {item.description}
-          </Text>
+          {expandedJobId === item.id ? (
+            <Text style={styles.description}>
+              <Text style={styles.descriptionTitle}></Text>
+              {item.description}
+            </Text>
+          ) : (
+            <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+              <Text style={styles.readMoreText}>Read More</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
-        <Text style={styles.readMoreText}>
-          {expandedJobId === item.id ? "Read Less" : "Read More"}
-        </Text>
-      </TouchableOpacity>
+      {expandedJobId === item.id && item.description && (
+        <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+          <Text style={styles.readMoreText}>Read Less</Text>
+        </TouchableOpacity>
+      )}
 
-        {/* Render Image if available */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
-      ) : null}
+      
+      <View style={styles.buttonGroup}>
+        {/* UnSave Icon */}
+        <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
+          <Ionicons name="bookmark" size={30} color="black" />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
-        <Text style={styles.unsaveButtonText}>Unsave</Text>
-      </TouchableOpacity>
-
-      {/* Apply Button */}
-      <TouchableOpacity onPress={() => applyJob(item.id)} style={styles.applyButton}>
-        <Text style={styles.applyButtonText}>Apply</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -299,31 +294,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#007BFF",
   },
+  buttonGroup: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
   unsaveButton: {
-    backgroundColor: "#000000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    padding: 6,
+    borderRadius: 50,
+    backgroundColor: "#F0F0F0", // Add background for the icon button
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
-  },
-  unsaveButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  applyButton: {
-    backgroundColor: "#000000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  applyButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   subtitle: {
     fontSize: 14,
