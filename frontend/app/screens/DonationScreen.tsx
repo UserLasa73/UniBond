@@ -105,7 +105,6 @@ export default function Donationscreen() {
         Donate
       </Text>
 
-      {/* Show "Add Donation Post" button only for the specific user */}
       {userEmail === "aathifahamad4@gmail.com" && (
         <TouchableOpacity
           style={{
@@ -129,7 +128,6 @@ export default function Donationscreen() {
         </TouchableOpacity>
       )}
 
-      {/* Form to add a new donation post */}
       {showAddForm && (
         <View style={{ marginBottom: 24 }}>
           <TextInput
@@ -226,7 +224,6 @@ export default function Donationscreen() {
         </View>
       )}
 
-      {/* Display donation posts */}
       {donations.map((donation) => (
         <View
           key={donation.id}
@@ -258,7 +255,6 @@ export default function Donationscreen() {
             Target Amount: LKR {donation.target_amount}
           </Text>
 
-          {/* Donate Button */}
           <TouchableOpacity
             style={{
               backgroundColor: "#2C3036",
@@ -267,11 +263,7 @@ export default function Donationscreen() {
               marginBottom: 16,
             }}
             onPress={() => {
-              console.log("Navigating with donationId:", donation.id); // Debugging
-              router.push({
-                pathname: "./DonationDetailsScreen", // Use absolute path
-                params: { donationId: donation.id }, // Pass donationId
-              });
+              router.push(`./DonationDetailsScreen?donationId=${donation.id}`);
             }}
           >
             <Text
