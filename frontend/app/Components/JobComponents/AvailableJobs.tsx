@@ -14,12 +14,16 @@ interface JobListing {
   skills: string;
   description: string;
   is_active: boolean;
+  deadline: string;
+  job_phone: string;
+  job_website: string;
+  job_email: string;
   image_url: string | null; // Add image_url field to JobListing type
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null); 
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // Store authenticated user
   const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
@@ -89,76 +93,63 @@ const AvailableJobs: React.FC = () => {
     }
   };
 
-  // Apply for the job
-  const applyForJob = async (jobId: string) => {
-    if (user) {
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError.message);
-        } else {
-          const applicantName = profile.full_name;
-
-          // Insert application details into applications table
-          const { data, error } = await supabase.from('applications').insert([
-            {
-              job_id: jobId,
-              user_id: user.id,
-              applicant_name: applicantName, // Store applicant's name
-              status: 'applied', // Set initial status to 'applied'
-            },
-          ]);
-
-          if (error) {
-            console.error("Error applying for job:", error.message);
-            Alert.alert("Already Applied");
-          } else {
-            console.log("Application submitted successfully:", data);
-            Alert.alert(
-              "Application Submitted",
-              "You have successfully applied for the job.",
-              [{ text: "OK" }],
-              { cancelable: true }
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-      }
-    } else {
-      console.error("User not authenticated");
-    }
-  };
-
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
-      
-
       <Text style={styles.title}>{item.title}</Text>
+
       <View style={styles.userInfo}>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.company}</Text>
-          <Text style={styles.location}>{item.location}</Text>
-          <Text style={styles.date}>{item.time}</Text>
         </View>
       </View>
+
+      {/* Conditionally render image if image_url exists */}
+      {item.image_url ? (
+        <Image source={{ uri: item.image_url }} style={styles.image} />
+      ) : null}
+
       <View style={styles.details}>
-        <View style={styles.row}>
-          <Ionicons name="briefcase-outline" size={20} color="gray" />
-          <Text style={styles.detailText}>
-            {item.type} - {item.level}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <MaterialIcons name="article" size={20} color="gray" />
-          <Text style={styles.detailText}>Skills: {item.skills}</Text>
-        </View>
+        {/* Conditionally render items only if values exist */}
+        {item.location && (
+          <View style={styles.row}>
+            <MaterialIcons name="location-on" size={20} color="gray" />
+            <Text style={styles.detailText}>Location: {item.location}</Text>
+          </View>
+        )}
+
+        {item.type || item.level && (
+          <View style={styles.row}>
+            <Ionicons name="briefcase-outline" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Type: {item.type} Level: {item.level}
+            </Text>
+          </View>
+        )}
+
+        {item.skills && (
+          <View style={styles.row}>
+            <MaterialIcons name="article" size={20} color="gray" />
+            <Text style={styles.detailText}>Skills: {item.skills}</Text>
+          </View>
+        )}
+
+        {item.deadline && (
+          <View style={styles.row}>
+            <MaterialIcons name="event" size={20} color="gray" />
+            <Text style={styles.detailText}>Deadline: {item.deadline}</Text>
+          </View>
+        )}
+
+        {(item.job_phone || item.job_email || item.job_website) && (
+          <View style={styles.row}>
+            <MaterialIcons name="person" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Contact: {item.job_phone} | {item.job_email} | {item.job_website}
+            </Text>
+          </View>
+        )}
       </View>
+
 
       {expandedJobId === item.id && (
         <View style={styles.additionalDetails}>
@@ -175,17 +166,11 @@ const AvailableJobs: React.FC = () => {
         </Text>
       </TouchableOpacity>
 
-        {/* Conditionally render image if image_url exists */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.image} />
-      ) : null}
-      
+
       <View style={styles.buttonGroup}>
-        <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
-          <Text style={styles.buttonText}>Save</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => applyForJob(item.id)} style={styles.applyButton}>
-          <Text style={styles.buttonText}>Apply</Text>
+        {/* Save Icon */}
+        <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.iconButton}>
+          <Ionicons name="bookmark-outline" size={30} color="#000" />
         </TouchableOpacity>
       </View>
     </View>
@@ -258,10 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  location: {
-    fontSize: 14,
-    color: "gray",
-  },
   date: {
     fontSize: 12,
     color: "gray",
@@ -300,30 +281,14 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
   },
-  saveButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
+  iconButton: {
+    padding: 6,
+    borderRadius: 50,
+    backgroundColor: "#F0F0F0", // Add background for the icon button
+    justifyContent: "center",
     alignItems: "center",
-  },
-  applyButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   subtitle: {
     fontSize: 14,
