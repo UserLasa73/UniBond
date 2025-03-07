@@ -5,12 +5,12 @@ import { supabase } from "@/app/lib/supabse"; // Assuming this path for your sup
 
 interface JobListing {
   id: string;
+  user_id: string; // Add user_id
   title: string;
   company: string;
   location: string;
   type: string;
   level: string;
-  time: string;
   skills: string;
   description: string;
   is_active: boolean;
@@ -19,6 +19,9 @@ interface JobListing {
   job_website: string;
   job_email: string;
   image_url: string | null;
+  created_at: string;
+  avatar_url?: string | null; //user avatar
+  full_name?: string;
 }
 
 const AvailableJobs: React.FC = () => {
@@ -32,12 +35,43 @@ const AvailableJobs: React.FC = () => {
     const fetchJobs = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
-        if (error) {
-          console.error("Error fetching jobs:", error.message);
-        } else {
-          setJobListings(data || []);
+        const { data: jobs, error: jobsError } = await supabase.from("jobs").select("*").eq("is_active", true);
+        if (jobsError) {
+          console.error("Error fetching jobs:", jobsError.message);
+          return;
         }
+
+        // Fetch user_id who posted job posters
+        const userIds = jobs.map((job) => job.user_id);
+
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", userIds);
+
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError.message);
+          return;
+        }
+
+        // Map profile data to jobs
+
+        const SUPABASE_STORAGE_URL = "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/" ;  //supabase url for Avatars bucket
+        
+
+        const jobsWithProfiles = jobs.map((job) => {
+          const profile = profiles.find((p) => p.id === job.user_id);
+          return {
+            ...job,
+            avatar_url: profile?.avatar_url? `${SUPABASE_STORAGE_URL}${'avatars/'}${profile.avatar_url}` : null,
+            full_name: profile?.full_name || "Unknown",
+            image_url: job.image_url ? `${SUPABASE_STORAGE_URL}${'job_Images/'}${job.image_url}` : null,   //create job image url and add to jobListing
+          };
+        });
+
+        setJobListings(jobsWithProfiles);
+
+
       } catch (error) {
         console.error("Unexpected error:", error);
       } finally {
@@ -83,23 +117,23 @@ const AvailableJobs: React.FC = () => {
       Alert.alert("Authentication Required", "Please log in to save jobs.");
       return;
     }
-  
+
     try {
       if (savedJobIds.includes(jobId)) {
         // Remove job from saved_jobs
         const { error } = await supabase.from("saved_jobs").delete().eq("user_id", user.id).eq("job_id", jobId);
-        
+
         if (error) {
           console.error("Error unsaving job:", error.message);
           Alert.alert("Error", "Failed to remove job.");
         } else {
           setSavedJobIds((prev) => prev.filter((id) => id !== jobId)); // Update state
-          Alert.alert("Unsaved","The job has been Unsaved successfully.");
+          Alert.alert("Unsaved", "The job has been Unsaved successfully.");
         }
       } else {
         // Save job to saved_jobs
         const { error } = await supabase.from("saved_jobs").insert([{ user_id: user.id, job_id: jobId }]);
-  
+
         if (error) {
           console.error("Error saving job:", error.message);
           Alert.alert("Error", "Failed to save job.");
@@ -112,7 +146,7 @@ const AvailableJobs: React.FC = () => {
       console.error("Unexpected error:", error);
     }
   };
-  
+
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>
@@ -190,6 +224,20 @@ const AvailableJobs: React.FC = () => {
           <Ionicons name={savedJobIds.includes(item.id) ? "bookmark" : "bookmark-outline"} size={30} color="#000" />
         </TouchableOpacity>
       </View>
+
+      {/* Profile Image */}
+      {item.avatar_url ? (
+        <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+      ) : (
+        <Ionicons name="person-circle" size={40} color="gray" />
+      )}
+
+      {/* User Name and Job Posted Date */}
+      <View style={styles.textGroup}>
+        <Text style={styles.name}>{item.full_name}</Text>
+        <Text style={styles.date}>{new Date(item.created_at).toDateString()}</Text>
+      </View>
+
     </View>
   );
 
@@ -309,6 +357,20 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+    color: "gray",
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  date: {
+    fontSize: 12,
     color: "gray",
   },
 });
