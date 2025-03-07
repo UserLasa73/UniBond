@@ -5,12 +5,11 @@ import { supabase } from "@/app/lib/supabse";
 
 interface JobListing {
   id: string;
+  user_id: string; // Add user_id
   title: string;
   company: string;
   location: string;
   type: string;
-  level: string;
-  time: string;
   skills: string;
   description: string;
   is_active: boolean;
@@ -18,177 +17,247 @@ interface JobListing {
   job_phone: string;
   job_website: string;
   job_email: string;
-  image_url: string | null; // Add image_url field to JobListing type
+  image_url: string | null;
+  created_at: string;
+  avatar_url?: string | null; // user avatar
+  full_name?: string;
 }
 
 const SavedJobs: React.FC = () => {
-  const [savedJobs, setSavedJobs] = useState<JobListing[]>([]);
+  const [jobListings, setJobListings] = useState<JobListing[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null); // Store authenticated user
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
+  const [user, setUser] = useState<any>(null);
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]); // Store saved job IDs
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchUserAndSavedJobs = async () => {
-      setIsLoading(true); // Set loading state to true
+    const fetchJobs = async () => {
+      setIsLoading(true);
       try {
-        // Fetch authenticated user
-        const { data, error: userError } = await supabase.auth.getUser();
+        // Fetch the logged-in user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError) {
           console.error("Error fetching user:", userError.message);
-        } else {
-          setUser(data?.user);
+          return;
         }
+        setUser(userData?.user);
 
-        // Fetch saved jobs for the authenticated user
-        if (data?.user) {
-          const { data: savedJobData, error: savedJobError } = await supabase
+        // Fetch saved jobs for this user
+        if (userData?.user) {
+          const { data: savedJobs, error: savedJobsError } = await supabase
             .from("saved_jobs")
             .select("job_id")
-            .eq("user_id", data?.user.id);
+            .eq("user_id", userData.user.id);
 
-          if (savedJobError) {
-            console.error("Error fetching saved jobs:", savedJobError.message);
-          } else {
-            const jobIds = savedJobData?.map((savedJob) => savedJob.job_id);
-
-            // Fetch job details for the saved job ids, including the image_url
-            const { data: jobs, error: jobsError } = await supabase
-              .from("jobs")
-              .select("*")
-              .in("id", jobIds);
-
-            if (jobsError) {
-              console.error("Error fetching job details:", jobsError.message);
-            } else {
-              setSavedJobs(jobs || []);
-            }
+          if (savedJobsError) {
+            console.error("Error fetching saved jobs:", savedJobsError.message);
+            return;
           }
+
+          // Get the list of job IDs
+          const savedJobIdsList = savedJobs.map((job) => job.job_id);
+          setSavedJobIds(savedJobIdsList);
+
+          // Fetch jobs based on saved job IDs
+          const { data: jobs, error: jobsError } = await supabase
+            .from("jobs")
+            .select("*")
+            .in("id", savedJobIdsList);
+
+          if (jobsError) {
+            console.error("Error fetching jobs:", jobsError.message);
+            return;
+          }
+
+          // Fetch user profile data
+          const userIds = jobs.map((job) => job.user_id);
+          const { data: profiles, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url")
+            .in("id", userIds);
+
+          if (profilesError) {
+            console.error("Error fetching profiles:", profilesError.message);
+            return;
+          }
+
+          // Map profile data to jobs
+          const SUPABASE_STORAGE_URL = "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/";
+
+          const jobsWithProfiles = jobs.map((job) => {
+            const profile = profiles.find((p) => p.id === job.user_id);
+            return {
+              ...job,
+              avatar_url: profile?.avatar_url ? `${SUPABASE_STORAGE_URL}${'avatars/'}${profile.avatar_url}` : null,
+              full_name: profile?.full_name || "Unknown",
+              image_url: job.image_url ? `${SUPABASE_STORAGE_URL}${'job_Images/'}${job.image_url}` : null,
+            };
+          });
+
+          setJobListings(jobsWithProfiles);
         }
       } catch (error) {
         console.error("Unexpected error:", error);
       } finally {
-        setIsLoading(false); // Set loading state to false once data is fetched
+        setIsLoading(false);
       }
     };
 
-    fetchUserAndSavedJobs();
+    fetchJobs();
   }, []);
 
   const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+    setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
   const unsaveJob = async (jobId: string) => {
     if (!user) {
-      console.error("User not logged in");
+      Alert.alert("Authentication Required", "Please log in to unsave jobs.");
       return;
     }
-
+  
     try {
-      const { data, error } = await supabase
+      // Remove job from saved_jobs table
+      const { error } = await supabase
         .from("saved_jobs")
         .delete()
-        .match({ job_id: jobId, user_id: user.id });
-
+        .eq("user_id", user.id)
+        .eq("job_id", jobId);
+  
       if (error) {
         console.error("Error unsaving job:", error.message);
+        Alert.alert("Error", "Failed to remove job.");
       } else {
-        setSavedJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
-        console.log("Deleting saved job with:", { jobId, userId: user.id });
-        Alert.alert("Unsaved","The job has been Unsaved successfully.");
+        // Remove the job from savedJobIds and jobListings state immediately
+        setSavedJobIds((prev) => prev.filter((id) => id !== jobId));
+        setJobListings((prev) => prev.filter((job) => job.id !== jobId)); // Remove from jobListings as well
+  
+        Alert.alert("Unsaved", "The job has been unsaved successfully.");
       }
     } catch (error) {
       console.error("Unexpected error:", error);
     }
   };
+  
 
+  const getRelativeTime = (createdAt: string) => {
+    const now = new Date();
+    const createdDate = new Date(createdAt);
+    const diffInSeconds = Math.floor((now.getTime() - createdDate.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return "just now";
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 2592000) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    } else {
+      return new Date(createdAt).toLocaleDateString();
+    }
+  };
 
   const renderItem = ({ item }: { item: JobListing }) => (
-    <View style={styles.card}>
-      <Text style={styles.title}>{item.title}</Text>
-
-      <View style={styles.userInfo}>
-        <View style={styles.textGroup}>
-          <Text style={styles.name}>{item.company}</Text>
+    <View>
+      {/* Profile Image and Name in a Row */}
+      <View style={styles.profileContainer}>
+        {item.avatar_url ? (
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+        ) : (
+          <Ionicons name="person-circle" size={40} color="gray" />
+        )}
+        <View>
+          <Text style={styles.name}>{item.full_name}</Text>
+          <Text style={styles.date}>{getRelativeTime(item.created_at)}</Text>
         </View>
       </View>
 
-      {/* Conditionally render image if image_url exists */}
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.jobImage} />
-      )}
+      <View style={styles.card}>
+        <Text style={styles.title}>{item.title}</Text>
 
-      <View style={styles.details}>
-        
-        {item.location && (
-          <View style={styles.row}>
-            <MaterialIcons name="location-on" size={20} color="gray" />
-            <Text style={styles.detailText}>Location: {item.location}</Text>
-          </View>
-        )}
-
-        {(item.type || item.level) && (
-          <View style={styles.row}>
-            <Ionicons name="briefcase-outline" size={20} color="gray" />
-            <Text style={styles.detailText}>
-              Type: {item.type} Level: {item.level}
-            </Text>
-          </View>
-        )}
-
-        {item.skills && (
-          <View style={styles.row}>
-            <MaterialIcons name="article" size={20} color="gray" />
-            <Text style={styles.detailText}>Skills: {item.skills}</Text>
-          </View>
-        )}
-
-        {item.deadline && (
-          <View style={styles.row}>
-            <MaterialIcons name="event" size={20} color="gray" />
-            <Text style={styles.detailText}>Deadline: {item.deadline}</Text>
-          </View>
-        )}
-
-        {(item.job_phone || item.job_email || item.job_website) && (
-          <View style={styles.row}>
-            <MaterialIcons name="person" size={20} color="gray" />
-            <Text style={styles.detailText}>
-              Contact: {item.job_phone} | {item.job_email} | {item.job_website}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {item.description && (
-        <View style={styles.additionalDetails}>
-          {expandedJobId === item.id ? (
-            <Text style={styles.description}>
-              <Text style={styles.descriptionTitle}></Text>
-              {item.description}
-            </Text>
-          ) : (
-            <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
-              <Text style={styles.readMoreText}>Read More</Text>
-            </TouchableOpacity>
+        <View style={styles.userInfo}>
+          {item.company && (
+            <View style={styles.textGroup}>
+              <Text style={styles.name}>at {item.company}</Text>
+            </View>
           )}
         </View>
-      )}
 
-      {expandedJobId === item.id && item.description && (
-        <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
-          <Text style={styles.readMoreText}>Read Less</Text>
-        </TouchableOpacity>
-      )}
+        {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
 
-      
-      <View style={styles.buttonGroup}>
-        {/* UnSave Icon */}
-        <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.unsaveButton}>
-          <Ionicons name="bookmark" size={30} color="black" />
-        </TouchableOpacity>
+        <View style={styles.details}>
+          {item.location && (
+            <View style={styles.row}>
+              <MaterialIcons name="location-on" size={20} color="gray" />
+              <Text style={styles.detailText}>Location: {item.location}</Text>
+            </View>
+          )}
+
+          {item.type && (
+            <View style={styles.row}>
+              <Ionicons name="briefcase-outline" size={20} color="gray" />
+              <Text style={styles.detailText}>
+                Type: {item.type}
+              </Text>
+            </View>
+          )}
+
+          {item.skills && (
+            <View style={styles.row}>
+              <MaterialIcons name="article" size={20} color="gray" />
+              <Text style={styles.detailText}>Skills: {item.skills}</Text>
+            </View>
+          )}
+
+          {item.deadline && (
+            <View style={styles.row}>
+              <MaterialIcons name="event" size={20} color="gray" />
+              <Text style={styles.detailText}>Deadline: {item.deadline}</Text>
+            </View>
+          )}
+
+          {(item.job_phone || item.job_email || item.job_website) && (
+            <View style={styles.row}>
+              <MaterialIcons name="person" size={20} color="gray" />
+              <Text style={styles.detailText}>
+                Contact: {item.job_phone} | {item.job_email} | {item.job_website}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {item.description && (
+          <View style={styles.additionalDetails}>
+            {expandedJobId === item.id ? (
+              <Text style={styles.description}>{item.description}</Text>
+            ) : (
+              <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+                <Text style={styles.readMoreText}>Read More</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {expandedJobId === item.id && item.description && (
+          <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+            <Text style={styles.readMoreText}>Read Less</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.buttonGroup}>
+          <TouchableOpacity onPress={() => unsaveJob(item.id)} style={styles.iconButton}>
+            <Ionicons
+              name={savedJobIds.includes(item.id) ? "bookmark" : "bookmark-outline"}
+              size={30}
+              color="#000"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-
     </View>
   );
 
@@ -200,14 +269,14 @@ const SavedJobs: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={savedJobs}
+          data={jobListings}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={{ flexGrow: 1 }}
           ListEmptyComponent={
             <View style={styles.card}>
-              <Text style={styles.title}>No Saved Jobs</Text>
-              <Text style={styles.subtitle}>You haven't saved any jobs yet.</Text>
+              <Text style={styles.title}>No Jobs Available</Text>
+              <Text style={styles.subtitle}>Please check back later.</Text>
             </View>
           }
         />
@@ -232,11 +301,18 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 40,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  image: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 16,
   },
   title: {
     fontSize: 18,
@@ -254,10 +330,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  location: {
-    fontSize: 14,
-    color: "gray",
   },
   date: {
     fontSize: 12,
@@ -299,7 +371,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
   },
-  unsaveButton: {
+  iconButton: {
     padding: 6,
     borderRadius: 50,
     backgroundColor: "#F0F0F0", // Add background for the icon button
@@ -307,13 +379,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "gray",
   },
-  jobImage: {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 8,
-    marginBottom: 8,
+  profileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 10, // Adjust spacing
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
   },
 });

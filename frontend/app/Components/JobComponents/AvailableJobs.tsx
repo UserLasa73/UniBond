@@ -10,7 +10,6 @@ interface JobListing {
   company: string;
   location: string;
   type: string;
-  level: string;
   skills: string;
   description: string;
   is_active: boolean;
@@ -56,14 +55,14 @@ const AvailableJobs: React.FC = () => {
 
         // Map profile data to jobs
 
-        const SUPABASE_STORAGE_URL = "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/" ;  //supabase url for Avatars bucket
-        
+        const SUPABASE_STORAGE_URL = "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/";  //supabase url for Avatars bucket
+
 
         const jobsWithProfiles = jobs.map((job) => {
           const profile = profiles.find((p) => p.id === job.user_id);
           return {
             ...job,
-            avatar_url: profile?.avatar_url? `${SUPABASE_STORAGE_URL}${'avatars/'}${profile.avatar_url}` : null,
+            avatar_url: profile?.avatar_url ? `${SUPABASE_STORAGE_URL}${'avatars/'}${profile.avatar_url}` : null,
             full_name: profile?.full_name || "Unknown",
             image_url: job.image_url ? `${SUPABASE_STORAGE_URL}${'job_Images/'}${job.image_url}` : null,   //create job image url and add to jobListing
           };
@@ -147,16 +146,58 @@ const AvailableJobs: React.FC = () => {
     }
   };
 
+  const getRelativeTime = (createdAt: string) => {
+    const now = new Date();
+    const createdDate = new Date(createdAt);
+    const diffInSeconds = Math.floor((now.getTime() - createdDate.getTime()) / 1000);
+  
+    // Calculate time difference in minutes, hours, and days
+    if (diffInSeconds < 60) {
+      return "just now";
+    } else if (diffInSeconds < 3600) { // less than 1 hour
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 86400) { // less than 1 day
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 2592000) { // less than 30 days
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    } else { // more than 30 days
+      return new Date(createdAt).toLocaleDateString(); // Show the full date after 30 days
+    }
+  };
+
 
   const renderItem = ({ item }: { item: JobListing }) => (
+    <View>
+
+        {/* Profile Image and Name in a Row */}
+        <View style={styles.profileContainer}>
+        {item.avatar_url ? (
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+        ) : (
+          <Ionicons name="person-circle" size={40} color="gray" />
+        )}
+        <View>
+          <Text style={styles.name}>{item.full_name}</Text>
+          <Text style={styles.date}>{getRelativeTime(item.created_at)}</Text>
+        </View>
+      </View>
+    
     <View style={styles.card}>
+
       <Text style={styles.title}>{item.title}</Text>
 
       <View style={styles.userInfo}>
-        <View style={styles.textGroup}>
-          <Text style={styles.name}>{item.company}</Text>
-        </View>
+      {item.company && (
+          <View style={styles.textGroup}>
+            <Text style={styles.name}>at {item.company}</Text>
+          </View>
+        )}
       </View>
+
+      
 
       {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
 
@@ -168,11 +209,11 @@ const AvailableJobs: React.FC = () => {
           </View>
         )}
 
-        {(item.type || item.level) && (
+        {item.type && (
           <View style={styles.row}>
             <Ionicons name="briefcase-outline" size={20} color="gray" />
             <Text style={styles.detailText}>
-              Type: {item.type} Level: {item.level}
+              Type: {item.type}
             </Text>
           </View>
         )}
@@ -204,6 +245,7 @@ const AvailableJobs: React.FC = () => {
       {item.description && (
         <View style={styles.additionalDetails}>
           {expandedJobId === item.id ? (
+            
             <Text style={styles.description}>{item.description}</Text>
           ) : (
             <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
@@ -225,18 +267,8 @@ const AvailableJobs: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Profile Image */}
-      {item.avatar_url ? (
-        <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-      ) : (
-        <Ionicons name="person-circle" size={40} color="gray" />
-      )}
 
-      {/* User Name and Job Posted Date */}
-      <View style={styles.textGroup}>
-        <Text style={styles.name}>{item.full_name}</Text>
-        <Text style={styles.date}>{new Date(item.created_at).toDateString()}</Text>
-      </View>
+    </View>
 
     </View>
   );
@@ -279,7 +311,8 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 40,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -359,19 +392,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "gray",
   },
+  profileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 10, // Adjust spacing
+  },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 10,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  date: {
-    fontSize: 12,
-    color: "gray",
   },
 });
 
