@@ -12,8 +12,8 @@ import {
 import { useRouter } from "expo-router"; // For navigation
 import supabase from "@/lib/supabse"; // Adjust the import path
 import { useAuth } from "@/app/providers/AuthProvider"; // For session management
-import ShowingAvatar from "../Components/ShowingAvatar"; // Import ShowingAvatar
 import { MaterialIcons } from "@expo/vector-icons"; // For the X symbol
+import AvatarInCard from "./AvatarInCard";
 
 type User = {
   id: string;
@@ -144,7 +144,6 @@ const RandomUserCards: React.FC<RandomUserCardsProps> = ({ currentUserId }) => {
   // Render each user card
   const renderUserCard = ({ item }: { item: User }) => (
     <View style={styles.card}>
-      {/* Remove Button (X Symbol) */}
       <TouchableOpacity
         style={styles.removeButton}
         onPress={() => handleRemove(item.id)}
@@ -152,10 +151,8 @@ const RandomUserCards: React.FC<RandomUserCardsProps> = ({ currentUserId }) => {
         <MaterialIcons name="close" size={20} color="#000" />
       </TouchableOpacity>
 
-      {/* User Avatar and Username */}
       <TouchableOpacity
         onPress={() => {
-          // Navigate to the user's profile
           router.push({
             pathname: "/screens/ProfileScreen",
             params: { userId: item.id },
@@ -163,7 +160,7 @@ const RandomUserCards: React.FC<RandomUserCardsProps> = ({ currentUserId }) => {
         }}
       >
         <View style={styles.avatarContainer}>
-          <ShowingAvatar
+          <AvatarInCard
             url={item.avatar_url}
             size={20}
             onUpload={(newAvatarUrl) => {
