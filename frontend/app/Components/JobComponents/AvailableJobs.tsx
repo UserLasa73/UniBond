@@ -77,32 +77,42 @@ const AvailableJobs: React.FC = () => {
     setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
+
   const saveJob = async (jobId: string) => {
     if (!user) {
       Alert.alert("Authentication Required", "Please log in to save jobs.");
       return;
     }
-
+  
     try {
-      // Check if the job is already saved
       if (savedJobIds.includes(jobId)) {
-        Alert.alert("Already Saved", "You have already saved this job.");
-        return;
-      }
-
-      const { error } = await supabase.from("saved_jobs").insert([{ user_id: user.id, job_id: jobId }]);
-
-      if (error) {
-        console.error("Error saving job:", error.message);
-        Alert.alert("Error", error.message);
+        // Remove job from saved_jobs
+        const { error } = await supabase.from("saved_jobs").delete().eq("user_id", user.id).eq("job_id", jobId);
+        
+        if (error) {
+          console.error("Error unsaving job:", error.message);
+          Alert.alert("Error", "Failed to remove job.");
+        } else {
+          setSavedJobIds((prev) => prev.filter((id) => id !== jobId)); // Update state
+          Alert.alert("Unsaved","The job has been Unsaved successfully.");
+        }
       } else {
-        setSavedJobIds((prev) => [...prev, jobId]); // Update state to reflect saved job
-        Alert.alert("Success", "The job has been saved successfully.");
+        // Save job to saved_jobs
+        const { error } = await supabase.from("saved_jobs").insert([{ user_id: user.id, job_id: jobId }]);
+  
+        if (error) {
+          console.error("Error saving job:", error.message);
+          Alert.alert("Error", "Failed to save job.");
+        } else {
+          setSavedJobIds((prev) => [...prev, jobId]); // Update state
+          Alert.alert("Saved", "The job has been saved successfully.");
+        }
       }
     } catch (error) {
       console.error("Unexpected error:", error);
     }
   };
+  
 
   const renderItem = ({ item }: { item: JobListing }) => (
     <View style={styles.card}>

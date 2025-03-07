@@ -95,6 +95,7 @@ const SavedJobs: React.FC = () => {
       } else {
         setSavedJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
         console.log("Deleting saved job with:", { jobId, userId: user.id });
+        Alert.alert("Unsaved","The job has been Unsaved successfully.");
       }
     } catch (error) {
       console.error("Unexpected error:", error);
