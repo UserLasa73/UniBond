@@ -14,6 +14,7 @@ import { supabase } from "../lib/supabse";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { useNavigation } from "@react-navigation/native";
 import { PostStackParamList } from "./PostNav";
+//import { v4 as uuidv4 } from "uuid";
 
 const AddProjectScreen = () => {
   const { user } = useAuth();
@@ -69,12 +70,29 @@ const AddProjectScreen = () => {
 
     const { id: userId } = user;
     const currentDate = new Date();
-    const datePosted = currentDate.toLocaleDateString();
-    const timePosted = currentDate.toLocaleTimeString();
+    const datePosted = currentDate.toISOString().split("T")[0];
+    const timePosted = currentDate.toTimeString().split(" ")[0];
+
+    const projectId = Math.floor(Math.random() * 1000000);
+
+    const { data: userData, error: userError } = await supabase
+      .from("profiles") // Change "users" if your user table has a different name
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+
+    if (userError) {
+      alert("Error fetching user name: " + userError.message);
+      return;
+    }
+
+    const userName = userData?.full_name || "Anonymous";
 
     const { data, error } = await supabase.from("projects").insert([
       {
+        project_id: projectId,
         user_id: userId,
+        user_name: userName,
         project_title: projectTitle,
         description: projectDescription,
         technologies: technologies,
@@ -82,6 +100,8 @@ const AddProjectScreen = () => {
         payment_details: paymentDetails,
         date_posted: datePosted,
         time_posted: timePosted,
+        is_saved: false,
+        is_applied: false,
       },
     ]);
 
