@@ -125,7 +125,7 @@ export default function ProjectTitleBox() {
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
-          <Text style={styles.name}>User ID: {item.user_id}</Text>
+          <Text style={styles.name}>User : {item.user_name}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
             {new Date(item.date_posted).toLocaleDateString()}
