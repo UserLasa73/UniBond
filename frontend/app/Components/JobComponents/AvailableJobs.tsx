@@ -5,189 +5,268 @@ import { supabase } from "@/app/lib/supabse"; // Assuming this path for your sup
 
 interface JobListing {
   id: string;
+  user_id: string; // Add user_id
   title: string;
   company: string;
   location: string;
   type: string;
-  level: string;
-  time: string;
   skills: string;
   description: string;
   is_active: boolean;
-  image_url: string | null; // Add image_url field to JobListing type
+  deadline: string;
+  job_phone: string;
+  job_website: string;
+  job_email: string;
+  image_url: string | null;
+  created_at: string;
+  avatar_url?: string | null; //user avatar
+  full_name?: string;
 }
 
 const AvailableJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null); 
-  const [user, setUser] = useState<any>(null); // Store authenticated user
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [savedJobIds, setSavedJobIds] = useState<string[]>([]); // Store saved job IDs
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchJobs = async () => {
-      setIsLoading(true); // Set loading state to true
+      setIsLoading(true);
       try {
-        const { data, error } = await supabase.from("jobs").select("*").eq("is_active", true);
-        if (error) {
-          console.error("Error fetching jobs:", error.message);
-        } else {
-          setJobListings(data || []);
+        const { data: jobs, error: jobsError } = await supabase.from("jobs").select("*").eq("is_active", true);
+        if (jobsError) {
+          console.error("Error fetching jobs:", jobsError.message);
+          return;
         }
+
+        // Fetch user_id who posted job posters
+        const userIds = jobs.map((job) => job.user_id);
+
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", userIds);
+
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError.message);
+          return;
+        }
+
+        // Map profile data to jobs
+
+        const SUPABASE_STORAGE_URL = "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/";  //supabase url for Avatars bucket
+
+
+        const jobsWithProfiles = jobs.map((job) => {
+          const profile = profiles.find((p) => p.id === job.user_id);
+          return {
+            ...job,
+            avatar_url: profile?.avatar_url ? `${SUPABASE_STORAGE_URL}${'avatars/'}${profile.avatar_url}` : null,
+            full_name: profile?.full_name || "Unknown",
+            image_url: job.image_url ? `${SUPABASE_STORAGE_URL}${'job_Images/'}${job.image_url}` : null,   //create job image url and add to jobListing
+          };
+        });
+
+        setJobListings(jobsWithProfiles);
+
+
       } catch (error) {
         console.error("Unexpected error:", error);
       } finally {
-        setIsLoading(false); // Set loading state to false once data is fetched
+        setIsLoading(false);
       }
     };
 
     fetchJobs();
 
-    // Fetch current user
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Error fetching user:", error.message);
-      } else {
-        setUser(data?.user); // Store the user
+    // Fetch user and their saved jobs
+    const getUserAndSavedJobs = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error("Error fetching user:", userError.message);
+        return;
+      }
+      setUser(userData?.user);
+
+      if (userData?.user) {
+        const { data: savedJobs, error: savedJobsError } = await supabase
+          .from("saved_jobs")
+          .select("job_id")
+          .eq("user_id", userData.user.id);
+
+        if (savedJobsError) {
+          console.error("Error fetching saved jobs:", savedJobsError.message);
+        } else {
+          setSavedJobIds(savedJobs.map((job) => job.job_id)); // Store saved job IDs
+        }
       }
     };
 
-    getUser();
+    getUserAndSavedJobs();
   }, []);
 
   const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id)); // Toggle between expanded and collapsed
+    setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
+
   const saveJob = async (jobId: string) => {
-    if (user) {
-      try {
-        const { data, error } = await supabase.from("saved_jobs").insert([
-          {
-            user_id: user.id,
-            job_id: jobId,
-          },
-        ]);
+    if (!user) {
+      Alert.alert("Authentication Required", "Please log in to save jobs.");
+      return;
+    }
+
+    try {
+      if (savedJobIds.includes(jobId)) {
+        // Remove job from saved_jobs
+        const { error } = await supabase.from("saved_jobs").delete().eq("user_id", user.id).eq("job_id", jobId);
+
+        if (error) {
+          console.error("Error unsaving job:", error.message);
+          Alert.alert("Error", "Failed to remove job.");
+        } else {
+          setSavedJobIds((prev) => prev.filter((id) => id !== jobId)); // Update state
+          Alert.alert("Unsaved", "The job has been Unsaved successfully.");
+        }
+      } else {
+        // Save job to saved_jobs
+        const { error } = await supabase.from("saved_jobs").insert([{ user_id: user.id, job_id: jobId }]);
 
         if (error) {
           console.error("Error saving job:", error.message);
-          Alert.alert("Already Saved");
+          Alert.alert("Error", "Failed to save job.");
         } else {
-          console.log("Job saved!", data);
-          Alert.alert(
-            "Success",
-            "The job has been saved successfully.",
-            [{ text: "OK" }],
-            { cancelable: true }
-          );
+          setSavedJobIds((prev) => [...prev, jobId]); // Update state
+          Alert.alert("Saved", "The job has been saved successfully.");
         }
-      } catch (error) {
-        console.error("Unexpected error:", error);
       }
-    } else {
-      console.error("User not authenticated");
+    } catch (error) {
+      console.error("Unexpected error:", error);
     }
   };
 
-  // Apply for the job
-  const applyForJob = async (jobId: string) => {
-    if (user) {
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError.message);
-        } else {
-          const applicantName = profile.full_name;
-
-          // Insert application details into applications table
-          const { data, error } = await supabase.from('applications').insert([
-            {
-              job_id: jobId,
-              user_id: user.id,
-              applicant_name: applicantName, // Store applicant's name
-              status: 'applied', // Set initial status to 'applied'
-            },
-          ]);
-
-          if (error) {
-            console.error("Error applying for job:", error.message);
-            Alert.alert("Already Applied");
-          } else {
-            console.log("Application submitted successfully:", data);
-            Alert.alert(
-              "Application Submitted",
-              "You have successfully applied for the job.",
-              [{ text: "OK" }],
-              { cancelable: true }
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-      }
-    } else {
-      console.error("User not authenticated");
+  const getRelativeTime = (createdAt: string) => {
+    const now = new Date();
+    const createdDate = new Date(createdAt);
+    const diffInSeconds = Math.floor((now.getTime() - createdDate.getTime()) / 1000);
+  
+    // Calculate time difference in minutes, hours, and days
+    if (diffInSeconds < 60) {
+      return "just now";
+    } else if (diffInSeconds < 3600) { // less than 1 hour
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} min${minutes > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 86400) { // less than 1 day
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 2592000) { // less than 30 days
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    } else { // more than 30 days
+      return new Date(createdAt).toLocaleDateString(); // Show the full date after 30 days
     }
   };
+
 
   const renderItem = ({ item }: { item: JobListing }) => (
+    <View>
+
+        {/* Profile Image and Name in a Row */}
+        <View style={styles.profileContainer}>
+        {item.avatar_url ? (
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+        ) : (
+          <Ionicons name="person-circle" size={40} color="gray" />
+        )}
+        <View>
+          <Text style={styles.name}>{item.full_name}</Text>
+          <Text style={styles.date}>{getRelativeTime(item.created_at)}</Text>
+        </View>
+      </View>
+    
     <View style={styles.card}>
-      
 
       <Text style={styles.title}>{item.title}</Text>
-      <View style={styles.userInfo}>
-        <View style={styles.textGroup}>
-          <Text style={styles.name}>{item.company}</Text>
-          <Text style={styles.location}>{item.location}</Text>
-          <Text style={styles.date}>{item.time}</Text>
-        </View>
-      </View>
+
+      
+      {item.company && (
+          <View style={styles.company}>
+            <Text style={styles.company_name}>at {item.company}</Text>
+          </View>
+        )}
+
+      {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
+
       <View style={styles.details}>
-        <View style={styles.row}>
-          <Ionicons name="briefcase-outline" size={20} color="gray" />
-          <Text style={styles.detailText}>
-            {item.type} - {item.level}
-          </Text>
-        </View>
-        <View style={styles.row}>
-          <MaterialIcons name="article" size={20} color="gray" />
-          <Text style={styles.detailText}>Skills: {item.skills}</Text>
-        </View>
+        {item.location && (
+          <View style={styles.row}>
+            <MaterialIcons name="location-on" size={20} color="gray" />
+            <Text style={styles.detailText}>Location: {item.location}</Text>
+          </View>
+        )}
+
+        {item.type && (
+          <View style={styles.row}>
+            <Ionicons name="briefcase-outline" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Type: {item.type}
+            </Text>
+          </View>
+        )}
+
+        {item.skills && (
+          <View style={styles.row}>
+            <MaterialIcons name="article" size={20} color="gray" />
+            <Text style={styles.detailText}>Skills: {item.skills}</Text>
+          </View>
+        )}
+
+        {item.deadline && (
+          <View style={styles.row}>
+            <MaterialIcons name="event" size={20} color="gray" />
+            <Text style={styles.detailText}>Deadline: {item.deadline}</Text>
+          </View>
+        )}
+
+        {(item.job_phone || item.job_email || item.job_website) && (
+          <View style={styles.row}>
+            <MaterialIcons name="person" size={20} color="gray" />
+            <Text style={styles.detailText}>
+              Contact: {item.job_phone} | {item.job_email} | {item.job_website}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {expandedJobId === item.id && (
+      {item.description && (
         <View style={styles.additionalDetails}>
-          <Text style={styles.description}>
-            <Text style={styles.descriptionTitle}>Description - </Text>
-            {item.description}
-          </Text>
+          {expandedJobId === item.id ? (
+            
+            <Text style={styles.description}>{item.description}</Text>
+          ) : (
+            <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+              <Text style={styles.readMoreText}>Read More</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
-        <Text style={styles.readMoreText}>
-          {expandedJobId === item.id ? "Read Less" : "Read More"}
-        </Text>
-      </TouchableOpacity>
-
-        {/* Conditionally render image if image_url exists */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.image} />
-      ) : null}
-      
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.saveButton}>
-          <Text style={styles.buttonText}>Save</Text>
+      {expandedJobId === item.id && item.description && (
+        <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.readMoreButton}>
+          <Text style={styles.readMoreText}>Read Less</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => applyForJob(item.id)} style={styles.applyButton}>
-          <Text style={styles.buttonText}>Apply</Text>
+      )}
+
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity onPress={() => saveJob(item.id)} style={styles.iconButton}>
+          <Ionicons name={savedJobIds.includes(item.id) ? "bookmark" : "bookmark-outline"} size={30} color="#000" />
         </TouchableOpacity>
       </View>
+
+
+    </View>
+
     </View>
   );
 
@@ -229,7 +308,8 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 40,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -242,25 +322,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 5,
+    textAlign:'center',
   },
-  userInfo: {
-    flexDirection: "row",
+  
+  company: {
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  textGroup: {
-    flex: 1,
+  company_name: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign:'center',
   },
+
   name: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  location: {
-    fontSize: 14,
-    color: "gray",
   },
   date: {
     fontSize: 12,
@@ -300,35 +380,30 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
   },
-  saveButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
+  iconButton: {
+    padding: 6,
+    borderRadius: 50,
+    backgroundColor: "#F0F0F0", // Add background for the icon button
+    justifyContent: "center",
     alignItems: "center",
-  },
-  applyButton: {
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "gray",
-    textAlign: "center",
+  },
+  profileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 10, // Adjust spacing
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
   },
 });
 
