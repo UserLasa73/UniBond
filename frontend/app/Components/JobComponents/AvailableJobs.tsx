@@ -189,15 +189,12 @@ const AvailableJobs: React.FC = () => {
 
       <Text style={styles.title}>{item.title}</Text>
 
-      <View style={styles.userInfo}>
+      
       {item.company && (
-          <View style={styles.textGroup}>
-            <Text style={styles.name}>at {item.company}</Text>
+          <View style={styles.company}>
+            <Text style={styles.company_name}>at {item.company}</Text>
           </View>
         )}
-      </View>
-
-      
 
       {item.image_url && <Image source={{ uri: item.image_url }} style={styles.image} />}
 
@@ -325,18 +322,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 5,
+    textAlign:'center',
   },
-  userInfo: {
-    flexDirection: "row",
+  
+  company: {
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  textGroup: {
-    flex: 1,
+  company_name: {
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign:'center',
   },
+
   name: {
     fontSize: 16,
     fontWeight: "600",
