@@ -362,27 +362,22 @@ const HomeScreen: React.FC = () => {
   });
 
   const renderItem = ({ item }: { item: Post | Event }) => {
+    const storageUrl =
+      "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+  
     if (item.type === "event") {
       const event = item as Event;
-      const storageUrl =
-        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-      const imageUrl = event.avatar_url
-        ? `${storageUrl}${event.avatar_url}`
-        : null;
-
+      const imageUrl = event.avatar_url ? `${storageUrl}${event.avatar_url}` : null;
+  
       return (
         <View style={styles.eventItem}>
+          {/* User Profile Section */}
           <TouchableOpacity
-            onPress={() =>
-              router.push(`/screens/ProfileScreen?userId=${event.uid}`)
-            }
+            onPress={() => router.push(`/screens/ProfileScreen?userId=${event.uid}`)}
           >
             <View style={styles.userInfoContainer}>
               {imageUrl ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={{ width: 40, height: 40, borderRadius: 20 }}
-                />
+                <Image source={{ uri: imageUrl }} style={styles.avatar} />
               ) : (
                 <MaterialIcons name="person" size={40} color="#000" />
               )}
@@ -396,20 +391,17 @@ const HomeScreen: React.FC = () => {
               </View>
             </View>
           </TouchableOpacity>
+  
+          {/* Event Details */}
           <Text style={styles.eventTitle}>{event.event_name}</Text>
           <Text style={styles.eventDetails}>Date: {event.event_date}</Text>
-          <Text style={styles.eventDetails}>
-            Location: {event.event_location}
-          </Text>
-          <Text style={styles.eventDetails}>
-            Description: {event.event_description}
-          </Text>
-          <Text style={styles.eventDetails}>
-            Interested People: ({event.interested_count})
-          </Text>
-
+          <Text style={styles.eventDetails}>Location: {event.event_location}</Text>
+          <Text style={styles.eventDetails}>Description: {event.event_description}</Text>
+          <Text style={styles.eventDetails}>Interested People: ({event.interested_count})</Text>
+  
           <View style={styles.divider} />
-
+  
+          {/* Interested Button */}
           <TouchableOpacity
             style={styles.interestedButton}
             onPress={() => handleInterestToggle(event.id)}
@@ -420,39 +412,56 @@ const HomeScreen: React.FC = () => {
               color="#000"
             />
             <Text style={styles.interestedButtonText}>
-              {event.isInterestedByCurrentUser
-                ? "Not Interested"
-                : "Interested"}
+              {event.isInterestedByCurrentUser ? "Not Interested" : "Interested"}
             </Text>
           </TouchableOpacity>
         </View>
       );
     } else if (item.type === "post") {
       const post = item as Post;
-      const storageUrl =
-        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-      const imageUrl = post.avatar_url
-        ? `${storageUrl}${post.avatar_url}`
-        : null;
-
+      const imageUrl = post.avatar_url ? `${storageUrl}${post.avatar_url}` : null;
+  
       return (
-        <PostItem
-          post={post}
-          username={post.username}
-          avatarUrl={imageUrl}
-          postedDate={post.posted_date}
-          postDuration={calculatePostDuration(post.posted_date)}
-          role={post.role}
-          onLike={handleLike}
-          onCommentSubmit={handleCommentSubmit}
-          onProfilePress={() =>
-            router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
-          }
-        />
+        <View style={styles.postItem}>
+          {/* User Profile Section */}
+          <TouchableOpacity
+            onPress={() => router.push(`/screens/ProfileScreen?userId=${post.user_id}`)}
+          >
+            <View style={styles.userInfoContainer}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.avatar} />
+              ) : (
+                <MaterialIcons name="person" size={40} color="#000" />
+              )}
+              <View style={styles.userInfoText}>
+                <Text style={styles.username}>
+                  {post.username} ({post.role ? "Alumni" : "Student"})
+                </Text>
+                <Text style={styles.postedDate}>
+                  {calculatePostDuration(post.posted_date)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+  
+          {/* Post Content */}
+          <PostItem
+            post={post}
+            username={post.username}
+            avatarUrl={imageUrl}
+            postedDate={post.posted_date}
+            postDuration={calculatePostDuration(post.posted_date)}
+            role={post.role}
+            onLike={handleLike}
+            onCommentSubmit={handleCommentSubmit}
+            onProfilePress={() => router.push(`/screens/ProfileScreen?userId=${post.user_id}`)}
+          />
+        </View>
       );
     }
     return null;
   };
+  
 
   const renderHeader = () => (
     <View style={styles.randomUserCardsContainer}>
@@ -573,6 +582,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
   },
+  postItem: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: "#fff", // Ensures posts have a distinct background
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   eventTitle: {
     fontSize: 16,
     fontWeight: "bold",
@@ -586,6 +606,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   userInfoText: {
     flexDirection: "column",
@@ -610,7 +635,7 @@ const styles = StyleSheet.create({
   interestedButton: {
     marginTop: 5,
     padding: 10,
-    backgroundColor: "Transaprent",
+    backgroundColor: "transparent",
     borderRadius: 5,
     alignItems: "center",
   },
