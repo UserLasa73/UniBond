@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons"; // Add MaterialIcons
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
 
@@ -32,39 +32,39 @@ export default function ProfileScreen() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const [role, setRole] = useState<boolean>(false); // State for role
+  const [role, setRole] = useState<boolean>(false);
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [posts, setPosts] = useState([]); // State for posts
-  const [events, setEvents] = useState([]); // State for events
-  const [postCount, setPostCount] = useState(0); // State for post count
-  const [followingCount, setFollowingCount] = useState(0); // State for following count
-  const [email, setEmail] = useState(""); // State for email
-  const [github, setGithub] = useState(""); // State for GitHub
-  const [linkedin, setLinkedin] = useState(""); // State for LinkedIn
-  const [portfolio, setPortfolio] = useState(""); // State for portfolio
-  const [showDropdown, setShowDropdown] = useState(false); // State for dropdown visibility
+  const [posts, setPosts] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [postCount, setPostCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [email, setEmail] = useState("");
+  const [github, setGithub] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [portfolio, setPortfolio] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [jobtitle, setJobtitle] = useState([]);
   const [graduationyear, setgraduationyear] = useState();
+
   useEffect(() => {
     if (userId || session) {
       getProfile();
       checkFollowingStatus();
       getFollowing();
       getFollowerCount();
-      fetchPostCount(); // Fetch post count
-      fetchFollowingCount(); // Fetch following count
+      fetchPostCount();
+      fetchFollowingCount();
       if (isFollowing) {
-        fetchPostsAndEvents(); // Fetch posts and events only if following
+        fetchPostsAndEvents();
       }
     }
-  }, [userId, session, isFollowing]); // Add isFollowing to dependency array
+  }, [userId, session, isFollowing]);
 
-  // Fetch post count
   const fetchPostCount = async () => {
     try {
       const profileId = userId || session?.user?.id;
@@ -77,13 +77,12 @@ export default function ProfileScreen() {
 
       if (error) throw error;
 
-      setPostCount(data.length); // Set post count
+      setPostCount(data.length);
     } catch (error) {
       console.error("Error fetching post count:", error);
     }
   };
 
-  // Fetch following count
   const fetchFollowingCount = async () => {
     try {
       const profileId = userId || session?.user?.id;
@@ -96,19 +95,17 @@ export default function ProfileScreen() {
 
       if (error) throw error;
 
-      setFollowingCount(data.length); // Set following count
+      setFollowingCount(data.length);
     } catch (error) {
       console.error("Error fetching following count:", error);
     }
   };
 
-  // Fetch posts and events created by the user
   const fetchPostsAndEvents = async () => {
     try {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      // Fetch posts
       const { data: postsData, error: postsError } = await supabase
         .from("posts")
         .select("*")
@@ -116,7 +113,6 @@ export default function ProfileScreen() {
 
       if (postsError) throw postsError;
 
-      // Fetch events
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
         .select("*")
@@ -124,14 +120,27 @@ export default function ProfileScreen() {
 
       if (eventsError) throw eventsError;
 
-      // Update state with posts and events
+      const eventsWithInterestStatus = await Promise.all(
+        eventsData.map(async (event) => {
+          const { data: interestData, error: interestError } = await supabase
+            .from("event_interests")
+            .select("*")
+            .eq("event_id", event.id)
+            .eq("user_id", session?.user?.id);
+
+          if (interestError) throw interestError;
+
+          return {
+            ...event,
+            isInterestedByCurrentUser: interestData.length > 0,
+          };
+        })
+      );
+
       setPosts(postsData || []);
-      setEvents(eventsData || []);
+      setEvents(eventsWithInterestStatus || []);
 
-      // Calculate total count (posts + events)
       const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
-
-      // Update post count
       setPostCount(totalCount);
     } catch (error) {
       console.error("Error fetching posts and events:", error);
@@ -139,7 +148,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Fetching the follower count for the profile
   const getFollowerCount = async () => {
     try {
       const { data, error } = await supabase
@@ -155,7 +163,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Check if the current user is following this profile
   const checkFollowingStatus = async () => {
     const profileId = session?.user?.id;
     const { data, error } = await supabase
@@ -171,7 +178,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Fetching the list of followed users with their profile details
   const getFollowing = async () => {
     const profileId = session?.user?.id;
     const { data, error } = await supabase
@@ -195,7 +201,7 @@ export default function ProfileScreen() {
       getFollowing();
       getFollowerCount();
       if (!isFollowing) {
-        fetchPostsAndEvents(); // Fetch posts and events after following
+        fetchPostsAndEvents();
       }
     } catch (error) {
       Alert.alert("Error", "Something went wrong.");
@@ -224,7 +230,6 @@ export default function ProfileScreen() {
     if (error) throw new Error("Error unfollowing user.");
   };
 
-  // Fetching the profile data
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
@@ -253,9 +258,9 @@ export default function ProfileScreen() {
         setSkills(data.skills);
         setInterests(data.interests);
         setRole(data.role);
-        setEmail(data.email); // Set email
-        setGithub(data.github); // Set GitHub
-        setLinkedin(data.linkedin); // Set LinkedIn
+        setEmail(data.email);
+        setGithub(data.github);
+        setLinkedin(data.linkedin);
         setPortfolio(data.portfolio);
         setJobtitle(data.job_title);
         setgraduationyear(data.graduation_year);
@@ -266,7 +271,6 @@ export default function ProfileScreen() {
     }
   }
 
-  // Render a single post
   const renderPost = ({ item }) => (
     <View style={styles.postContainer}>
       <Text style={styles.postContent}>{item.content}</Text>
@@ -274,13 +278,11 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // Function to handle toggling interest in an event
   const handleInterestToggle = async (eventId: number) => {
     try {
       const profileId = session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      // Check if the user is already interested
       const { data: interestData, error: interestError } = await supabase
         .from("event_interests")
         .select("*")
@@ -292,7 +294,6 @@ export default function ProfileScreen() {
       const isInterested = interestData.length > 0;
 
       if (isInterested) {
-        // Remove interest
         const { error: removeError } = await supabase
           .from("event_interests")
           .delete()
@@ -301,7 +302,6 @@ export default function ProfileScreen() {
 
         if (removeError) throw removeError;
 
-        // Decrement the interested count
         const { data: eventData, error: fetchError } = await supabase
           .from("events")
           .select("interested_count")
@@ -319,7 +319,6 @@ export default function ProfileScreen() {
 
         if (updateError) throw updateError;
 
-        // Update local state
         setEvents((prevEvents) =>
           prevEvents.map((event) =>
             event.id === eventId
@@ -332,14 +331,12 @@ export default function ProfileScreen() {
           )
         );
       } else {
-        // Add interest
         const { error: addError } = await supabase
           .from("event_interests")
           .insert([{ event_id: eventId, user_id: profileId }]);
 
         if (addError) throw addError;
 
-        // Increment the interested count
         const { data: eventData, error: fetchError } = await supabase
           .from("events")
           .select("interested_count")
@@ -357,7 +354,6 @@ export default function ProfileScreen() {
 
         if (updateError) throw updateError;
 
-        // Update local state
         setEvents((prevEvents) =>
           prevEvents.map((event) =>
             event.id === eventId
@@ -376,7 +372,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Render a single event
   const renderEvent = ({ item }) => (
     <View style={styles.eventItem}>
       <Text style={styles.eventName}>{item.event_name}</Text>
@@ -388,7 +383,6 @@ export default function ProfileScreen() {
       </Text>
       <View style={styles.divider} />
 
-      {/* Interested Button */}
       <TouchableOpacity
         style={styles.interestedButton}
         onPress={() => handleInterestToggle(item.id)}
@@ -422,7 +416,6 @@ export default function ProfileScreen() {
             <Text style={styles.dropdownItem}>Email: {email}</Text>
             <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
 
-            {/* Clickable GitHub Link */}
             <TouchableOpacity
               onPress={() => {
                 if (github) Linking.openURL(github);
@@ -438,7 +431,6 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Clickable LinkedIn Link */}
             <TouchableOpacity
               onPress={() => {
                 if (linkedin) Linking.openURL(linkedin);
@@ -454,7 +446,6 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Clickable Portfolio Link */}
             <TouchableOpacity
               onPress={() => {
                 if (portfolio) Linking.openURL(portfolio);
@@ -499,7 +490,6 @@ export default function ProfileScreen() {
             size={150}
             onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />
-          {/* Add post, followers, and following counts */}
           <View
             style={{
               flexDirection: "row",
@@ -640,7 +630,6 @@ export default function ProfileScreen() {
               </Link>
             </TouchableOpacity>
 
-            {/* Three-Dot Menu Button */}
             <TouchableOpacity
               onPress={toggleDropdown}
               style={{
@@ -684,10 +673,8 @@ export default function ProfileScreen() {
         )}
       </View>
       {renderDropdown()}
-      {/* Conditionally render posts and events only if following */}
       {isFollowing && (
         <>
-          {/* Posts Section */}
           <View style={{ marginTop: 30, marginHorizontal: 20 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
             <FlatList
@@ -702,7 +689,6 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* Events Section */}
           <View style={{ marginTop: 30, marginHorizontal: 20, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
             <FlatList
