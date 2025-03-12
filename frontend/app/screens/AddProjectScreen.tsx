@@ -155,12 +155,12 @@ const AddProjectScreen = () => {
           "projectDescription"
         )}
       />
-      <TextInput
+      {/* <TextInput
         style={styles.input}
         placeholder="Technologies (comma-separated)"
         value={technologies}
         onChangeText={handleInputChange(setTechnologies, "technologies")}
-      />
+      /> */}
       <TextInput
         style={styles.input}
         placeholder="Timeline"
