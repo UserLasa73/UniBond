@@ -10,7 +10,7 @@ interface Props {
   gender?: "male" | "female"; // Add gender as a prop
 }
 
-export default function ShowingAvatar({
+export default function AvatarInCard({
   url,
   size = 150,
   onUpload,
@@ -28,7 +28,7 @@ export default function ShowingAvatar({
       const { data, error } = await supabase.storage
         .from("avatars")
         .download(path);
-      
+
       if (error) {
         throw error;
       }
@@ -73,9 +73,9 @@ const styles = StyleSheet.create({
     borderRadius: 999, // Fully circular
     overflow: "hidden", // Hide the overflow
     maxWidth: "100%",
-    resizeMode: "stretch",
-    height: 150,
-    width: 150,
+    resizeMode: "cover",
+    height: "100%",
+    width: "100%",
     marginBottom: 20,
   },
   image: {

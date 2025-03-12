@@ -10,8 +10,9 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import supabase from "../../lib/supabse";
 import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { supabase } from "../lib/supabse";
 
 interface ProjectData {
   project_id: number;
@@ -63,7 +64,7 @@ export default function ProjectTitleBox() {
       setProjectData((prevProjects) =>
         prevProjects.map((project) =>
           project.project_id === projectId
-            ? { ...project, is_saved: true }  // Mark this project as saved
+            ? { ...project, is_saved: true } // Mark this project as saved
             : project
         )
       );
@@ -75,8 +76,13 @@ export default function ProjectTitleBox() {
     }
   };
 
-  const handleApply = async (projectId: number) => {
+  const handleApply = async (projectId: number, user_id?: string) => {
     try {
+      if (!user_id) {
+        Alert.alert("Error", "User information is missing. Please try again.");
+        return;
+      }
+
       const { error } = await supabase
         .from("projects")
         .update({ is_applied: true })
@@ -84,19 +90,24 @@ export default function ProjectTitleBox() {
 
       if (error) throw error;
 
-      // Update the local state by modifying the specific project
       setProjectData((prevProjects) =>
         prevProjects.map((project) =>
           project.project_id === projectId
-            ? { ...project, is_applied: true }  // Mark this project as applied
+            ? { ...project, is_applied: true }
             : project
         )
       );
 
-      Alert.alert("Success", "You have applied for the project!");
+      Alert.alert("You Can Send Message to applied for the project!");
+
+      // Navigate only if userId is valid
+      router.push(`../user?userId=${encodeURIComponent(user_id)}`);
     } catch (error) {
       console.error("Error applying to project:", error);
-      Alert.alert("Error", "Failed to apply for the project. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to apply for the project. Please try again."
+      );
     }
   };
 
@@ -154,7 +165,7 @@ export default function ProjectTitleBox() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.applyButton}
-          onPress={() => handleApply(item.project_id)}
+          onPress={() => handleApply(item.project_id, item.user_id)} // ✅ Ensure user_id is passed
         >
           <Text style={styles.buttonText}>Apply</Text>
         </TouchableOpacity>

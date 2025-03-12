@@ -6,24 +6,19 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { supabase } from "../lib/supabse";
+import AddDonationForm from "./AddDonationForm"; // Import the new component
 
 export default function Donationscreen() {
   const [donations, setDonations] = useState([]);
   const [userEmail, setUserEmail] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newDonation, setNewDonation] = useState({
-    title: "",
-    description: "",
-    target_amount: "",
-    account_details: "",
-    contact_person: "",
-  });
+  const [menuVisible, setMenuVisible] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch user email on component mount
+  // Fetch user email
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -36,52 +31,51 @@ export default function Donationscreen() {
     fetchUser();
   }, []);
 
-  // Fetch donations from the database
+  // Fetch donations
   useEffect(() => {
     const fetchDonations = async () => {
+      setLoading(true);
       const { data, error } = await supabase.from("donations").select("*");
       if (error) {
         console.error("Error fetching donations:", error);
+        Alert.alert("Error", "Failed to fetch donations.");
       } else {
         setDonations(data);
       }
+      setLoading(false);
     };
     fetchDonations();
   }, []);
 
-  // Handle adding a new donation post
-  const handleAddDonation = async () => {
-    if (
-      !newDonation.title ||
-      !newDonation.description ||
-      !newDonation.target_amount ||
-      !newDonation.account_details ||
-      !newDonation.contact_person
-    ) {
-      Alert.alert("Error", "Please fill in all fields.");
-      return;
-    }
+  // Handle delete donation
+  const handleDeleteDonation = async (id) => {
+    Alert.alert("Confirm", "Are you sure you want to delete this donation?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        onPress: async () => {
+          const { error } = await supabase
+            .from("donations")
+            .delete()
+            .eq("id", id);
+          if (error) {
+            Alert.alert("Error", "Failed to delete donation.");
+          } else {
+            setDonations(donations.filter((donation) => donation.id !== id));
+            Alert.alert("Success", "Donation deleted successfully!");
+          }
+        },
+      },
+    ]);
+  };
 
-    const { data, error } = await supabase
-      .from("donations")
-      .insert([newDonation])
-      .select();
-
-    if (error) {
-      console.error("Error adding donation:", error);
-      Alert.alert("Error", "Failed to add donation post.");
-    } else {
-      setDonations([...donations, data[0]]);
-      setNewDonation({
-        title: "",
-        description: "",
-        target_amount: "",
-        account_details: "",
-        contact_person: "",
-      });
-      setShowAddForm(false);
-      Alert.alert("Success", "Donation post added successfully!");
-    }
+  // Handle add donation
+  const handleAddDonation = (donation) => {
+    setDonations([...donations, donation]);
+    setShowAddForm(false);
   };
 
   return (
@@ -105,7 +99,7 @@ export default function Donationscreen() {
         Donate
       </Text>
 
-      {/* Show "Add Donation Post" button only for the specific user */}
+      {/* Add Donation Button (Admin Only) */}
       {userEmail === "aathifahamad4@gmail.com" && (
         <TouchableOpacity
           style={{
@@ -129,164 +123,146 @@ export default function Donationscreen() {
         </TouchableOpacity>
       )}
 
-      {/* Form to add a new donation post */}
+      {/* Add Donation Form (Admin Only) */}
       {showAddForm && (
-        <View style={{ marginBottom: 24 }}>
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-            }}
-            placeholder="Title"
-            value={newDonation.title}
-            onChangeText={(text) =>
-              setNewDonation({ ...newDonation, title: text })
-            }
-          />
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-            }}
-            placeholder="Description"
-            value={newDonation.description}
-            onChangeText={(text) =>
-              setNewDonation({ ...newDonation, description: text })
-            }
-            multiline
-          />
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-            }}
-            placeholder="Target Amount"
-            value={newDonation.target_amount}
-            onChangeText={(text) =>
-              setNewDonation({ ...newDonation, target_amount: text })
-            }
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-            }}
-            placeholder="Account Details"
-            value={newDonation.account_details}
-            onChangeText={(text) =>
-              setNewDonation({ ...newDonation, account_details: text })
-            }
-          />
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-            }}
-            placeholder="Contact Person"
-            value={newDonation.contact_person}
-            onChangeText={(text) =>
-              setNewDonation({ ...newDonation, contact_person: text })
-            }
-          />
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#2C3036",
-              padding: 12,
-              borderRadius: 8,
-            }}
-            onPress={handleAddDonation}
-          >
-            <Text
-              style={{
-                color: "white",
-                textAlign: "center",
-                fontSize: 16,
-                fontWeight: "500",
-              }}
-            >
-              Submit Donation Post
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <AddDonationForm
+          onAddDonation={handleAddDonation}
+          onCancel={() => setShowAddForm(false)}
+        />
       )}
 
-      {/* Display donation posts */}
-      {donations.map((donation) => (
-        <View
-          key={donation.id}
-          style={{
-            backgroundColor: "#f7fafc",
-            borderRadius: 8,
-            padding: 24,
-            marginBottom: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-          }}
-        >
-          <Text
+      {/* Donation List */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#2C3036" />
+      ) : (
+        donations.map((donation) => (
+          <View
+            key={donation.id}
             style={{
-              fontSize: 18,
-              fontWeight: "600",
-              color: "#2d3748",
-              marginBottom: 8,
-            }}
-          >
-            {donation.title}
-          </Text>
-          <Text style={{ color: "#4a5568", marginBottom: 16, lineHeight: 24 }}>
-            {donation.description}
-          </Text>
-          <Text style={{ color: "#4a5568", marginBottom: 16, lineHeight: 24 }}>
-            Target Amount: LKR {donation.target_amount}
-          </Text>
-
-          {/* Donate Button */}
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#2C3036",
-              padding: 12,
+              backgroundColor: "#f7fafc",
               borderRadius: 8,
-              marginBottom: 16,
-            }}
-            onPress={() => {
-              console.log("Navigating with donationId:", donation.id); // Debugging
-              router.push({
-                pathname: "./DonationDetailsScreen", // Use absolute path
-                params: { donationId: donation.id }, // Pass donationId
-              });
+              padding: 24,
+              marginBottom: 24,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
             }}
           >
+            {/* Donation Title */}
             <Text
               style={{
-                color: "white",
-                textAlign: "center",
-                fontSize: 16,
-                fontWeight: "500",
+                fontSize: 18,
+                fontWeight: "600",
+                color: "#2d3748",
+                marginBottom: 8,
               }}
             >
-              Donate Now
+              {donation.title}
             </Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+
+            {/* Donation Description */}
+            <Text
+              style={{ color: "#4a5568", marginBottom: 16, lineHeight: 24 }}
+            >
+              {donation.description}
+            </Text>
+
+            {/* Target Amount */}
+            <Text
+              style={{ color: "#4a5568", marginBottom: 16, lineHeight: 24 }}
+            >
+              Target Amount: LKR {donation.target_amount}
+            </Text>
+
+            {/* Amount Raised */}
+            <Text
+              style={{ color: "#4a5568", marginBottom: 16, lineHeight: 24 }}
+            >
+              Amount Raised: LKR {donation.amount_raised}
+            </Text>
+
+            {/* Three-dot menu (Admin Only) */}
+            {userEmail === "aathifahamad4@gmail.com" && (
+              <TouchableOpacity
+                style={{ position: "absolute", right: 16, top: 16 }}
+                onPress={() =>
+                  setMenuVisible(
+                    menuVisible === donation.id ? null : donation.id
+                  )
+                }
+              >
+                <Ionicons name="ellipsis-vertical" size={24} color="black" />
+              </TouchableOpacity>
+            )}
+
+            {/* Dropdown Menu */}
+            {menuVisible === donation.id && (
+              <View
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: 8,
+                  position: "absolute",
+                  right: 16,
+                  top: 40,
+                  width: 120,
+                  padding: 8,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    router.push(`./EditDonationScreen?id=${donation.id}`);
+                    setMenuVisible(null);
+                  }}
+                  style={{ padding: 10 }}
+                >
+                  <Text style={{ color: "#333", fontSize: 16 }}>Edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    handleDeleteDonation(donation.id);
+                    setMenuVisible(null);
+                  }}
+                  style={{ padding: 10 }}
+                >
+                  <Text style={{ color: "red", fontSize: 16 }}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Donate Now Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 12,
+                borderRadius: 8,
+                marginTop: 16,
+              }}
+              onPress={() => {
+                router.push(
+                  `./DonationDetailsScreen?donationId=${donation.id}`
+                );
+              }}
+            >
+              <Text
+                style={{
+                  color: "white",
+                  textAlign: "center",
+                  fontSize: 16,
+                  fontWeight: "500",
+                }}
+              >
+                Donate Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
     </ScrollView>
   );
 }

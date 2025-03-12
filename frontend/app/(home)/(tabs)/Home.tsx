@@ -17,6 +17,7 @@ import PostItem from "../../screens/PostItem";
 import { MaterialIcons } from "@expo/vector-icons";
 import RandomUserCards from "@/app/Components/renderUserCard ";
 import { SafeAreaView } from "react-native-safe-area-context";
+import EventItem from "@/app/Components/EventItem";
 
 type Post = {
   id: number;
@@ -104,7 +105,7 @@ const HomeScreen: React.FC = () => {
       // Fetch posts
       const { data: postsData, error: postsError } = await supabase
         .from("posts")
-        .select("id, content, likes, comments, is_public, user_id, created_at")
+        .select("id, content, likes, comments, is_public, user_id, created_at,media_url")
         .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
 
       if (postsError) throw postsError;
@@ -168,6 +169,140 @@ const HomeScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInterestToggle = async (eventId: number) => {
+    try {
+      const event = combinedData.find(
+        (item) => item.type === "event" && item.id === eventId
+      ) as Event;
+
+      if (!event) throw new Error("Event not found");
+
+      const isInterested = event.isInterestedByCurrentUser;
+
+      if (isInterested) {
+        const { error: removeError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", session?.user?.id);
+
+        if (removeError) throw removeError;
+
+        const newInterestedCount = event.interested_count - 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        setCombinedData((prev) =>
+          prev.map((item) =>
+            item.type === "event" && item.id === eventId
+              ? {
+                  ...item,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: false,
+                }
+              : item
+          )
+        );
+      } else {
+        const { error: addError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: session?.user?.id }]);
+
+        if (addError) throw addError;
+
+        const newInterestedCount = event.interested_count + 1;
+
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({ interested_count: newInterestedCount })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        setCombinedData((prev) =>
+          prev.map((item) =>
+            item.type === "event" && item.id === eventId
+              ? {
+                  ...item,
+                  interested_count: newInterestedCount,
+                  isInterestedByCurrentUser: true,
+                }
+              : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Could not toggle interest.");
+    }
+  };
+
+  const renderItem = ({ item }: { item: Post | Event }) => {
+    if (item.type === "event") {
+      return (
+        <EventItem
+          event={item as Event}
+          onInterestToggle={handleInterestToggle}
+        />
+      );
+    } else if (item.type === "post") {
+      const post = item as Post;
+      const storageUrl =
+        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+      const imageUrl = post.avatar_url
+        ? `${storageUrl}${post.avatar_url}`
+        : null;
+
+      return (
+        <View style={styles.postItem}>
+          {/* User Profile Section */}
+          <TouchableOpacity
+            onPress={() =>
+              router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
+            }
+          >
+            <View style={styles.userInfoContainer}>
+              {imageUrl ? (
+                <Image source={{ uri: imageUrl }} style={styles.avatar} />
+              ) : (
+                <MaterialIcons name="person" size={40} color="#000" />
+              )}
+              <View style={styles.userInfoText}>
+                <Text style={styles.username}>
+                  {post.username} ({post.role ? "Alumni" : "Student"})
+                </Text>
+                <Text style={styles.postedDate}>
+                  {calculatePostDuration(post.posted_date)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Post Content */}
+          <PostItem
+            post={post}
+            username={post.username}
+            avatarUrl={imageUrl}
+            postedDate={post.posted_date}
+            postDuration={calculatePostDuration(post.posted_date)}
+            role={post.role}
+            onLike={handleLike}
+            onCommentSubmit={handleCommentSubmit}
+            onProfilePress={() =>
+              router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
+            }
+          />
+        </View>
+      );
+    }
+    return null;
   };
 
   const calculatePostDuration = (postedDate: string) => {
@@ -251,79 +386,6 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleInterestToggle = async (eventId: number) => {
-    try {
-      const event = combinedData.find(
-        (item) => item.type === "event" && item.id === eventId
-      ) as Event;
-
-      if (!event) throw new Error("Event not found");
-
-      const isInterested = event.isInterestedByCurrentUser;
-
-      if (isInterested) {
-        const { error: removeError } = await supabase
-          .from("event_interests")
-          .delete()
-          .eq("event_id", eventId)
-          .eq("user_id", session?.user?.id);
-
-        if (removeError) throw removeError;
-
-        const newInterestedCount = event.interested_count - 1;
-
-        const { error: updateError } = await supabase
-          .from("events")
-          .update({ interested_count: newInterestedCount })
-          .eq("id", eventId);
-
-        if (updateError) throw updateError;
-
-        setCombinedData((prev) =>
-          prev.map((item) =>
-            item.type === "event" && item.id === eventId
-              ? {
-                  ...item,
-                  interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: false,
-                }
-              : item
-          )
-        );
-      } else {
-        const { error: addError } = await supabase
-          .from("event_interests")
-          .insert([{ event_id: eventId, user_id: session?.user?.id }]);
-
-        if (addError) throw addError;
-
-        const newInterestedCount = event.interested_count + 1;
-
-        const { error: updateError } = await supabase
-          .from("events")
-          .update({ interested_count: newInterestedCount })
-          .eq("id", eventId);
-
-        if (updateError) throw updateError;
-
-        setCombinedData((prev) =>
-          prev.map((item) =>
-            item.type === "event" && item.id === eventId
-              ? {
-                  ...item,
-                  interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: true,
-                }
-              : item
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error toggling interest:", error);
-      Alert.alert("Error", "Could not toggle interest.");
-    }
-  };
-
   const handleFilterChange = (newFilter: "all" | "posts" | "events") => {
     setFilter(newFilter);
   };
@@ -361,99 +423,6 @@ const HomeScreen: React.FC = () => {
     return 0; // No sorting
   });
 
-  const renderItem = ({ item }: { item: Post | Event }) => {
-    if (item.type === "event") {
-      const event = item as Event;
-      const storageUrl =
-        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-      const imageUrl = event.avatar_url
-        ? `${storageUrl}${event.avatar_url}`
-        : null;
-
-      return (
-        <View style={styles.eventItem}>
-          <TouchableOpacity
-            onPress={() =>
-              router.push(`/screens/ProfileScreen?userId=${event.uid}`)
-            }
-          >
-            <View style={styles.userInfoContainer}>
-              {imageUrl ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={{ width: 40, height: 40, borderRadius: 20 }}
-                />
-              ) : (
-                <MaterialIcons name="person" size={40} color="#000" />
-              )}
-              <View style={styles.userInfoText}>
-                <Text style={styles.username}>
-                  {event.username} ({event.role ? "Alumni" : "Student"})
-                </Text>
-                <Text style={styles.postedDate}>
-                  {calculatePostDuration(event.posted_date)}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.eventTitle}>{event.event_name}</Text>
-          <Text style={styles.eventDetails}>Date: {event.event_date}</Text>
-          <Text style={styles.eventDetails}>
-            Location: {event.event_location}
-          </Text>
-          <Text style={styles.eventDetails}>
-            Description: {event.event_description}
-          </Text>
-          <Text style={styles.eventDetails}>
-            Interested People: ({event.interested_count})
-          </Text>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity
-            style={styles.interestedButton}
-            onPress={() => handleInterestToggle(event.id)}
-          >
-            <MaterialIcons
-              name={event.isInterestedByCurrentUser ? "remove" : "add"}
-              size={20}
-              color="#000"
-            />
-            <Text style={styles.interestedButtonText}>
-              {event.isInterestedByCurrentUser
-                ? "Not Interested"
-                : "Interested"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      );
-    } else if (item.type === "post") {
-      const post = item as Post;
-      const storageUrl =
-        "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-      const imageUrl = post.avatar_url
-        ? `${storageUrl}${post.avatar_url}`
-        : null;
-
-      return (
-        <PostItem
-          post={post}
-          username={post.username}
-          avatarUrl={imageUrl}
-          postedDate={post.posted_date}
-          postDuration={calculatePostDuration(post.posted_date)}
-          role={post.role}
-          onLike={handleLike}
-          onCommentSubmit={handleCommentSubmit}
-          onProfilePress={() =>
-            router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
-          }
-        />
-      );
-    }
-    return null;
-  };
-
   const renderHeader = () => (
     <View style={styles.randomUserCardsContainer}>
       <RandomUserCards currentUserId={session?.user?.id} />
@@ -469,80 +438,78 @@ const HomeScreen: React.FC = () => {
   }
 
   return (
-    <>
-      <SafeAreaView>
-        <TopNavigationBar
-          userName={username}
-          onProfilePress={() => router.push("/screens/ShowProfileEdit")}
-          onNotificationPress={() => router.push("/screens/NotificationScreen")}
-          onPostPress={() => router.push("/screens/PostScreen")}
-        />
+    <SafeAreaView style={styles.container}>
+      <TopNavigationBar
+        userName={username}
+        onProfilePress={() => router.push("/screens/ShowProfileEdit")}
+        onNotificationPress={() => router.push("/screens/NotificationScreen")}
+        onPostPress={() => router.push("/screens/PostScreen")}
+      />
 
-        <View style={styles.filterSortContainer}>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === "all" && styles.activeFilter,
-            ]}
-            onPress={() => handleFilterChange("all")}
-          >
-            <Text style={styles.filterButtonText}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === "posts" && styles.activeFilter,
-            ]}
-            onPress={() => handleFilterChange("posts")}
-          >
-            <Text style={styles.filterButtonText}>Posts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === "events" && styles.activeFilter,
-            ]}
-            onPress={() => handleFilterChange("events")}
-          >
-            <Text style={styles.filterButtonText}>Events</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.sortButton, isDateSorted && styles.activeSort]}
-            onPress={() => handleSortChange("date")}
-          >
-            <Text style={styles.sortButtonText}>
-              {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={sortedData}
-          renderItem={renderItem}
-          keyExtractor={(item) =>
-            `${item.type === "event" ? "event" : "post"}-${item.id}`
-          }
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={renderHeader}
-          contentContainerStyle={styles.combinedList}
-        />
+      <View style={styles.filterSortContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === "all" && styles.activeFilter]}
+          onPress={() => handleFilterChange("all")}
+        >
+          <Text style={styles.filterButtonText}>All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "posts" && styles.activeFilter,
+          ]}
+          onPress={() => handleFilterChange("posts")}
+        >
+          <Text style={styles.filterButtonText}>Posts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "events" && styles.activeFilter,
+          ]}
+          onPress={() => handleFilterChange("events")}
+        >
+          <Text style={styles.filterButtonText}>Events</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.DonateButton}
-          onPress={() => {
-            router.push("/screens/DonationScreen");
-          }}
+          style={[styles.sortButton, isDateSorted && styles.activeSort]}
+          onPress={() => handleSortChange("date")}
         >
-          <Image source={require("../../Constatnts/Donate Icon.png")} />
-          <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
+          <Text style={styles.sortButtonText}>
+            {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
+          </Text>
         </TouchableOpacity>
-      </SafeAreaView>
-    </>
+      </View>
+
+      <FlatList
+        data={sortedData}
+        renderItem={renderItem}
+        keyExtractor={(item) =>
+          `${item.type === "event" ? "event" : "post"}-${item.id}`
+        }
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderHeader}
+        contentContainerStyle={styles.combinedList}
+      />
+
+      <TouchableOpacity
+        style={styles.DonateButton}
+        onPress={() => {
+          router.push("/screens/DonationScreen");
+        }}
+      >
+        <Image source={require("../../Constatnts/Donate Icon.png")} />
+        <Text style={{ color: "#000", fontWeight: "bold" }}>Donate</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   DonateButton: {
     borderWidth: 1,
     borderColor: "#EBF2FA",
@@ -550,7 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 70,
     position: "absolute",
-    top: 600,
+    bottom: 20,
     right: 20,
     height: 70,
     backgroundColor: "#EBF2FA",
@@ -566,26 +533,28 @@ const styles = StyleSheet.create({
   },
   combinedList: {
     padding: 16,
+    paddingBottom: 100, // Add padding to ensure the last item is visible
   },
-  eventItem: {
+  postItem: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff", // Ensures posts have a distinct background
     borderRadius: 8,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  eventDetails: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   userInfoContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   userInfoText: {
     flexDirection: "column",
@@ -606,22 +575,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  interestedButton: {
-    marginTop: 5,
-    padding: 10,
-    backgroundColor: "Transaprent",
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  interestedButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#2C3036",
-    marginVertical: 5,
   },
   filterSortContainer: {
     flexDirection: "row",
