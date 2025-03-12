@@ -19,8 +19,9 @@ const PostItem = ({ post, username, onLike, onCommentSubmit }) => {
   const [hasLiked, setHasLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
   const bounceAnim = new Animated.Value(1);
-  const [imageUrl, setImageUrl] = useState(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const postImageSize = 300;
+
 
   useEffect(() => {
     if (post.media_url) {
@@ -30,16 +31,39 @@ const PostItem = ({ post, username, onLike, onCommentSubmit }) => {
 
   // Fetch the image URL directly from Supabase Storage
   const fetchImageUrl = async (filePath) => {
-    const { data, error } = await supabase.storage
-      .from("post_images")
-      .getPublicUrl(filePath);
 
-    if (error) {
-      console.error("Error fetching image:", error);
-    } else {
-      setImageUrl(data.publicUrl);
+    // const { data, error } = await supabase.storage
+    //   .from("post_images")
+    //   .getPublicUrl(filePath);
+
+    // if (error) {
+    //   console.error("Error fetching image:", error);
+    // } else {
+    //   setImageUrl(data.media_url);
+    //   console.log("test"+data.media_url)
+    // }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("post_images")
+        .download(filePath);
+      
+      if (error) {
+        throw error;
+      }
+
+      const fr = new FileReader();
+      fr.readAsDataURL(data);
+      fr.onload = () => {
+        setImageUrl(fr.result as string);
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        console.log("Error downloading image: ", error.message);
+      }
     }
   };
+
 
   const handleCommentSubmit = () => {
     if (!newComment.trim()) {
@@ -86,6 +110,12 @@ const PostItem = ({ post, username, onLike, onCommentSubmit }) => {
       alert("Failed to update like. Please try again.");
     }
   };
+ 
+
+  const storageUrl =
+  "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/post_images//"; // Storage URL for post images
+
+
 
   return (
     <View style={styles.postContainer}>
@@ -96,11 +126,12 @@ const PostItem = ({ post, username, onLike, onCommentSubmit }) => {
       <View>
         {imageUrl ? (
           <Image
-            source={{ uri: imageUrl }}
+            source={{ uri:imageUrl}}
             style={[{ height: postImageSize, width: postImageSize }, styles.image]}
             accessibilityLabel="Post Image"
           />
         ) : (
+
           <View style={[{ height: postImageSize, width: postImageSize }, styles.noImage]}>
             <Text style={styles.noImageText}>No Image</Text>
           </View>

@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabse";
 import { Alert, View, Button, Image, StyleSheet,Text} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
+const [postImageUrl, setpostImageUrl] = useState<string | null>(null);
+
 interface PostImageProps {
   onUpload: (imageUrl: string) => void;
 }

@@ -11,6 +11,7 @@ import { supabase } from "../lib/supabse";
 import { Input } from "@rneui/themed";
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
+import { registerForPushNotifications } from "../Components/Notifications/registerForPushNotifications"; 
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -31,12 +32,16 @@ export default function Auth() {
 
   async function signInWithEmail() {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
 
-    if (error) Alert.alert(error.message);
+    if (error) {
+      Alert.alert(error.message);
+    } else if (data?.user) {
+      registerForPushNotifications(data.user.id); // Register push notifications after login
+    }
     setLoading(false);
   }
 

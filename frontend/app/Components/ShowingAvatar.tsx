@@ -28,7 +28,7 @@ export default function ShowingAvatar({
       const { data, error } = await supabase.storage
         .from("avatars")
         .download(path);
-
+      
       if (error) {
         throw error;
       }
