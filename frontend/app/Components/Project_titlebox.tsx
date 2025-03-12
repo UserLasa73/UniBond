@@ -25,6 +25,8 @@ interface ProjectData {
   skills: string;
   is_saved: boolean;
   is_applied: boolean;
+  avatar_url: string;
+  id: string;
 }
 
 export default function ProjectTitleBox() {
@@ -34,11 +36,50 @@ export default function ProjectTitleBox() {
   // Function to fetch project data
   const fetchData = async () => {
     try {
-      const { data, error } = await supabase.from("projects").select("*");
-      if (error) throw error;
-      setProjectData(data || []);
+      // Fetch projects data
+      const { data: projects, error: projectError } = await supabase
+        .from("projects")
+        .select("*");
+
+      if (projectError) throw projectError;
+
+      // If there are no projects, set empty and return
+      if (!projects || projects.length === 0) {
+        setProjectData([]);
+        return;
+      }
+
+      // Get all unique user_ids from projects
+      const userIds = [...new Set(projects.map((project) => project.user_id))];
+
+      if (userIds.length === 0) {
+        setProjectData([]);
+        return;
+      }
+
+      // Fetch profiles data for these user_ids
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, avatar_url")
+        .in("id", userIds);
+
+      if (profileError) throw profileError;
+
+      // Create a map of user_id to avatar_url
+      const avatarMap: Record<string, string> = {};
+      profiles.forEach((profile) => {
+        avatarMap[profile.id] = profile.avatar_url;
+      });
+
+      // Merge avatar_url into projects data
+      const projectsWithAvatars = projects.map((project) => ({
+        ...project,
+        avatar_url: avatarMap[project.user_id],
+      }));
+
+      setProjectData(projectsWithAvatars);
     } catch (error) {
-      console.error("Error fetching project data:", error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +88,10 @@ export default function ProjectTitleBox() {
   // Use useFocusEffect to fetch data when the screen is focused
   useFocusEffect(
     useCallback(() => {
-      fetchData();
+      const fetch = async () => {
+        await fetchData();
+      };
+      fetch();
     }, [])
   );
 
@@ -132,7 +176,7 @@ export default function ProjectTitleBox() {
       <Text style={styles.title}>{item.project_title}</Text>
       <View style={styles.userInfo}>
         <Image
-          source={{ uri: "https://via.placeholder.com/40" }}
+          source={{ uri: item.avatar_url }}
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
