@@ -19,6 +19,7 @@ interface JobListing {
   full_name: string;
   image_url: string | null;
   created_at: string;
+  user_id: string;
 }
 
 const AvailableJobs: React.FC = () => {
