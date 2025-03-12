@@ -1,56 +1,31 @@
+import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import {
-  NavigationContainer,
-  NavigatorScreenParams,
-} from "@react-navigation/native";
 import PostScreen from "./PostScreen";
 import AddPostScreen from "./AddPostScreen";
-import AddProjectScreen from "./AddProjectScreen";
-import AddJobScreen from "./AddJobScreen";
 import AddEventScreen from "./AddEventScreen";
+import AddJobScreen from "./AddJobScreen";
+import AddProjectScreen from "./AddProjectScreen";
 
 export type PostStackParamList = {
-  PostScreen: undefined;
+  PostScreen: { content?: string; imageUri?: string | null };
   AddPostScreen: undefined;
-  AddProjectScreen: undefined;
-  AddJobScreen: undefined;
   AddEventScreen: undefined;
+  AddJobScreen: undefined;
+  AddProjectScreen: undefined;
 };
 
 const Stack = createStackNavigator<PostStackParamList>();
 
-const AppNavigator = () => {
+const PostNav = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="PostScreen">
-        <Stack.Screen
-          name="PostScreen"
-          component={PostScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddPostScreen"
-          component={AddPostScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddProjectScreen"
-          component={AddProjectScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddJobScreen"
-          component={AddJobScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AddEventScreen"
-          component={AddEventScreen}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator initialRouteName="PostScreen">
+      <Stack.Screen name="PostScreen" component={PostScreen} />
+      <Stack.Screen name="AddPostScreen" component={AddPostScreen} />
+      <Stack.Screen name="AddEventScreen" component={AddEventScreen} />
+      <Stack.Screen name="AddJobScreen" component={AddJobScreen} />
+      <Stack.Screen name="AddProjectScreen" component={AddProjectScreen} />
+    </Stack.Navigator>
   );
 };
 
-export default AppNavigator;
+export default PostNav;
