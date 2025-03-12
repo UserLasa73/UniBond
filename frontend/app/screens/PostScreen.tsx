@@ -6,26 +6,32 @@ import {
   Modal,
   TouchableOpacity,
   Image,
+  BackHandler,
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
+import { useAuth } from "../providers/AuthProvider";
 import PostOptionItem from "../Components/PostOptionItem";
-import usePostParams from "../hooks/usePostParams";
-import { useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { PostStackParamList } from "./PostNav";
-import { BackHandler } from "react-native";
 import { router } from "expo-router";
-import { useAuth } from "../providers/AuthProvider";
-import * as FileSystem from "expo-file-system";
+
+interface PostData {
+  content?: string;
+  imageUri?: string;
+}
+
 const PostScreen = () => {
+  const route = useRoute();
   const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
-  const { content, media } = usePostParams();
   const { profile } = useAuth();
-  const [showPreview, setShowPreview] = useState(!!content || !!media);
+
+  const [postData, setPostData] = useState<PostData | null>(
+    route.params || null
+  );
+  const [showPreview, setShowPreview] = useState(!!postData);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
-  const [mediaUri, setMediaUri] = useState<string | null>(null);
 
   const storageUrl =
     "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
@@ -43,42 +49,9 @@ const PostScreen = () => {
     return () => {
       BackHandler.removeEventListener("hardwareBackPress", backAction);
     };
-  }, []);
-
-  useEffect(() => {
-    const prepareMedia = async () => {
-      if (media?.uri) {
-        try {
-          // Check if the file exists at the given URI
-          const fileInfo = await FileSystem.getInfoAsync(media.uri);
-
-          if (fileInfo.exists) {
-            // Create a new URI in the document directory
-            const newUri = `${FileSystem.documentDirectory}${media.uri.split("/").pop()}`;
-
-            // Copy the file to the new location
-            await FileSystem.copyAsync({ from: media.uri, to: newUri });
-
-            // Set the new URI for use in your app
-            setPersistentUri(newUri);
-          } else {
-            console.error("Media file does not exist:", media.uri);
-          }
-        } catch (error) {
-          console.error("Error copying media file:", error);
-        }
-      }
-    };
-
-    prepareMedia();
-  }, [media]);
-
-  const handleOptionPress = (screen: keyof PostStackParamList) => {
-    navigation.navigate(screen);
-  };
+  }, [navigation]);
 
   const handlePostPress = () => {
-    console.log("Post submitted with content:", content, "and media:", media);
     setShowPreview(false);
   };
 
@@ -91,11 +64,15 @@ const PostScreen = () => {
     toggleModal();
   };
 
+  const handleCancelPreview = () => {
+    setShowPreview(false);
+  };
+
   return (
     <View style={styles.container}>
       {/* Custom Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/(home)/(tabs)/Home")}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <MaterialIcons name="close" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
@@ -103,6 +80,7 @@ const PostScreen = () => {
           <Text style={styles.postButton}>Post</Text>
         </TouchableOpacity>
       </View>
+
       {/* User Info Section */}
       <View style={styles.userInfo}>
         <View style={styles.profileImage}>
@@ -129,54 +107,59 @@ const PostScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
-      {showPreview && (content || media) && (
+      {/* Conditionally Render Preview */}
+      {postData && (postData.content || postData.imageUri) && (
         <View style={styles.previewContainer}>
-          {content ? <Text style={styles.promptText}>{content}</Text> : null}
-          {mediaUri && media?.type === "image" ? (
+          {/* Cancel Button */}
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelPreview}
+          >
+            <Text style={styles.cancelText}>X</Text>
+          </TouchableOpacity>
+
+          {postData.content ? (
+            <Text style={styles.promptText}>{postData.content}</Text>
+          ) : null}
+          {postData.imageUri ? (
             <Image
-              source={{ uri: mediaUri }}
+              source={{ uri: postData.imageUri }}
               style={styles.imagePreview}
               onError={(error) =>
                 console.log("Image load error:", error.nativeEvent)
               }
             />
-          ) : mediaUri && media?.type === "video" ? (
-            <Video
-              source={{ uri: mediaUri }}
-              style={styles.imagePreview}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-            />
-          ) : (
-            <Text>Unsupported media type</Text>
-          )}
+          ) : null}
         </View>
       )}
+
       {/* Post Options */}
       <View style={styles.options}>
         <PostOptionItem
           label="Add a Post"
           icon={<Ionicons name="image-outline" size={24} color="#000" />}
-          onPress={() => handleOptionPress("AddPostScreen")}
+          onPress={() => navigation.navigate("AddPostScreen")}
         />
         <PostOptionItem
           label="Add a Project"
           icon={<Ionicons name="folder" size={24} color="#000" />}
-          onPress={() => handleOptionPress("AddProjectScreen")}
+          onPress={() => navigation.navigate("AddProjectScreen")}
         />
         <PostOptionItem
           label="Share a Job"
           icon={<MaterialIcons name="work-outline" size={24} color="#000" />}
-          onPress={() => handleOptionPress("AddJobScreen")}
+          onPress={() => navigation.navigate("AddJobScreen")}
         />
         <PostOptionItem
           label="Share an Event"
           icon={<MaterialIcons name="event" size={24} color="#000" />}
-          onPress={() => handleOptionPress("AddEventScreen")}
+          onPress={() => navigation.navigate("AddEventScreen")}
         />
       </View>
+
       {/* Visibility Selector Modal */}
       <Modal
         visible={isModalVisible}
@@ -206,9 +189,6 @@ const PostScreen = () => {
   );
 };
 
-export default PostScreen;
-
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -273,14 +253,29 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 16,
   },
-  mediaPreviewContainer: {
-    marginVertical: 12,
+  previewContainer: {
+    borderColor: "#ddd",
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 16,
+    position: "relative",
   },
-  imagePreview: {
-    width: "100%",
-    height: 200,
-    borderRadius: 8,
-    marginTop: 8,
+  cancelButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#FF4040",
+    borderRadius: 20,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelText: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#fff",
   },
   options: {
     borderTopWidth: 1,
@@ -309,11 +304,11 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
   },
-  previewContainer: {
-    borderColor: "#ddd",
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 16,
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
   },
 });
+
+export default PostScreen;
