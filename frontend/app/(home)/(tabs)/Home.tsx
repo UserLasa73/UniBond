@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Alert,
@@ -15,9 +15,9 @@ import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
 import { MaterialIcons } from "@expo/vector-icons";
-import RandomUserCards from "@/app/Components/renderUserCard ";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EventItem from "@/app/Components/EventItem";
+import RandomUserCards from "@/app/Components/renderUserCard ";
 
 type Post = {
   id: number;
@@ -105,7 +105,9 @@ const HomeScreen: React.FC = () => {
       // Fetch posts
       const { data: postsData, error: postsError } = await supabase
         .from("posts")
-        .select("id, content, likes, comments, is_public, user_id, created_at,media_url")
+        .select(
+          "id, content, likes, comments, is_public, user_id, created_at, media_url"
+        )
         .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
 
       if (postsError) throw postsError;
@@ -406,27 +408,32 @@ const HomeScreen: React.FC = () => {
     return true; // 'all'
   });
 
-  const sortedData = filteredData.sort((a, b) => {
-    if (sortBy === "date" && isDateSorted) {
-      return (
-        new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
-      );
-    } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
-      return b.likes - a.likes;
-    } else if (
-      sortBy === "interested" &&
-      a.type === "event" &&
-      b.type === "event"
-    ) {
-      return b.interested_count - a.interested_count;
-    }
-    return 0; // No sorting
-  });
+  const sortedData = useMemo(() => {
+    return filteredData.sort((a, b) => {
+      if (sortBy === "date" && isDateSorted) {
+        return (
+          new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
+        );
+      } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
+        return b.likes - a.likes;
+      } else if (
+        sortBy === "interested" &&
+        a.type === "event" &&
+        b.type === "event"
+      ) {
+        return b.interested_count - a.interested_count;
+      }
+      return 0; // No sorting
+    });
+  }, [filteredData, sortBy, isDateSorted]);
 
-  const renderHeader = () => (
-    <View style={styles.randomUserCardsContainer}>
-      <RandomUserCards currentUserId={session?.user?.id} />
-    </View>
+  const renderHeader = useCallback(
+    () => (
+      <View style={styles.randomUserCardsContainer}>
+        <RandomUserCards currentUserId={session?.user?.id} />
+      </View>
+    ),
+    [session?.user?.id]
   );
 
   if (loading) {
@@ -488,8 +495,7 @@ const HomeScreen: React.FC = () => {
         keyExtractor={(item) =>
           `${item.type === "event" ? "event" : "post"}-${item.id}`
         }
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderHeader}
+        ListHeaderComponent={renderHeader} // Include RandomUserCards here
         contentContainerStyle={styles.combinedList}
       />
 
