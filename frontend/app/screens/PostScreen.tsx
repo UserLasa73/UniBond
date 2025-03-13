@@ -7,14 +7,18 @@ import {
   TouchableOpacity,
   Image,
   BackHandler,
+  Alert,
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../providers/AuthProvider";
 import PostOptionItem from "../Components/PostOptionItem";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import type { StackNavigationProp } from "@react-navigation/stack";
+import { StackNavigationProp } from "@react-navigation/stack";
 import { PostStackParamList } from "./PostNav";
 import { router } from "expo-router";
+import { supabase } from "../lib/supabse";
+import * as FileSystem from "expo-file-system";
+import * as mime from "mime";
 
 interface PostData {
   content?: string;
@@ -32,6 +36,7 @@ const PostScreen = () => {
   const [showPreview, setShowPreview] = useState(!!postData);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState("Anyone");
+  const [loading, setLoading] = useState(false);
 
   const storageUrl =
     "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
@@ -51,8 +56,113 @@ const PostScreen = () => {
     };
   }, [navigation]);
 
-  const handlePostPress = () => {
-    setShowPreview(false);
+  const uploadImage = async (uri) => {
+    try {
+      setLoading(true);
+      console.log("Image URI:", uri);
+
+      // Get the file extension
+      const fileExt = uri.split(".").pop();
+      const timeStamp = Date.now().toString(); // Only timestamp as filename
+      const fileName = `${timeStamp}.${fileExt}`;
+      const filePath = `${fileName}`; // Correct path here
+
+      // Get MIME type
+      const mimeType = mime.default.getType(uri) || `image/${fileExt}`;
+
+      // Read file as a binary data
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error("File does not exist.");
+      }
+
+      // Convert image into a file object
+      const formData = new FormData();
+      formData.append("file", {
+        uri: uri,
+        name: fileName,
+        type: mimeType,
+      });
+
+      // Upload the image to Supabase Storage
+      let { data, error } = await supabase.storage
+        .from("post_images")
+        .upload(filePath, formData, {
+          contentType: mimeType,
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Error uploading image:", error);
+        Alert.alert("Upload Failed", error.message);
+        return null;
+      }
+
+      console.log("Upload successful:", data);
+      return fileName; // Return only the image filename
+    } catch (err) {
+      console.error("Upload error:", err);
+      Alert.alert("Upload Error", "Could not upload image.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePostPress = async () => {
+    if (!postData || (!postData.content && !postData.imageUri)) {
+      console.error("Post cannot be empty");
+      return;
+    }
+
+    const isPublic = selectedVisibility === "Anyone";
+
+    // Get the local time in your timezone (UTC +5:30)
+    const localTime = new Date();
+    const timezoneOffset = 5.5 * 60 * 60 * 1000; // Convert 5.5 hours to milliseconds
+    const adjustedTime = new Date(localTime.getTime() + timezoneOffset);
+
+    const formattedTime = adjustedTime
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " "); // Format as 'YYYY-MM-DD HH:mm:ss'
+
+    let image = null;
+
+    try {
+      if (postData.imageUri) {
+        image = await uploadImage(postData.imageUri);
+        if (!image) {
+          console.error("Image upload failed, cannot proceed.");
+          return;
+        }
+      }
+
+      const { data: postDataRes, error: postError } = await supabase
+        .from("posts")
+        .insert([
+          {
+            user_id: profile.id,
+            content: postData.content,
+            media_url: image,
+            created_at: formattedTime, // Store adjusted time
+            is_public: isPublic,
+          },
+        ]);
+
+      if (postError) {
+        console.error("Error inserting post:", postError);
+        Alert.alert("Error", "Failed to post. Please try again.");
+      } else {
+        console.log("Post inserted successfully:", postDataRes);
+        setPostData(null); // Clear post data
+        setShowPreview(false); // Hide preview
+        router.push("../(home)/(tabs)/Home");
+      }
+    } catch (err) {
+      console.error("Error with post submission:", err);
+    }
   };
 
   const toggleModal = () => {
@@ -66,18 +176,29 @@ const PostScreen = () => {
 
   const handleCancelPreview = () => {
     setShowPreview(false);
+    setPostData(null);
   };
 
   return (
     <View style={styles.container}>
       {/* Custom Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="close" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Share Post</Text>
         <TouchableOpacity onPress={handlePostPress}>
-          <Text style={styles.postButton}>Post</Text>
+          <TouchableOpacity
+            onPress={handlePostPress}
+            disabled={!postData || (!postData.content && !postData.imageUri)}
+          >
+            <Text
+              style={[
+                styles.postButton,
+                (!postData || (!postData.content && !postData.imageUri)) &&
+                  styles.disabledButton,
+              ]}
+            >
+              Post
+            </Text>
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
 
@@ -111,7 +232,7 @@ const PostScreen = () => {
       <Text style={styles.promptText}>What do you want to talk about?</Text>
 
       {/* Conditionally Render Preview */}
-      {postData && (postData.content || postData.imageUri) && (
+      {postData && (postData.content || postData.imageUri) && showPreview && (
         <View style={styles.previewContainer}>
           {/* Cancel Button */}
           <TouchableOpacity
@@ -271,6 +392,7 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 2, // Ensures it's on top
   },
   cancelText: {
     fontSize: 20,
@@ -308,6 +430,15 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 200,
     borderRadius: 8,
+  },
+  disabledButton: {
+    color: "#ccc",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: "center",
   },
 });
 
