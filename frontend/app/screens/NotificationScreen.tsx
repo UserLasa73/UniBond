@@ -1,108 +1,110 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router"; // For navigation
-//import hekko from '../(tabs)/Home'
-
-const notifications = [
-  {
-    id: "1",
-    type: "message",
-    message: "You have a new message.",
-    read: false,
-    path: "../(tabs)/Home",
-  },
-  {
-    id: "2",
-    type: "profile",
-    message: "Your profile has been updated.",
-    read: false,
-    path: "../(tabs)/Home",
-  },
-  {
-    id: "3",
-    type: "job",
-    message: "New job opportunity available.",
-    read: false,
-    path: "../(tabs)/Jobs",
-  },
-  {
-    id: "4",
-    type: "comment",
-    message: "Someone commented on your post.",
-    read: false,
-    path: "../(tabs)/Home",
-  },
-  {
-    id: "5",
-    type: "like",
-    message: "Your post got a new like.",
-    read: false,
-    path: "/tabs/home",
-  },
-  {
-    id: "6",
-    type: "project",
-    message: "A new project has been assigned to you.",
-    read: false,
-    path: "../(tabs)/Projects",
-  },
-];
+import { useRouter } from "expo-router";
+import { supabase } from "../lib/supabse"; // Adjust path as needed
 
 const NotificationScreen = () => {
-  const [notificationList, setNotificationList] = useState(notifications);
+  const [notifications, setNotifications] = useState<
+    { id: string; user_id: string; follower_id: string; message: string; created_at: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleRemoveNotification = (id: string) => {
-    setNotificationList((prevNotifications) =>
-      prevNotifications.filter((notification) => notification.id !== id)
-    );
+  // Get logged-in user's ID
+  const getUser = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error("Error fetching user:", error);
+    } else if (data?.user) {
+      setUserId(data.user.id);
+    }
   };
 
-  const handleNavigate = (path: any) => {
-    router.push(path); // Navigate to the corresponding path
+  // Fetch notifications for the logged-in user
+  const fetchNotifications = async () => {
+    if (!userId) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId) // Only get notifications for the logged-in user
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching notifications:", error);
+    } else {
+      setNotifications(data || []);
+    }
+    setLoading(false);
   };
 
+  // Remove notification from Supabase
+  const handleRemoveNotification = async (id: string) => {
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting notification:", error);
+    } else {
+      setNotifications((prev) => prev.filter((notif) => notif.id !== id));
+    }
+  };
+
+  // Navigate to the profile of the follower who triggered the notification
+  const handleNotificationPress = (follower_id: string) => {
+    router.push({
+      pathname: "./ProfileScreen",
+      params: { userId: follower_id }, // Pass follower_id as userId to the profile screen
+    });
+  };
+
+  // Fetch user & notifications on mount
+  useEffect(() => {
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchNotifications();
+
+      // Real-time notifications for the logged-in user
+      const subscription = supabase
+        .channel("realtime:notifications")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications" },
+          (payload) => {
+            if (payload.new.user_id === userId) {
+              setNotifications((prev) => [payload.new, ...prev]);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
+  }, [userId]);
+
+  // Render each notification
   const renderNotification = ({
     item,
   }: {
-    item: (typeof notifications)[0];
+    item: { id: string; user_id: string; follower_id: string; message: string; created_at: string };
   }) => {
-    let backgroundColor;
-    switch (item.type) {
-      case "message":
-        backgroundColor = "#E6F7FF";
-        break;
-      case "profile":
-        backgroundColor = "#FFFBE6";
-        break;
-      case "job":
-        backgroundColor = "#F6FFE6";
-        break;
-      case "comment":
-        backgroundColor = "#FFF0F6";
-        break;
-      case "like":
-        backgroundColor = "#F9F9F9";
-        break;
-      case "project":
-        backgroundColor = "#E6FFF9";
-        break;
-      default:
-        backgroundColor = "#FFF";
-    }
-
     return (
-      <View style={[styles.notification, { backgroundColor }]}>
+      <View style={styles.notification}>
         <TouchableOpacity
           style={{ flex: 1 }}
-          onPress={() => handleNavigate(item.path)} // Navigate to the relevant tab
+          onPress={() => handleNotificationPress(item.follower_id)} // Navigate to follower's profile on press
         >
           <Text>{item.message}</Text>
         </TouchableOpacity>
@@ -116,11 +118,16 @@ const NotificationScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Notifications</Text>
-      <FlatList
-        data={notificationList}
-        renderItem={renderNotification}
-        keyExtractor={(item) => item.id}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderNotification}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={<Text>No notifications yet.</Text>}
+        />
+      )}
     </View>
   );
 };
@@ -142,6 +149,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    backgroundColor: "#E6F7FF",
   },
 });
 
