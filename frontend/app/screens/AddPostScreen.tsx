@@ -8,6 +8,7 @@ import {
   Image,
   StyleSheet,
   BackHandler,
+  SafeAreaView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -78,6 +79,7 @@ const AddPostScreen = () => {
   }, [content, imageUri]);
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -117,10 +119,15 @@ const AddPostScreen = () => {
         <Text style={styles.postButtonText}>Post</Text>
       </TouchableOpacity>
     </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: { flex: 1, backgroundColor: "#fff", padding: 16 },
   header: {
     alignItems: "center",

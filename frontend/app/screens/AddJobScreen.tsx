@@ -9,6 +9,7 @@ import {
   Alert,
   BackHandler,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -147,6 +148,7 @@ const AddJobScreen = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       {isLoading && (
         <ActivityIndicator
@@ -205,12 +207,17 @@ const AddJobScreen = () => {
         <Text style={styles.postButtonText}>Post</Text>
       </TouchableOpacity>
     </View>
+    </SafeAreaView>
   );
 };
 
 export default AddJobScreen;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: {
     flex: 1,
     padding: 20,
