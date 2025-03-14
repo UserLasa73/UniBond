@@ -62,6 +62,7 @@ const HomeScreen: React.FC = () => {
     null
   );
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (session) {
@@ -69,6 +70,10 @@ const HomeScreen: React.FC = () => {
       fetchCombinedData();
     }
   }, [session]);
+
+  useEffect(() => {
+    fetchCombinedData();
+  }, [refreshKey]);
 
   const getProfile = async () => {
     try {
@@ -344,18 +349,53 @@ const HomeScreen: React.FC = () => {
                   });
                 }
               }}
-              onDelete={() => {
+              onDelete={async () => {
                 if (isOwner) {
-                  setMenuVisiblePostId(null);
-                  // Handle Delete logic
+                  Alert.alert(
+                    "Delete Post",
+                    "Are you sure you want to delete this post?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            const { error } = await supabase
+                              .from("posts")
+                              .delete()
+                              .eq("id", post.id);
+
+                            if (error) {
+                              console.error("Error deleting post:", error);
+                              Alert.alert("Error", "Failed to delete post.");
+                            } else {
+                              console.log("Post deleted successfully");
+                              setRefreshKey((prevKey) => prevKey + 1);
+                              setMenuVisiblePostId(null);
+                            }
+                          } catch (err) {
+                            console.error("Unexpected error:", err);
+                            Alert.alert(
+                              "Error",
+                              "An unexpected error occurred."
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
                 }
               }}
               onShare={() => {
                 setMenuVisiblePostId(null);
                 // Handle Share logic
               }}
-              isOwner={isOwner} // Pass isOwner to control button states
-              position={menuPosition} // Pass menu position for dynamic placement
+              isOwner={isOwner}
+              position={menuPosition}
             />
           )}
         </View>
