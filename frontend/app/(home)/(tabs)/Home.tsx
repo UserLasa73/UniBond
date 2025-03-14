@@ -14,10 +14,12 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
+import PostMenu from "../../Components/PostMenu";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EventItem from "@/app/Components/EventItem";
 import RandomUserCards from "@/app/Components/renderUserCard ";
+import EditPostScreen from "@/app/screens/EditPostScreen";
 
 type Post = {
   id: number;
@@ -56,6 +58,10 @@ const HomeScreen: React.FC = () => {
   const [filter, setFilter] = useState<"all" | "posts" | "events">("all");
   const [sortBy, setSortBy] = useState<"date" | "likes" | "interested">("date");
   const [isDateSorted, setIsDateSorted] = useState<boolean>(false);
+  const [menuVisiblePostId, setMenuVisiblePostId] = useState<string | null>(
+    null
+  );
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (session) {
@@ -262,6 +268,8 @@ const HomeScreen: React.FC = () => {
         ? `${storageUrl}${post.avatar_url}`
         : null;
 
+      const isOwner = post.user_id === session?.user?.id;
+
       return (
         <View style={styles.postItem}>
           {/* User Profile Section */}
@@ -301,6 +309,55 @@ const HomeScreen: React.FC = () => {
               router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
             }
           />
+
+          {/* Post Menu Button */}
+          <TouchableOpacity
+            onPress={(event) => {
+              if (menuVisiblePostId === post.id) {
+                setMenuVisiblePostId(null); // Close if already open
+              } else {
+                setMenuVisiblePostId(post.id);
+                setMenuPosition({
+                  x: event.nativeEvent.pageX - 110, // Shift menu left
+                  y: event.nativeEvent.pageY - 5,
+                });
+              }
+            }}
+            style={styles.menuButton}
+          >
+            <MaterialIcons name="more-vert" size={24} color="black" />
+          </TouchableOpacity>
+
+          {/* Post Menu */}
+          {menuVisiblePostId === post.id && (
+            <PostMenu
+              visible={true}
+              onClose={() => setMenuVisiblePostId(null)}
+              onEdit={() => {
+                if (isOwner) {
+                  setMenuVisiblePostId(null);
+                  router.push({
+                    pathname: "/screens/EditPostScreen",
+                    params: {
+                      postId: post.id,
+                    },
+                  });
+                }
+              }}
+              onDelete={() => {
+                if (isOwner) {
+                  setMenuVisiblePostId(null);
+                  // Handle Delete logic
+                }
+              }}
+              onShare={() => {
+                setMenuVisiblePostId(null);
+                // Handle Share logic
+              }}
+              isOwner={isOwner} // Pass isOwner to control button states
+              position={menuPosition} // Pass menu position for dynamic placement
+            />
+          )}
         </View>
       );
     }
@@ -617,6 +674,13 @@ const styles = StyleSheet.create({
   randomUserCardsContainer: {
     padding: 10,
     marginBottom: 10,
+  },
+  menuButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 5,
+    borderRadius: 5,
   },
 });
 
