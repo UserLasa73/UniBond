@@ -8,6 +8,7 @@ import {
   Image,
   BackHandler,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../providers/AuthProvider";
@@ -180,6 +181,7 @@ const PostScreen = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       {/* Custom Header */}
       <View style={styles.header}>
@@ -307,10 +309,15 @@ const PostScreen = () => {
         </TouchableOpacity>
       </Modal>
     </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
