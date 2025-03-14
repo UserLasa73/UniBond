@@ -75,6 +75,12 @@ const Layout = () => {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="EditPostScreen"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };
