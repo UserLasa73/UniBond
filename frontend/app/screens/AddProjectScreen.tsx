@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   BackHandler,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../providers/AuthProvider";
@@ -124,6 +125,7 @@ const AddProjectScreen = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
       <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
         <Ionicons name="close" size={24} color="black" />
@@ -167,12 +169,17 @@ const AddProjectScreen = () => {
         <Text style={styles.postButtonText}>Post Project</Text>
       </TouchableOpacity>
     </View>
+    </SafeAreaView>
   );
 };
 
 export default AddProjectScreen;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: {
     flex: 1,
     padding: 20,

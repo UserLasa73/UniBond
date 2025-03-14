@@ -429,7 +429,7 @@ export default function ShowProfileEdit() {
       </View>
 
       {/* Profile Header */}
-      <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+      <View style={{ marginTop: 30, marginHorizontal: 40 }}>
         <View
           style={{
             flexDirection: "row",
@@ -449,6 +449,7 @@ export default function ShowProfileEdit() {
               flexDirection: "row",
               alignItems: "center",
               marginRight: 20,
+            
             }}
           >
             <View
