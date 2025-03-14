@@ -13,7 +13,7 @@ import { supabase } from "../lib/supabse"; // Adjust path as needed
 
 const NotificationScreen = () => {
   const [notifications, setNotifications] = useState<
-    { id: string; user_id: string; message: string; created_at: string }[]
+    { id: string; user_id: string; follower_id: string; message: string; created_at: string }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -57,6 +57,14 @@ const NotificationScreen = () => {
     }
   };
 
+  // Navigate to the profile of the follower who triggered the notification
+  const handleNotificationPress = (follower_id: string) => {
+    router.push({
+      pathname: "./ProfileScreen",
+      params: { userId: follower_id }, // Pass follower_id as userId to the profile screen
+    });
+  };
+
   // Fetch user & notifications on mount
   useEffect(() => {
     getUser();
@@ -90,11 +98,14 @@ const NotificationScreen = () => {
   const renderNotification = ({
     item,
   }: {
-    item: { id: string; user_id: string; message: string; created_at: string };
+    item: { id: string; user_id: string; follower_id: string; message: string; created_at: string };
   }) => {
     return (
       <View style={styles.notification}>
-        <TouchableOpacity style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() => handleNotificationPress(item.follower_id)} // Navigate to follower's profile on press
+        >
           <Text>{item.message}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleRemoveNotification(item.id)}>
