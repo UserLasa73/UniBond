@@ -114,12 +114,10 @@ const HomeScreen: React.FC = () => {
     setLoading(true);
     try {
       // Fetch posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("posts")
-        .select(
-          "id, content, likes, comments, is_public, user_id, created_at, media_url"
-        )
-        .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
+      const { data: postsData, error: postsError } = await supabase.rpc(
+        "get_visible_posts",
+        { current_user_id: session?.user?.id }
+      );
 
       if (postsError) throw postsError;
 
