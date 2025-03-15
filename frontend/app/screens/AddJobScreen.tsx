@@ -84,7 +84,7 @@ const AddJobScreen = () => {
     }
 
     if (jobEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(jobEmail)) {
-      Alert.alert("Error", "Please enter a valid email.");
+      Alert.alert("Error", "Please enter a valid email. ex-: www.example@gmail.com");
       return;
     }
 
@@ -93,15 +93,10 @@ const AddJobScreen = () => {
       return;
     }
 
-    if (jobWebsite.trim() && !/^https?:\/\/[\w.-]+\.[a-z]{2,}(\/\S*)?$/.test(jobWebsite)) {
-      Alert.alert("Error", "Please enter a valid website URL.");
-      return;
-    }
-
     if (deadline.trim()) {
       const parsedDate = Date.parse(deadline);
       if (isNaN(parsedDate)) {
-        Alert.alert("Error", "Please enter a valid date.");
+        Alert.alert("Error", "Please enter a valid date. ex-: 2025-06-12");
         return;
       }
     }
@@ -149,12 +144,17 @@ const AddJobScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flexContainer} >
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        
           <View style={styles.container}>
             {isLoading && <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />}
-
+            <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Post a Job</Text>
+
+            <TouchableOpacity onPress={()=>navigation.goBack()} style={styles.cancelButton}>
+              <Ionicons name="close" size={24} color="#000" />
+            </TouchableOpacity>
 
             {media && (
               <View style={styles.imagePreviewContainer}>
@@ -165,29 +165,29 @@ const AddJobScreen = () => {
               </View>
             )}
 
-            <TouchableOpacity onPress={handleMediaPicker}>
+            <TouchableOpacity style={styles.selectImage} onPress={handleMediaPicker}>
               <Ionicons name="image-outline" size={24} />
               <Text>Select Image</Text>
             </TouchableOpacity>
 
 
-            <Text style={styles.label}>Job Title <Text style={styles.required}>*</Text> </Text>
+            {/* <Text style={styles.label}>Job Title <Text style={styles.required}>*</Text> </Text> */}
             <TextInput
               style={styles.input}
               placeholder="Title (*required)"
-              placeholderTextColor="#888" // Light gray
+              placeholderTextColor="#E53935" // Light gray
               value={title}
               onChangeText={setTitle}
             />
-            <Text style={styles.label}>Company <Text style={styles.required}>*</Text> </Text>
+            {/* <Text style={styles.label}>Company <Text style={styles.required}>*</Text> </Text> */}
             <TextInput
               style={styles.input}
               placeholder="Company (*required)"
-              placeholderTextColor="#888" // Light gray
+              placeholderTextColor="#E53935" // Light gray
               value={company}
               onChangeText={setCompany}
             />
-            <Text style={styles.label}>Location</Text>
+            {/* <Text style={styles.label}>Location</Text> */}
             <TextInput
               style={styles.input}
               placeholder="Location"
@@ -195,15 +195,15 @@ const AddJobScreen = () => {
               value={location}
               onChangeText={setLocation}
             />
-            <Text style={styles.label}>Job Type</Text>
+            {/* <Text style={styles.label}>Job Type</Text> */}
             <TextInput
               style={styles.input}
-              placeholder="Job Type (e.g., Full-time)"
+              placeholder="Job Type (e.g., Full-time / online)"
               placeholderTextColor="#888" // Light gray
               value={type}
               onChangeText={setType}
             />
-            <Text style={styles.label}>Skills</Text>
+            {/* <Text style={styles.label}>Skills</Text> */}
             <TextInput
               style={styles.input}
               placeholder="Skills (comma separated)"
@@ -211,15 +211,15 @@ const AddJobScreen = () => {
               value={skills}
               onChangeText={setSkills}
             />
-            <Text style={styles.label}>Application Deadline</Text>
+            {/* <Text style={styles.label}>Application Deadline</Text> */}
             <TextInput
               style={styles.input}
-              placeholder="Application Deadline - y.m.d"
+              placeholder="Application Deadline (y-m-d)"
               placeholderTextColor="#888" // Light gray
               value={deadline}
               onChangeText={setDeadline}
             />
-            <Text style={styles.label}>Phone</Text>
+            {/* <Text style={styles.label}>Phone</Text> */}
             <TextInput
               style={styles.input}
               placeholder="Phone"
@@ -227,7 +227,7 @@ const AddJobScreen = () => {
               value={jobPhone}
               onChangeText={setJobPhone}
             />
-            <Text style={styles.label}>Email</Text>
+            {/* <Text style={styles.label}>Email</Text> */}
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -235,7 +235,7 @@ const AddJobScreen = () => {
               value={jobEmail}
               onChangeText={setJobEmail}
             />
-            <Text style={styles.label}>Website</Text>
+            {/* <Text style={styles.label}>Website</Text> */}
             <TextInput
               style={styles.input}
               placeholder="Website"
@@ -243,7 +243,7 @@ const AddJobScreen = () => {
               value={jobWebsite}
               onChangeText={setJobWebsite}
             />
-            <Text style={styles.label}>Job Description</Text>
+            {/* <Text style={styles.label}>Job Description</Text> */}
             <TextInput
               style={[styles.input, styles.descriptionInput]}
               placeholder="Additional information"
@@ -255,14 +255,13 @@ const AddJobScreen = () => {
               textAlignVertical="top"  // Aligns text to the top
             />
 
-
-
-
             <TouchableOpacity style={styles.postButton} onPress={handleJobSubmit}>
               <Text style={styles.postButtonText}>Post Job</Text>
             </TouchableOpacity>
+
+            </ScrollView>
           </View>
-        </ScrollView>
+        
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -292,6 +291,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     color: "#333",
+  },
+  cancelButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1,
+  },
+  selectImage:{
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
