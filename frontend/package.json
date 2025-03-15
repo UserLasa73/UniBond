@@ -30,6 +30,8 @@
     "@supabase/realtime-js": "^2.11.3",
     "@supabase/supabase-js": "^2.47.10",
     "@types/react-native": "^0.72.8",
+    "dayjs": "^1.11.13",
+    "dayjs-plugin-utc": "^0.1.2",
     "expo": "~52.0.11",
     "expo-auth-session": "~6.0.1",
     "expo-av": "~15.0.1",
