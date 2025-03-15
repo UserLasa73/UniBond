@@ -9,6 +9,7 @@ import {
   BackHandler,
   Alert,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../providers/AuthProvider";
@@ -45,17 +46,60 @@ const PostScreen = () => {
     ? `${storageUrl}${profile.avatar_url}`
     : null;
 
+  //router.push("../(home)/(tabs)/Home");
+
+  const showDiscardAlert = (e?: any) => {
+    Alert.alert(
+      "Discard Changes?",
+      "Are you sure you want to leave without posting?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => null,
+          style: "cancel",
+        },
+        {
+          text: "Leave",
+          onPress: () => {
+            router.push("../(home)/(tabs)/Home");
+            if (e) e.preventDefault();
+          },
+        },
+      ]
+    );
+  };
+
   useEffect(() => {
     const backAction = () => {
+      if (!showPreview) {
+        showDiscardAlert();
+        return true;
+      }
       router.push("../(home)/(tabs)/Home");
       return true;
     };
 
-    BackHandler.addEventListener("hardwareBackPress", backAction);
+    if (Platform.OS === "android") {
+      BackHandler.addEventListener("hardwareBackPress", backAction);
+    } else {
+      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+        if (!showPreview) {
+          e.preventDefault();
+          showDiscardAlert(e);
+        } else {
+          router.push("../(home)/(tabs)/Home");
+        }
+      });
+
+      return () => unsubscribe();
+    }
+
     return () => {
-      BackHandler.removeEventListener("hardwareBackPress", backAction);
+      if (Platform.OS === "android") {
+        BackHandler.removeEventListener("hardwareBackPress", backAction);
+      }
     };
-  }, [navigation]);
+  }, [showPreview, navigation]);
 
   const uploadImage = async (uri) => {
     try {
@@ -150,19 +194,65 @@ const PostScreen = () => {
             created_at: formattedTime, // Store adjusted time
             is_public: isPublic,
           },
-        ]);
+        ])
+        .select();
 
       if (postError) {
         console.error("Error inserting post:", postError);
         Alert.alert("Error", "Failed to post. Please try again.");
       } else {
-        console.log("Post inserted successfully:", postDataRes);
+        console.log("Post inserted successfully:");
+
+        const postId = postDataRes?.[0]?.id; // Extract inserted post ID
+
+        if (!isPublic && postId) {
+          await handlePostVisibility(postId, profile.id, formattedTime);
+        }
+
         setPostData(null); // Clear post data
         setShowPreview(false); // Hide preview
         router.push("../(home)/(tabs)/Home");
       }
     } catch (err) {
       console.error("Error with post submission:", err);
+    }
+  };
+
+  const handlePostVisibility = async (
+    postId: number,
+    userId: number,
+    formattedTime: string
+  ) => {
+    try {
+      const { data: followersData, error: followersError } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("followed_id", userId);
+
+      if (followersError) {
+        console.error("Error fetching followers:", followersError);
+        return;
+      }
+      if (!followersData || followersData.length === 0) {
+        console.log("No followers found. Post will not be visible.");
+        return;
+      }
+
+      const visibilityRecords = followersData.map((follower) => ({
+        post_id: postId,
+        follower_id: follower.follower_id,
+        created_at: formattedTime,
+      }));
+
+      const { error: postVisibilityError } = await supabase
+        .from("post_visibility")
+        .insert(visibilityRecords);
+
+      if (postVisibilityError) {
+        console.error("Error inserting post visibility:", postVisibilityError);
+      }
+    } catch (err) {
+      console.error("Error with post visibility:", err);
     }
   };
 
@@ -182,133 +272,133 @@ const PostScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Share Post</Text>
-        <TouchableOpacity onPress={handlePostPress}>
-          <TouchableOpacity
-            onPress={handlePostPress}
-            disabled={!postData || (!postData.content && !postData.imageUri)}
-          >
-            <Text
-              style={[
-                styles.postButton,
-                (!postData || (!postData.content && !postData.imageUri)) &&
-                  styles.disabledButton,
-              ]}
+      <View style={styles.container}>
+        {/* Custom Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Share Post</Text>
+          <TouchableOpacity onPress={handlePostPress}>
+            <TouchableOpacity
+              onPress={handlePostPress}
+              disabled={!postData || (!postData.content && !postData.imageUri)}
             >
-              Post
-            </Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </View>
-
-      {/* User Info Section */}
-      <View style={styles.userInfo}>
-        <View style={styles.profileImage}>
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={{ width: 50, height: 50, borderRadius: 25 }}
-            />
-          ) : (
-            <MaterialIcons name="person" size={40} color="#fff" />
-          )}
-        </View>
-        <View style={styles.userDetails}>
-          <Text style={styles.userName}>
-            {profile?.username || "Guest User"}
-          </Text>
-          <TouchableOpacity
-            style={styles.visibilitySelector}
-            onPress={toggleModal}
-          >
-            <MaterialIcons name="public" size={16} color="#000" />
-            <Text style={styles.visibilityText}>{selectedVisibility}</Text>
-            <MaterialIcons name="arrow-drop-down" size={16} color="#000" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Text style={styles.promptText}>What do you want to talk about?</Text>
-
-      {/* Conditionally Render Preview */}
-      {postData && (postData.content || postData.imageUri) && showPreview && (
-        <View style={styles.previewContainer}>
-          {/* Cancel Button */}
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancelPreview}
-          >
-            <Text style={styles.cancelText}>X</Text>
-          </TouchableOpacity>
-
-          {postData.content ? (
-            <Text style={styles.promptText}>{postData.content}</Text>
-          ) : null}
-          {postData.imageUri ? (
-            <Image
-              source={{ uri: postData.imageUri }}
-              style={styles.imagePreview}
-              onError={(error) =>
-                console.log("Image load error:", error.nativeEvent)
-              }
-            />
-          ) : null}
-        </View>
-      )}
-
-      {/* Post Options */}
-      <View style={styles.options}>
-        <PostOptionItem
-          label="Add a Post"
-          icon={<Ionicons name="image-outline" size={24} color="#000" />}
-          onPress={() => navigation.navigate("AddPostScreen")}
-        />
-        <PostOptionItem
-          label="Add a Project"
-          icon={<Ionicons name="folder" size={24} color="#000" />}
-          onPress={() => navigation.navigate("AddProjectScreen")}
-        />
-        <PostOptionItem
-          label="Share a Job"
-          icon={<MaterialIcons name="work-outline" size={24} color="#000" />}
-          onPress={() => navigation.navigate("AddJobScreen")}
-        />
-        <PostOptionItem
-          label="Share an Event"
-          icon={<MaterialIcons name="event" size={24} color="#000" />}
-          onPress={() => navigation.navigate("AddEventScreen")}
-        />
-      </View>
-
-      {/* Visibility Selector Modal */}
-      <Modal
-        visible={isModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={toggleModal}
-      >
-        <TouchableOpacity
-          style={styles.modalBackground}
-          onPress={toggleModal}
-          activeOpacity={1}
-        >
-          <View style={styles.modalContainer}>
-            {["Anyone", "My Network"].map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={styles.option}
-                onPress={() => handleOptionSelect(option)}
+              <Text
+                style={[
+                  styles.postButton,
+                  (!postData || (!postData.content && !postData.imageUri)) &&
+                    styles.disabledButton,
+                ]}
               >
-                <Text style={styles.optionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
+                Post
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+
+        {/* User Info Section */}
+        <View style={styles.userInfo}>
+          <View style={styles.profileImage}>
+            {imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={{ width: 50, height: 50, borderRadius: 25 }}
+              />
+            ) : (
+              <MaterialIcons name="person" size={40} color="#fff" />
+            )}
           </View>
-        </TouchableOpacity>
-      </Modal>
-    </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>
+              {profile?.username || "Guest User"}
+            </Text>
+            <TouchableOpacity
+              style={styles.visibilitySelector}
+              onPress={toggleModal}
+            >
+              <MaterialIcons name="public" size={16} color="#000" />
+              <Text style={styles.visibilityText}>{selectedVisibility}</Text>
+              <MaterialIcons name="arrow-drop-down" size={16} color="#000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Text style={styles.promptText}>What do you want to talk about?</Text>
+
+        {/* Conditionally Render Preview */}
+        {postData && (postData.content || postData.imageUri) && showPreview && (
+          <View style={styles.previewContainer}>
+            {/* Cancel Button */}
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelPreview}
+            >
+              <Text style={styles.cancelText}>X</Text>
+            </TouchableOpacity>
+
+            {postData.content ? (
+              <Text style={styles.promptText}>{postData.content}</Text>
+            ) : null}
+            {postData.imageUri ? (
+              <Image
+                source={{ uri: postData.imageUri }}
+                style={styles.imagePreview}
+                onError={(error) =>
+                  console.log("Image load error:", error.nativeEvent)
+                }
+              />
+            ) : null}
+          </View>
+        )}
+
+        {/* Post Options */}
+        <View style={styles.options}>
+          <PostOptionItem
+            label="Add a Post"
+            icon={<Ionicons name="image-outline" size={24} color="#000" />}
+            onPress={() => navigation.navigate("AddPostScreen")}
+          />
+          <PostOptionItem
+            label="Add a Project"
+            icon={<Ionicons name="folder" size={24} color="#000" />}
+            onPress={() => navigation.navigate("AddProjectScreen")}
+          />
+          <PostOptionItem
+            label="Share a Job"
+            icon={<MaterialIcons name="work-outline" size={24} color="#000" />}
+            onPress={() => navigation.navigate("AddJobScreen")}
+          />
+          <PostOptionItem
+            label="Share an Event"
+            icon={<MaterialIcons name="event" size={24} color="#000" />}
+            onPress={() => navigation.navigate("AddEventScreen")}
+          />
+        </View>
+
+        {/* Visibility Selector Modal */}
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={toggleModal}
+        >
+          <TouchableOpacity
+            style={styles.modalBackground}
+            onPress={toggleModal}
+            activeOpacity={1}
+          >
+            <View style={styles.modalContainer}>
+              {["Anyone", "My Network"].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.option}
+                  onPress={() => handleOptionSelect(option)}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </View>
     </SafeAreaView>
   );
 };
