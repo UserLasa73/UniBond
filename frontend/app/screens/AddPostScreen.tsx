@@ -1,71 +1,174 @@
-import { useState } from "react";
-import { supabase } from "../lib/supabse";
-import { useAuth } from "../providers/AuthProvider";
-import { Alert, View, Text, TextInput, Button, StyleSheet } from "react-native";
-import PostImage from "../Components/PostImage";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Image,
+  StyleSheet,
+  BackHandler,
+  SafeAreaView,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { MaterialIcons } from "@expo/vector-icons";
+import type { StackNavigationProp } from "@react-navigation/stack";
+import { PostStackParamList } from "./PostNav";
+import { useNavigation } from "expo-router";
 
-export default function CreatePostScreen() {
-  const { session } = useAuth();
-  const [content, setContent] = useState<string>("");
-  const [mediaUrl, setMediaUrl] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+const AddPostScreen = () => {
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
+  const [content, setContent] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
-  // Handle post creation
-  async function createPost() {
-    try {
-      setLoading(true);
-      if (!session) {
-        throw new Error("User not authenticated");
-      }
+  // Function to pick an image from the gallery
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
 
-      const { user } = session;
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
 
-      const { data, error } = await supabase.from("posts").insert([
+  // Function to handle posting content and/or image
+  const handlePost = () => {
+    if (!content && !imageUri) {
+      Alert.alert("Empty Post", "Please enter text or select an image.");
+      return;
+    }
+    navigation.navigate("PostScreen", { content, imageUri });
+  };
+
+  // Function to handle discard confirmation when back is pressed
+  const handleBackPress = () => {
+    if (content || imageUri) {
+      Alert.alert("Discard Changes?", "Your changes will be lost.", [
+        { text: "Cancel", style: "cancel" },
         {
-          user_id: user?.id,
-          content,
-          media_url: mediaUrl,
-          likes: 0,
-          comments: [],
-          is_public: true,
+          text: "Discard",
+          style: "destructive",
+          onPress: () => {
+            // Navigate back without passing any params
+            navigation.navigate("PostScreen");
+          },
         },
       ]);
-
-      if (error) throw error;
-
-      Alert.alert("Post created successfully!");
-      setContent("");  // Clear the content input field
-      setMediaUrl("");  // Clear the image URL
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert("Error", error.message);
-      }
-    } finally {
-      setLoading(false);
+      return true; // Prevent default back action
+    } else {
+      navigation.navigate("PostScreen"); // If no content/image, go back to PostScreen directly
+      return true; // Prevent default back action
     }
-  }
+  };
+
+  // Handle back button press using BackHandler
+  useEffect(() => {
+    const backAction = () => {
+      return handleBackPress(); // Call the back handler function
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", backAction);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", backAction);
+    };
+  }, [content, imageUri]);
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
-      <Text style={styles.title}>Create a Post</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Create Post</Text>
+      </View>
 
+      {/* Input Field */}
       <TextInput
         style={styles.input}
-        placeholder="Write something..."
+        placeholder="What's on your mind?"
         value={content}
         onChangeText={setContent}
+        multiline
       />
 
-      <PostImage onUpload={(url) => setMediaUrl(url)} />
+      {/* Image Picker */}
+      <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+        <MaterialIcons name="image" size={30} color="#000" />
+        <Text style={styles.imageText}>Add an image</Text>
+      </TouchableOpacity>
 
-      <Button title={loading ? "Creating..." : "Create Post"} onPress={createPost} disabled={loading || !content || !mediaUrl} />
+      {/* Image Preview */}
+      {imageUri && (
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          <TouchableOpacity
+            style={styles.removeImageButton}
+            onPress={() => setImageUri(null)}
+          >
+            <MaterialIcons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
+      {/* Post Button */}
+      <TouchableOpacity style={styles.postButton} onPress={handlePost}>
+        <Text style={styles.postButtonText}>Post</Text>
+      </TouchableOpacity>
     </View>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  input: { height: 100, borderColor: "#ccc", borderWidth: 1, padding: 10, marginBottom: 20, textAlignVertical: "top" },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
+  container: { flex: 1, backgroundColor: "#fff", padding: 16 },
+  header: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+  },
+  input: {
+    fontSize: 16,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+    minHeight: 100,
+  },
+  imagePicker: { flexDirection: "row", alignItems: "center", marginTop: 16 },
+  imageText: { marginLeft: 8, fontSize: 16, color: "black" },
+  imageContainer: { marginTop: 10, alignItems: "center" },
+  imagePreview: { width: 250, height: 200, borderRadius: 10 },
+  removeImageButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "red",
+    borderRadius: 15,
+    padding: 4,
+  },
+  postButton: {
+    backgroundColor: "#2C3036",
+    paddingVertical: 12,
+    marginTop: 20,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  postButtonText: {
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "600",
+  },
 });
+
+export default AddPostScreen;

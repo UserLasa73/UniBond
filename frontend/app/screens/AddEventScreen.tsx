@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   BackHandler,
+  SafeAreaView,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -107,6 +108,7 @@ const EventScreen = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Create Event</Text>
       <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
@@ -184,12 +186,17 @@ const EventScreen = () => {
         <Text style={styles.postButtonText}>Post</Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 export default EventScreen;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: {
     flexGrow: 1,
     backgroundColor: "#fff",

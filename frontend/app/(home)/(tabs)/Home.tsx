@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Alert,
@@ -14,10 +14,12 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import TopNavigationBar from "../../Components/TopNavigationBar";
 import { supabase } from "../../../lib/supabse";
 import PostItem from "../../screens/PostItem";
+import PostMenu from "../../Components/PostMenu";
 import { MaterialIcons } from "@expo/vector-icons";
-import RandomUserCards from "@/app/Components/renderUserCard ";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EventItem from "@/app/Components/EventItem";
+import RandomUserCards from "@/app/Components/renderUserCard ";
+import EditPostScreen from "@/app/screens/EditPostScreen";
 
 type Post = {
   id: number;
@@ -56,6 +58,11 @@ const HomeScreen: React.FC = () => {
   const [filter, setFilter] = useState<"all" | "posts" | "events">("all");
   const [sortBy, setSortBy] = useState<"date" | "likes" | "interested">("date");
   const [isDateSorted, setIsDateSorted] = useState<boolean>(false);
+  const [menuVisiblePostId, setMenuVisiblePostId] = useState<string | null>(
+    null
+  );
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (session) {
@@ -63,6 +70,10 @@ const HomeScreen: React.FC = () => {
       fetchCombinedData();
     }
   }, [session]);
+
+  useEffect(() => {
+    fetchCombinedData();
+  }, [refreshKey]);
 
   const getProfile = async () => {
     try {
@@ -103,10 +114,10 @@ const HomeScreen: React.FC = () => {
     setLoading(true);
     try {
       // Fetch posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("posts")
-        .select("id, content, likes, comments, is_public, user_id, created_at,media_url")
-        .or(`is_public.eq.true,user_id.eq.${session?.user?.id}`);
+      const { data: postsData, error: postsError } = await supabase.rpc(
+        "get_visible_posts",
+        { current_user_id: session?.user?.id }
+      );
 
       if (postsError) throw postsError;
 
@@ -260,6 +271,8 @@ const HomeScreen: React.FC = () => {
         ? `${storageUrl}${post.avatar_url}`
         : null;
 
+      const isOwner = post.user_id === session?.user?.id;
+
       return (
         <View style={styles.postItem}>
           {/* User Profile Section */}
@@ -299,6 +312,90 @@ const HomeScreen: React.FC = () => {
               router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
             }
           />
+
+          {/* Post Menu Button */}
+          <TouchableOpacity
+            onPress={(event) => {
+              if (menuVisiblePostId === post.id) {
+                setMenuVisiblePostId(null); // Close if already open
+              } else {
+                setMenuVisiblePostId(post.id);
+                setMenuPosition({
+                  x: event.nativeEvent.pageX - 110, // Shift menu left
+                  y: event.nativeEvent.pageY - 5,
+                });
+              }
+            }}
+            style={styles.menuButton}
+          >
+            <MaterialIcons name="more-vert" size={24} color="black" />
+          </TouchableOpacity>
+
+          {/* Post Menu */}
+          {menuVisiblePostId === post.id && (
+            <PostMenu
+              visible={true}
+              onClose={() => setMenuVisiblePostId(null)}
+              onEdit={() => {
+                if (isOwner) {
+                  setMenuVisiblePostId(null);
+                  router.push({
+                    pathname: "/screens/EditPostScreen",
+                    params: {
+                      postId: post.id,
+                    },
+                  });
+                }
+              }}
+              onDelete={async () => {
+                if (isOwner) {
+                  Alert.alert(
+                    "Delete Post",
+                    "Are you sure you want to delete this post?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            const { error } = await supabase
+                              .from("posts")
+                              .delete()
+                              .eq("id", post.id);
+
+                            if (error) {
+                              console.error("Error deleting post:", error);
+                              Alert.alert("Error", "Failed to delete post.");
+                            } else {
+                              console.log("Post deleted successfully");
+                              setRefreshKey((prevKey) => prevKey + 1);
+                              setMenuVisiblePostId(null);
+                            }
+                          } catch (err) {
+                            console.error("Unexpected error:", err);
+                            Alert.alert(
+                              "Error",
+                              "An unexpected error occurred."
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }
+              }}
+              onShare={() => {
+                setMenuVisiblePostId(null);
+                // Handle Share logic
+              }}
+              isOwner={isOwner}
+              position={menuPosition}
+            />
+          )}
         </View>
       );
     }
@@ -406,27 +503,32 @@ const HomeScreen: React.FC = () => {
     return true; // 'all'
   });
 
-  const sortedData = filteredData.sort((a, b) => {
-    if (sortBy === "date" && isDateSorted) {
-      return (
-        new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
-      );
-    } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
-      return b.likes - a.likes;
-    } else if (
-      sortBy === "interested" &&
-      a.type === "event" &&
-      b.type === "event"
-    ) {
-      return b.interested_count - a.interested_count;
-    }
-    return 0; // No sorting
-  });
+  const sortedData = useMemo(() => {
+    return filteredData.sort((a, b) => {
+      if (sortBy === "date" && isDateSorted) {
+        return (
+          new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
+        );
+      } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
+        return b.likes - a.likes;
+      } else if (
+        sortBy === "interested" &&
+        a.type === "event" &&
+        b.type === "event"
+      ) {
+        return b.interested_count - a.interested_count;
+      }
+      return 0; // No sorting
+    });
+  }, [filteredData, sortBy, isDateSorted]);
 
-  const renderHeader = () => (
-    <View style={styles.randomUserCardsContainer}>
-      <RandomUserCards currentUserId={session?.user?.id} />
-    </View>
+  const renderHeader = useCallback(
+    () => (
+      <View style={styles.randomUserCardsContainer}>
+        <RandomUserCards currentUserId={session?.user?.id} />
+      </View>
+    ),
+    [session?.user?.id]
   );
 
   if (loading) {
@@ -488,8 +590,7 @@ const HomeScreen: React.FC = () => {
         keyExtractor={(item) =>
           `${item.type === "event" ? "event" : "post"}-${item.id}`
         }
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderHeader}
+        ListHeaderComponent={renderHeader} // Include RandomUserCards here
         contentContainerStyle={styles.combinedList}
       />
 
@@ -611,6 +712,13 @@ const styles = StyleSheet.create({
   randomUserCardsContainer: {
     padding: 10,
     marginBottom: 10,
+  },
+  menuButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 5,
+    borderRadius: 5,
   },
 });
 

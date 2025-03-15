@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  SafeAreaView,
 } from "react-native";
 import SearchBar from "../../Components/SearchBar";
 import { supabase } from "../../../lib/supabse"; // Import your Supabase client
@@ -55,6 +56,7 @@ const Search = () => {
   };
 
   return (
+    <SafeAreaView style={styles.safeArea}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -75,12 +77,17 @@ const Search = () => {
         keyboardShouldPersistTaps="handled"
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 export default Search;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff", // Set a background color if needed
+  },
   container: {
     flex: 1,
     padding: 10,
