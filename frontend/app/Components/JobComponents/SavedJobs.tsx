@@ -110,8 +110,23 @@ const SavedJobs: React.FC = () => {
     setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
-  const deleteJob = async (jobId: string) => {
+  const deleteJob = async (jobId: string,imageUrl: string | null) => {
     try {
+      if (imageUrl) {
+        const imagePath = imageUrl.split('/').pop(); // Extract image name from URL
+        if(imagePath){
+          const { error: imageDeleteError } = await supabase.storage
+          .from('job_Images')
+          .remove([imagePath]);
+  
+        if (imageDeleteError) {
+          console.error('Error deleting job image:', imageDeleteError.message);
+          Alert.alert('Error', 'Failed to delete job image.');
+          return;
+        }
+        }
+      }
+
       // First, delete related records from saved_jobs
       const { error: savedJobsError } = await supabase
         .from('saved_jobs')
@@ -124,14 +139,14 @@ const SavedJobs: React.FC = () => {
         return;
       }
 
-      // Update the job's is_active status to false instead of deleting
+      //delete job from jobs
       const { error: jobError } = await supabase
         .from('jobs')
-        .update({ is_active: false })
+        .delete()
         .eq('id', jobId);
 
       if (jobError) {
-        console.error('Error updating job:', jobError.message);
+        console.error('Error deleting job:', jobError.message);
         Alert.alert('Error', 'Failed to delete the job.');
         return;
       }

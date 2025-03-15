@@ -25,7 +25,7 @@ interface JobCardProps {
   toggleExpand: (id: string) => void;
   user_id: string;
   currentUserId?: string;
-  onDeleteJob?: (jobId: string) => void;
+  onDeleteJob?: (jobId: string,image_url: string | null) => void;
 }
 
 const JobCard: React.FC<JobCardProps> = ({
@@ -75,7 +75,7 @@ const JobCard: React.FC<JobCardProps> = ({
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => onDeleteJob?.(jobId)
+          onPress: () => onDeleteJob?.(jobId,image_url)
         }
       ]
     );
