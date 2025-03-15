@@ -26,6 +26,10 @@ const AddProjectScreen = () => {
   const [timeline, setTimeline] = useState("");
   const [paymentDetails, setPaymentDetails] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
+  const [skills, setSkills] = useState("");
+  const [location, setLocation] = useState("");
+  const [projectStatus, setProjectStatus] = useState("");
+
 
   const handleInputChange = (
     setter: React.Dispatch<React.SetStateAction<any>>,
@@ -59,7 +63,7 @@ const AddProjectScreen = () => {
   }, [hasChanges, navigation]);
 
   const handleProjectSubmit = async () => {
-    if (!projectTitle || !projectDescription || !timeline || !paymentDetails) {
+    if (!projectTitle || !projectDescription || !timeline || !paymentDetails || !skills || !location || !projectStatus) {
       alert("Please fill in all required fields!");
       return;
     }
@@ -71,7 +75,9 @@ const AddProjectScreen = () => {
 
     const { id: userId } = user;
     const currentDate = new Date();
-    const datePosted = currentDate.toISOString().split("T")[0];
+    //const datePosted = currentDate.toISOString().split("T")[0];
+    //const datePosted = new Date().toISOString();
+    const datePosted = currentDate.toLocaleDateString("en-CA");
     const timePosted = currentDate.toTimeString().split(" ")[0];
 
     const projectId = Math.floor(Math.random() * 1000000);
@@ -103,6 +109,9 @@ const AddProjectScreen = () => {
         time_posted: timePosted,
         is_saved: false,
         is_applied: false,
+        skills: skills,
+        location: location,
+        project_status: projectStatus,
       },
     ]);
 
@@ -121,6 +130,9 @@ const AddProjectScreen = () => {
     setTimeline("");
     setPaymentDetails("");
     setHasChanges(false);
+    setSkills("");
+    setLocation("");
+    setProjectStatus("");
     navigation.navigate("PostScreen");
   };
 
@@ -147,12 +159,12 @@ const AddProjectScreen = () => {
           "projectDescription"
         )}
       />
-      <TextInput
+      {/* <TextInput
         style={styles.input}
         placeholder="Technologies (comma-separated)"
         value={technologies}
         onChangeText={handleInputChange(setTechnologies, "technologies")}
-      />
+      /> */}
       <TextInput
         style={styles.input}
         placeholder="Timeline"
@@ -165,6 +177,25 @@ const AddProjectScreen = () => {
         value={paymentDetails}
         onChangeText={handleInputChange(setPaymentDetails, "paymentDetails")}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Skills (comma-separated)"
+        value={skills}
+        onChangeText={handleInputChange(setSkills, "skills")}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Location"
+        value={location}
+        onChangeText={handleInputChange(setLocation, "location")}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Project Status (e.g., Open, In Progress, Completed)"
+        value={projectStatus}
+        onChangeText={handleInputChange(setProjectStatus, "projectStatus")}
+      />
+
       <TouchableOpacity style={styles.postButton} onPress={handleProjectSubmit}>
         <Text style={styles.postButtonText}>Post Project</Text>
       </TouchableOpacity>
