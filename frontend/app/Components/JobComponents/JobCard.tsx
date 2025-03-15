@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert,TouchableWithoutFeedback, Keyboard  } from 'react-native';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -100,6 +100,13 @@ const JobCard: React.FC<JobCardProps> = ({
   };
 
   return (
+    <TouchableWithoutFeedback
+    onPress={() => {
+      if (menuVisible) setMenuVisible(false);
+      Keyboard.dismiss(); // Dismiss keyboard if open
+    }}
+    accessible={false} // Ensures it doesn't interfere with screen readers
+  >
     <View style={styles.container} accessible={true} accessibilityLabel={`Job posting for ${title} at ${company}`}>
       <View style={styles.headerContainer}>
         <TouchableOpacity
@@ -269,6 +276,7 @@ const JobCard: React.FC<JobCardProps> = ({
         </View>
       </View>
     </View>
+    </TouchableWithoutFeedback>
   );
 };
 
