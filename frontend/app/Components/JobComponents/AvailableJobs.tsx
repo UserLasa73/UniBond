@@ -103,7 +103,41 @@ const AvailableJobs: React.FC = () => {
     setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
+  // Delete a job
+  const deleteJob = async (jobId: string) => {
+    try {
+      // First, delete related records from saved_jobs
+      const { error: savedJobsError } = await supabase
+        .from('saved_jobs')
+        .delete()
+        .eq('job_id', jobId);
 
+      if (savedJobsError) {
+        console.error('Error deleting saved jobs:', savedJobsError.message);
+        Alert.alert('Error', 'Failed to delete saved job references.');
+        return;
+      }
+
+      // Then, delete the job itself
+      const { error: jobError } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', jobId);
+
+      if (jobError) {
+        console.error('Error deleting job:', jobError.message);
+        Alert.alert('Error', 'Failed to delete the job.');
+        return;
+      }
+
+      // Update the local state to remove the deleted job
+      setJobListings((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+      Alert.alert('Success', 'Job deleted successfully.');
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
+  };
 
   // Save or unsave a job
   const saveJob = async (jobId: string) => {
@@ -145,19 +179,21 @@ const AvailableJobs: React.FC = () => {
     <View style={{ flex: 1, padding: 10 }}>
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#0000ff" />
+          <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : (
         <FlatList
           data={jobListings}
           renderItem={({ item }) => (
-            <JobCard   //sending props
+            <JobCard
               {...item}
               expandedJobId={expandedJobId}
               jobId={item.id}
               savedJobs={savedJobIds}
               onSaveJob={saveJob}
               toggleExpand={toggleExpand}
+              currentUserId={user?.id}
+              onDeleteJob={deleteJob}
             />
           )}
         />
