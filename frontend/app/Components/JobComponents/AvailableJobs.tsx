@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, ActivityIndicator, Alert } from 'react-native';
 import JobCard from './JobCard';
 import { supabase } from '@/app/lib/supabse'; // Assuming this path
+import { deleteJob } from './DeleteFunction' // Import the delete function
 
 interface JobListing {
   id: string;
@@ -103,57 +104,6 @@ const AvailableJobs: React.FC = () => {
     setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
 
-  // Delete a job
-  const deleteJob = async (jobId: string, imageUrl: string | null) => {
-    try {
-
-      if (imageUrl) {
-        const imagePath = imageUrl.split('/').pop(); // Extract image name from URL
-        if(imagePath){
-          const { error: imageDeleteError } = await supabase.storage
-          .from('job_Images')
-          .remove([imagePath]);
-  
-        if (imageDeleteError) {
-          console.error('Error deleting job image:', imageDeleteError.message);
-          Alert.alert('Error', 'Failed to delete job image.');
-          return;
-        }
-        }
-      }
-
-      // First, delete related records from saved_jobs
-      const { error: savedJobsError } = await supabase
-        .from('saved_jobs')
-        .delete()
-        .eq('job_id', jobId);
-
-      if (savedJobsError) {
-        console.error('Error deleting saved jobs:', savedJobsError.message);
-        Alert.alert('Error', 'Failed to delete saved job references.');
-        return;
-      }
-
-      // Then, delete the job itself
-      const { error: jobError } = await supabase
-        .from('jobs')
-        .delete()
-        .eq('id', jobId);
-
-      if (jobError) {
-        console.error('Error deleting job:', jobError.message);
-        Alert.alert('Error', 'Failed to delete the job.');
-        return;
-      }
-
-      // Update the local state to remove the deleted job
-      setJobListings((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
-      Alert.alert('Success', 'Job deleted successfully.');
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred.');
-    }
-  };
 
   // Save or unsave a job
   const saveJob = async (jobId: string) => {
@@ -209,7 +159,7 @@ const AvailableJobs: React.FC = () => {
               onSaveJob={saveJob}
               toggleExpand={toggleExpand}
               currentUserId={user?.id}
-              onDeleteJob={deleteJob}
+              onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)} // Use the function
             />
           )}
         />
