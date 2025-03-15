@@ -74,7 +74,9 @@ const AddProjectScreen = () => {
 
     const { id: userId } = user;
     const currentDate = new Date();
-    const datePosted = currentDate.toISOString().split("T")[0];
+    //const datePosted = currentDate.toISOString().split("T")[0];
+    //const datePosted = new Date().toISOString();
+    const datePosted = currentDate.toLocaleDateString("en-CA");
     const timePosted = currentDate.toTimeString().split(" ")[0];
 
     const projectId = Math.floor(Math.random() * 1000000);
