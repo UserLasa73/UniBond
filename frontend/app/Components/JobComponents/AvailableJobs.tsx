@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, ActivityIndicator, Alert } from 'react-native';
 import JobCard from './JobCard';
 import { supabase } from '@/app/lib/supabse'; // Assuming this path
-import { deleteJob } from './DeleteFunction' // Import the delete function
+import { deleteJob } from './DeleteFunction'; // Import the delete function
 
 interface JobListing {
   id: string;
@@ -29,48 +29,84 @@ const AvailableJobs: React.FC = () => {
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false); // Separate state for loading more jobs
 
-  // Fetch jobs and user info
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      try {
-        const { data: jobs, error: jobsError } = await supabase.from('jobs').select('*').eq('is_active', true);
-        if (jobsError) {
-          console.error('Error fetching jobs:', jobsError.message);
-          return;
-        }
+  // Add these new state variables for infinite scrolling
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [hasMoreJobs, setHasMoreJobs] = useState<boolean>(true);
 
-        const userIds = jobs.map((job) => job.user_id);
+  // Fetch jobs with pagination
+  const fetchJobs = async (page: number, pageSize: number = 10) => {
+    try {
+      const { data: jobs, error: jobsError } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('is_active', true)
+        .range((page - 1) * pageSize, page * pageSize - 1); // Fetch a specific range of jobs
 
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url')
-          .in('id', userIds);
-
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError.message);
-          return;
-        }
-
-        const SUPABASE_STORAGE_URL = 'https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/';
-
-        const jobsWithProfiles = jobs.map((job) => {
-          const profile = profiles.find((p) => p.id === job.user_id);
-          return {
-            ...job,
-            avatar_url: profile?.avatar_url ? `${SUPABASE_STORAGE_URL}avatars/${profile.avatar_url}` : null,
-            full_name: profile?.full_name || 'Unknown',
-            image_url: job.image_url ? `${SUPABASE_STORAGE_URL}job_Images/${job.image_url}` : null,
-          };
-        });
-
-        setJobListings(jobsWithProfiles);
-      } catch (error) {
-        console.error('Unexpected error:', error);
-      } finally {
-        setIsLoading(false);
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError.message);
+        return;
       }
+
+      // Fetch profiles and map them to jobs (same as before)
+      const userIds = jobs.map((job) => job.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError.message);
+        return;
+      }
+
+      const SUPABASE_STORAGE_URL = 'https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/';
+
+      const jobsWithProfiles = jobs.map((job) => {
+        const profile = profiles.find((p) => p.id === job.user_id);
+        return {
+          ...job,
+          avatar_url: profile?.avatar_url ? `${SUPABASE_STORAGE_URL}avatars/${profile.avatar_url}` : null,
+          full_name: profile?.full_name || 'Unknown',
+          image_url: job.image_url ? `${SUPABASE_STORAGE_URL}job_Images/${job.image_url}` : null,
+        };
+      });
+
+      return jobsWithProfiles;
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    }
+  };
+
+  // Load more jobs for infinite scrolling
+  const loadMoreJobs = async () => {
+    if (!hasMoreJobs || isLoadingMore) return;
+
+    setIsLoadingMore(true); // Set loading state for "load more"
+
+    const nextPage = currentPage + 1;
+    const newJobs = await fetchJobs(nextPage);
+
+    if (newJobs && newJobs.length > 0) {
+      setJobListings((prevJobs) => [...prevJobs, ...newJobs]); // Append new jobs to the end
+      setCurrentPage(nextPage);
+    } else {
+      setHasMoreJobs(false); // No more jobs to load
+    }
+
+    setIsLoadingMore(false); // Reset loading state
+  };
+
+  // Fetch initial jobs and user info
+  useEffect(() => {
+    const loadInitialJobs = async () => {
+      setIsLoading(true);
+      const jobs = await fetchJobs(1);
+      if (jobs) {
+        setJobListings(jobs);
+      }
+      setIsLoading(false);
     };
 
     const getUserAndSavedJobs = async () => {
@@ -95,7 +131,7 @@ const AvailableJobs: React.FC = () => {
       }
     };
 
-    fetchJobs();
+    loadInitialJobs();
     getUserAndSavedJobs();
   }, []);
 
@@ -103,7 +139,6 @@ const AvailableJobs: React.FC = () => {
   const toggleExpand = (id: string) => {
     setExpandedJobId((prevId) => (prevId === id ? null : id));
   };
-
 
   // Save or unsave a job
   const saveJob = async (jobId: string) => {
@@ -144,7 +179,7 @@ const AvailableJobs: React.FC = () => {
   return (
     <View style={{ flex: 1, padding: 10 }}>
       {isLoading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : (
@@ -159,9 +194,17 @@ const AvailableJobs: React.FC = () => {
               onSaveJob={saveJob}
               toggleExpand={toggleExpand}
               currentUserId={user?.id}
-              onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)} // Use the function
+              onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
             />
           )}
+          keyExtractor={(item) => item.id} // Ensure each item has a unique key
+          onEndReached={loadMoreJobs} // Trigger loading more jobs
+          onEndReachedThreshold={0.5} // Load more jobs when 50% of the list is reached
+          ListFooterComponent={
+            isLoadingMore ? ( // Show loading indicator at the bottom when loading more jobs
+              <ActivityIndicator size="large" color="#0000ff" />
+            ) : null
+          }
         />
       )}
     </View>
