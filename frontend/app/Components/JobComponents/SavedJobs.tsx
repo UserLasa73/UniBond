@@ -63,7 +63,8 @@ const SavedJobs: React.FC = () => {
           const { data: jobs, error: jobsError } = await supabase
             .from("jobs")
             .select("*")
-            .in("id", savedJobIdsList);
+            .in("id", savedJobIdsList)
+            .order("created_at", { ascending: false }); // Sort by created_at in descending order;
 
           if (jobsError) {
             console.error("Error fetching jobs:", jobsError.message);
