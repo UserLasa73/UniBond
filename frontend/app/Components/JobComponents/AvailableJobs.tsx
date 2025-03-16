@@ -42,6 +42,7 @@ const AvailableJobs: React.FC = () => {
         .from('jobs')
         .select('*')
         .eq('is_active', true)
+        .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1); // Fetch a specific range of jobs
 
       if (jobsError) {
