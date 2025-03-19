@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, FlatList, ActivityIndicator, Alert, Text, TextInput, StyleSheet } from 'react-native';
 import JobCard from './JobCard';
 import { supabase } from '@/app/lib/supabse'; // Assuming this path
 import { deleteJob } from './DeleteFunction'; // Import the delete function
+import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
 
 interface JobListing {
   id: string;
@@ -24,16 +25,16 @@ interface JobListing {
 }
 
 const AvailableJobs: React.FC = () => {
-  const [jobListings, setJobListings] = useState<JobListing[]>([]);
+  const [originalJobListings, setOriginalJobListings] = useState<JobListing[]>([]); // Store original job listings
+  const [jobListings, setJobListings] = useState<JobListing[]>([]); // Store displayed job listings
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false); // Separate state for loading more jobs
-
-  // Add these new state variables for infinite scrolling
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMoreJobs, setHasMoreJobs] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Fetch jobs with pagination
   const fetchJobs = async (page: number, pageSize: number = 10) => {
@@ -43,14 +44,13 @@ const AvailableJobs: React.FC = () => {
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1); // Fetch a specific range of jobs
+        .range((page - 1) * pageSize, page * pageSize - 1);
 
       if (jobsError) {
         console.error('Error fetching jobs:', jobsError.message);
         return;
       }
 
-      // Fetch profiles and map them to jobs (same as before)
       const userIds = jobs.map((job) => job.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -84,19 +84,19 @@ const AvailableJobs: React.FC = () => {
   const loadMoreJobs = async () => {
     if (!hasMoreJobs || isLoadingMore) return;
 
-    setIsLoadingMore(true); // Set loading state for "load more"
-
+    setIsLoadingMore(true);
     const nextPage = currentPage + 1;
     const newJobs = await fetchJobs(nextPage);
 
     if (newJobs && newJobs.length > 0) {
-      setJobListings((prevJobs) => [...prevJobs, ...newJobs]); // Append new jobs to the end
+      setOriginalJobListings((prevJobs) => [...prevJobs, ...newJobs]); // Update original job listings
+      setJobListings((prevJobs) => [...prevJobs, ...newJobs]); // Update displayed job listings
       setCurrentPage(nextPage);
     } else {
-      setHasMoreJobs(false); // No more jobs to load
+      setHasMoreJobs(false);
     }
 
-    setIsLoadingMore(false); // Reset loading state
+    setIsLoadingMore(false);
   };
 
   // Fetch initial jobs and user info
@@ -105,7 +105,8 @@ const AvailableJobs: React.FC = () => {
       setIsLoading(true);
       const jobs = await fetchJobs(1);
       if (jobs) {
-        setJobListings(jobs);
+        setOriginalJobListings(jobs); // Set original job listings
+        setJobListings(jobs); // Set displayed job listings
       }
       setIsLoading(false);
     };
@@ -127,7 +128,7 @@ const AvailableJobs: React.FC = () => {
         if (savedJobsError) {
           console.error('Error fetching saved jobs:', savedJobsError.message);
         } else {
-          setSavedJobIds(savedJobs.map((job) => job.job_id)); // Store saved job IDs
+          setSavedJobIds(savedJobs.map((job) => job.job_id));
         }
       }
     };
@@ -150,25 +151,23 @@ const AvailableJobs: React.FC = () => {
 
     try {
       if (savedJobIds.includes(jobId)) {
-        // Remove job from saved_jobs
         const { error } = await supabase.from('saved_jobs').delete().eq('user_id', user.id).eq('job_id', jobId);
 
         if (error) {
           console.error('Error unsaving job:', error.message);
           Alert.alert('Error', 'Failed to remove job.');
         } else {
-          setSavedJobIds((prev) => prev.filter((id) => id !== jobId)); // Update state
+          setSavedJobIds((prev) => prev.filter((id) => id !== jobId));
           Alert.alert('Unsaved', 'The job has been unsaved successfully.');
         }
       } else {
-        // Save job to saved_jobs
         const { error } = await supabase.from('saved_jobs').insert([{ user_id: user.id, job_id: jobId }]);
 
         if (error) {
           console.error('Error saving job:', error.message);
           Alert.alert('Error', 'Failed to save job.');
         } else {
-          setSavedJobIds((prev) => [...prev, jobId]); // Update state
+          setSavedJobIds((prev) => [...prev, jobId]);
           Alert.alert('Saved', 'The job has been saved successfully.');
         }
       }
@@ -177,8 +176,50 @@ const AvailableJobs: React.FC = () => {
     }
   };
 
+  // Search bar logic
+  const handleSearch = async (query: string) => {
+    setIsLoading(true);
+
+    if (query === '') {
+      // If the search query is empty, reset to the original job listings
+      setJobListings(originalJobListings);
+    } else {
+      // If there's a search query, filter the original job listings
+      const filteredJobs = originalJobListings.filter((job) =>{
+        const lowerCaseQuery = query.toLowerCase();
+
+        return (
+          job.title?.toLowerCase().includes(lowerCaseQuery) ||
+          job.company?.toLowerCase().includes(lowerCaseQuery) ||
+          (job.location?.toLowerCase().includes(lowerCaseQuery) ?? false) ||
+          (job.skills?.toLowerCase().includes(lowerCaseQuery) ?? false) ||
+          (job.type?.toLowerCase().includes(lowerCaseQuery) ?? false) ||
+          (job.description?.toLowerCase().includes(lowerCaseQuery) ?? false)
+        );
+      });
+      setJobListings(filteredJobs);
+    }
+
+    setIsLoading(false);
+  };
+
   return (
     <View style={{ flex: 1, padding: 10 }}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <MaterialIcons name="search" size={20} color="#888" style={styles.icon} />
+        <TextInput
+          placeholder="Search jobs..."
+          placeholderTextColor="#888"
+          value={searchQuery}
+          onChangeText={(text) => {
+            setSearchQuery(text); // Update the searchQuery state
+            handleSearch(text);   // Perform the search or reset to original listings
+          }}
+          style={styles.searchInput}
+        />
+      </View>
+
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#0000ff" />
@@ -198,18 +239,55 @@ const AvailableJobs: React.FC = () => {
               onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
             />
           )}
-          keyExtractor={(item) => item.id} // Ensure each item has a unique key
-          onEndReached={loadMoreJobs} // Trigger loading more jobs
-          onEndReachedThreshold={0.5} // Load more jobs when 50% of the list is reached
+          keyExtractor={(item) => item.id}
+          onEndReached={loadMoreJobs}
+          onEndReachedThreshold={0.5}
           ListFooterComponent={
-            isLoadingMore ? ( // Show loading indicator at the bottom when loading more jobs
+            isLoadingMore ? (
               <ActivityIndicator size="large" color="#0000ff" />
             ) : null
           }
+
+          ListEmptyComponent={
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>No results found</Text>
+            </View>
+          }
+
         />
       )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    marginHorizontal:10,
+    marginBottom: 10,
+  },
+  icon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: "#888",
+  },
+});
 
 export default AvailableJobs;
