@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert, TouchableWithoutFeedback, Keyboard, Linking } from 'react-native';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -178,11 +178,20 @@ const JobCard: React.FC<JobCardProps> = ({
           )}
         </View>
 
+        <TouchableOpacity
+            onPress={() => {
+              router.push({
+                pathname: '/screens/JobDetailScreen',
+                params: { jobId: jobId, image_url: image_url }, // Pass the job ID to the detail screen
+              });
+            }}
+        >
         <View style={styles.card}>
           <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
           {company && <Text style={styles.company}>at {company}</Text>}
 
           {image_url && !imageError && (
+            
             <View style={styles.imageContainer}>
               {imageLoading && <ActivityIndicator style={styles.loadingIndicator} />}
               <Image
@@ -223,19 +232,19 @@ const JobCard: React.FC<JobCardProps> = ({
             {(job_phone || job_email || job_website) && (
               <View>
                 {job_phone && (
-                  <TouchableOpacity style={styles.row} accessibilityRole="link">
+                  <TouchableOpacity style={styles.row} onPress={() => Linking.openURL(`tel:${job_phone}`)}>
                     <MaterialIcons name="phone" size={20} color="gray" />
                     <Text style={styles.detailText}>{job_phone}</Text>
                   </TouchableOpacity>
                 )}
                 {job_email && (
-                  <TouchableOpacity style={styles.row} accessibilityRole="link">
+                  <TouchableOpacity style={styles.row} onPress={() => Linking.openURL(`mailto:${job_email}`)}>
                     <MaterialIcons name="email" size={20} color="gray" />
                     <Text style={styles.detailText}>{job_email}</Text>
                   </TouchableOpacity>
                 )}
                 {job_website && (
-                  <TouchableOpacity style={styles.row} accessibilityRole="link">
+                  <TouchableOpacity style={styles.row} onPress={() => Linking.openURL(job_website)} accessibilityRole="link">
                     <MaterialIcons name="public" size={20} color="gray" />
                     <Text style={styles.detailText}>{truncateText(job_website, 30)}</Text>
                   </TouchableOpacity>
@@ -290,6 +299,7 @@ const JobCard: React.FC<JobCardProps> = ({
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableOpacity>
       </View>
     </TouchableWithoutFeedback>
   );
