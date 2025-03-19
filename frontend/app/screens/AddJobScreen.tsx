@@ -9,13 +9,16 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect  } from "@react-navigation/native";
 import { useAuth } from "../providers/AuthProvider";
 import { supabase } from "../lib/supabse";
 
@@ -34,6 +37,61 @@ const AddJobScreen = () => {
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+
+  const hasUnsavedChanges = () => {
+    return (
+      title.trim() !== "" ||
+      company.trim() !== "" ||
+      location.trim() !== "" ||
+      type.trim() !== "" ||
+      skills.trim() !== "" ||
+      deadline.trim() !== "" ||
+      jobPhone.trim() !== "" ||
+      jobEmail.trim() !== "" ||
+      jobWebsite.trim() !== "" ||
+      description.trim() !== "" ||
+      media !== null
+    );
+  };
+
+    // Handle back button press (hardware or cancel button)
+    const onBackPress = () => {
+      if (hasUnsavedChanges()) {
+        Alert.alert(
+          "Are you sure?",
+          "You have unsaved changes. Are you sure you want to leave?",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Leave",
+              style: "destructive",
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+        return true; // Prevent default behavior (going back)
+      }else{
+        navigation.goBack();
+        return false; // Allow default behavior (going back)
+      }
+
+    };
+
+    // Add event listener for hardware back button
+  useFocusEffect(
+    React.useCallback(() => {
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+      return () => {
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+      };
+    }, [onBackPress])
+  );
+
 
   // Media picker for image selection
   const handleMediaPicker = useCallback(async () => {
@@ -143,16 +201,19 @@ const AddJobScreen = () => {
 
 
   return (
+    <TouchableWithoutFeedback
+      onPress={() => Keyboard.dismiss()} // Dismiss keyboard if open}
+    >
     <SafeAreaView style={styles.safeArea}>
-      
+
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flexContainer} >
-        
-          <View style={styles.container}>
-            {isLoading && <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />}
-            <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+
+        <View style={styles.container}>
+          {isLoading && <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />}
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Post a Job</Text>
 
-            <TouchableOpacity onPress={()=>navigation.goBack()} style={styles.cancelButton}>
+            <TouchableOpacity onPress={onBackPress} style={styles.cancelButton}>
               <Ionicons name="close" size={24} color="#000" />
             </TouchableOpacity>
 
@@ -174,16 +235,16 @@ const AddJobScreen = () => {
             {/* <Text style={styles.label}>Job Title <Text style={styles.required}>*</Text> </Text> */}
             <TextInput
               style={styles.input}
-              placeholder="Title (*required)"
-              placeholderTextColor="#E53935" // Light gray
+              placeholder="Job Title *"
+              placeholderTextColor="#E53935" // red
               value={title}
               onChangeText={setTitle}
             />
             {/* <Text style={styles.label}>Company <Text style={styles.required}>*</Text> </Text> */}
             <TextInput
               style={styles.input}
-              placeholder="Company (*required)"
-              placeholderTextColor="#E53935" // Light gray
+              placeholder="Company *"
+              placeholderTextColor="#E53935" // red
               value={company}
               onChangeText={setCompany}
             />
@@ -259,11 +320,12 @@ const AddJobScreen = () => {
               <Text style={styles.postButtonText}>Post Job</Text>
             </TouchableOpacity>
 
-            </ScrollView>
-          </View>
-        
+          </ScrollView>
+        </View>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -294,11 +356,11 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     position: "absolute",
-    top: 10,
+    top: 2,
     right: 10,
     zIndex: 1,
   },
-  selectImage:{
+  selectImage: {
     marginBottom: 20,
   },
   label: {
