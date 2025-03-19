@@ -18,13 +18,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useNavigation, useFocusEffect  } from "@react-navigation/native";
+
+import {useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from "../providers/AuthProvider";
 import { supabase } from "../lib/supabse";
 
 const AddJobScreen = () => {
   const { user } = useAuth();
-  const navigation = useNavigation();
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
@@ -69,13 +70,13 @@ const AddJobScreen = () => {
             {
               text: "Leave",
               style: "destructive",
-              onPress: () => navigation.goBack(),
+              onPress: () => router.back(),
             },
           ]
         );
         return true; // Prevent default behavior (going back)
       }else{
-        navigation.goBack();
+        router.back();
         return false; // Allow default behavior (going back)
       }
 
@@ -189,14 +190,14 @@ const AddJobScreen = () => {
       if (error) throw new Error(error.message);
 
       Alert.alert("Success", "Job posted successfully!");
-      navigation.goBack();
+      router.push('/(tabs)/Jobs');
     } catch (error: any) {
       Alert.alert("Error", error.message);
       console.error("Job submission error:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [title, company, location, type, skills, deadline, jobPhone, jobEmail, jobWebsite, description, media, user, navigation]);
+  }, [title, company, location, type, skills, deadline, jobPhone, jobEmail, jobWebsite, description, media, user]);
 
 
 
