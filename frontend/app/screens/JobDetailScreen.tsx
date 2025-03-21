@@ -13,6 +13,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../lib/supabse';
 import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for the cancel button
+import * as Sharing from 'expo-sharing'; // Import expo-sharing
+import * as FileSystem from 'expo-file-system'; // Import expo-file-system
 
 const JobDetailScreen = () => {
   const { jobId, image_url } = useLocalSearchParams(); // Get the jobId from the route params
@@ -46,6 +48,26 @@ const JobDetailScreen = () => {
     fetchJobDetails();
   }, [jobId]);
 
+
+  // Function to share the job image
+  const shareImage = async () => {
+    if (!imageUrl) return;
+
+    try {
+      // Download the image to the device
+      const fileUri = `${FileSystem.cacheDirectory}job_image.jpg`;
+      const { uri } = await FileSystem.downloadAsync(imageUrl, fileUri);
+
+      // Share the downloaded image using expo-sharing
+      await Sharing.shareAsync(uri, {
+        dialogTitle: 'Share Job Image',
+        mimeType: 'image/jpeg', // Specify the MIME type
+      });
+    } catch (error) {
+      console.error('Error sharing image:', error);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -70,6 +92,14 @@ const JobDetailScreen = () => {
         style={styles.cancelButton}
       >
         <Ionicons name="close" size={24} color="#000" />
+      </TouchableOpacity>
+
+      {/* Share image Button */}
+      <TouchableOpacity
+        onPress={shareImage}
+        style={styles.shareButton}
+      >
+        <Ionicons name="share-social" size={24} color="#000" />
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -155,14 +185,12 @@ const JobDetailScreen = () => {
         </View>
 
         {/* Job Description */}
-
         {job.description && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Description:</Text>
-            </View>
-          )}
-          <Text style={styles.description}>{job.description}</Text>
-        
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Description:</Text>
+          </View>
+        )}
+        <Text style={styles.description}>{job.description}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -265,6 +293,15 @@ const styles = StyleSheet.create({
     zIndex: 1, // Ensure the button is above other content
     padding: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent background
+    borderRadius: 20,
+  },
+  shareButton: {
+    position: 'absolute',
+    top: 60,
+    right: 70, // Adjust position to avoid overlapping with the cancel button
+    zIndex: 1,
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     borderRadius: 20,
   },
   errorText: {
