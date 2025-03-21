@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, ActivityIndicator, Alert, Text, TextInput, StyleSheet } from 'react-native';
-import JobCard from './JobCard';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, FlatList, ActivityIndicator, Alert, Text, TextInput, StyleSheet, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity } from 'react-native';
 import { supabase } from '@/app/lib/supabse'; // Assuming this path
 import { deleteJob } from './DeleteFunction'; // Import the delete function
 import { MaterialIcons } from '@expo/vector-icons'; // Import MaterialIcons
+import JobCard from './JobCard';
+import ScrollToTopButton from './ScrollToTopButton';
 
 interface JobListing {
   id: string;
@@ -27,7 +28,6 @@ interface JobListing {
 const AvailableJobs: React.FC = () => {
   const [originalJobListings, setOriginalJobListings] = useState<JobListing[]>([]); // Store original job listings
   const [jobListings, setJobListings] = useState<JobListing[]>([]); // Store displayed job listings
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -35,6 +35,9 @@ const AvailableJobs: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMoreJobs, setHasMoreJobs] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState<boolean>(false);
+
+  const flatListRef = useRef<FlatList>(null);
 
   // Fetch jobs with pagination
   const fetchJobs = async (page: number, pageSize: number = 10) => {
@@ -137,11 +140,6 @@ const AvailableJobs: React.FC = () => {
     getUserAndSavedJobs();
   }, []);
 
-  // Toggle the expand state of a job description
-  const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id));
-  };
-
   // Save or unsave a job
   const saveJob = async (jobId: string) => {
     if (!user) {
@@ -185,7 +183,7 @@ const AvailableJobs: React.FC = () => {
       setJobListings(originalJobListings);
     } else {
       // If there's a search query, filter the original job listings
-      const filteredJobs = originalJobListings.filter((job) =>{
+      const filteredJobs = originalJobListings.filter((job) => {
         const lowerCaseQuery = query.toLowerCase();
 
         return (
@@ -201,6 +199,16 @@ const AvailableJobs: React.FC = () => {
     }
 
     setIsLoading(false);
+  };
+
+  // Scroll to top button logic
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY > 300) {
+      setShowScrollToTopButton(true);
+    } else {
+      setShowScrollToTopButton(false);
+    }
   };
 
   return (
@@ -225,36 +233,43 @@ const AvailableJobs: React.FC = () => {
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : (
-        <FlatList
-          data={jobListings}
-          renderItem={({ item }) => (
-            <JobCard
-              {...item}
-              expandedJobId={expandedJobId}
-              jobId={item.id}
-              savedJobs={savedJobIds}
-              onSaveJob={saveJob}
-              toggleExpand={toggleExpand}
-              currentUserId={user?.id}
-              onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          onEndReached={loadMoreJobs}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            isLoadingMore ? (
-              <ActivityIndicator size="large" color="#0000ff" />
-            ) : null
-          }
+        <>
+          <FlatList
+            ref={flatListRef}
+            data={jobListings}
+            renderItem={({ item }) => (
+              <JobCard
+                {...item}
+                jobId={item.id}
+                savedJobs={savedJobIds}
+                onSaveJob={saveJob}
+                currentUserId={user?.id}
+                onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            onEndReached={loadMoreJobs}
+            onEndReachedThreshold={0.5}
+            onScroll={handleScroll} // Add the scroll handler
+            scrollEventThrottle={16} // Ensure smooth scrolling
+            ListFooterComponent={
+              isLoadingMore ? (
+                <ActivityIndicator size="large" color="#0000ff" />
+              ) : null
+            }
+            ListEmptyComponent={
+              <View style={styles.noResultsContainer}>
+                <Text style={styles.noResultsText}>No results found</Text>
+              </View>
+            }
+          />
 
-          ListEmptyComponent={
-            <View style={styles.noResultsContainer}>
-              <Text style={styles.noResultsText}>No results found</Text>
-            </View>
-          }
-
-        />
+          {/* Use the ScrollToTopButton component */}
+          <ScrollToTopButton
+            flatListRef={flatListRef}
+            visible={showScrollToTopButton}
+          />
+        </>
       )}
     </View>
   );
@@ -268,7 +283,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 50,
     paddingHorizontal: 16,
-    marginHorizontal:10,
+    marginHorizontal: 10,
     marginBottom: 10,
   },
   icon: {
@@ -280,13 +295,29 @@ const styles = StyleSheet.create({
   },
   noResultsContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 20,
   },
   noResultsText: {
     fontSize: 16,
-    color: "#888",
+    color: '#888',
+  },
+  scrollToTopButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#0000ff',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });
 

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { View, FlatList, ActivityIndicator, Alert, Text } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, FlatList, ActivityIndicator, Alert, Text, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 import JobCard from './JobCard';
 import { supabase } from "@/app/lib/supabse";
-import { deleteJob } from './DeleteFunction' // Import the delete function
+import { deleteJob } from './DeleteFunction'; // Import the delete function
+import ScrollToTopButton from './ScrollToTopButton'; // Import the ScrollToTopButton component
 
 interface JobListing {
   id: string;
@@ -26,10 +27,12 @@ interface JobListing {
 
 const SavedJobs: React.FC = () => {
   const [jobListings, setJobListings] = useState<JobListing[]>([]);
-  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showScrollToTopButton, setShowScrollToTopButton] = useState<boolean>(false); // State for scroll-to-top button visibility
+
+  const flatListRef = useRef<FlatList>(null); // Ref for the FlatList
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -108,10 +111,6 @@ const SavedJobs: React.FC = () => {
     fetchJobs();
   }, []);
 
-  const toggleExpand = (id: string) => {
-    setExpandedJobId((prevId) => (prevId === id ? null : id));
-  };
-
 
   const unsaveJob = async (jobId: string) => {
     if (!user) {
@@ -142,6 +141,16 @@ const SavedJobs: React.FC = () => {
     }
   };
 
+  // Handle scroll event to show/hide the scroll-to-top button
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY > 300) {
+      setShowScrollToTopButton(true);
+    } else {
+      setShowScrollToTopButton(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1, padding: 10 }}>
       {isLoading ? (
@@ -149,27 +158,35 @@ const SavedJobs: React.FC = () => {
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : (
-        <FlatList
-          data={jobListings}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <JobCard
-              {...item}
-              expandedJobId={expandedJobId}
-              jobId={item.id}
-              savedJobs={savedJobIds}
-              onSaveJob={unsaveJob}
-              toggleExpand={toggleExpand}
-              currentUserId={user?.id}
-              onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={{ alignItems: "center", justifyContent: "center", marginTop: 20 }}>
-              <Text style={{ fontSize: 16, color: "gray" }}>No saved jobs found.</Text>
-            </View>
-          }
-        />
+        <>
+          <FlatList
+            ref={flatListRef}
+            data={jobListings}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <JobCard
+                {...item}
+                jobId={item.id}
+                savedJobs={savedJobIds}
+                onSaveJob={unsaveJob}
+                currentUserId={user?.id}
+                onDeleteJob={() => deleteJob(item.id, item.image_url, setJobListings)}
+              />
+            )}
+            onScroll={handleScroll} // Add scroll handler
+            scrollEventThrottle={16} // Ensure smooth scrolling
+            ListEmptyComponent={
+              <View style={{ alignItems: "center", justifyContent: "center", marginTop: 20 }}>
+                <Text style={{ fontSize: 16, color: "gray" }}>No saved jobs found.</Text>
+              </View>
+            }
+          />
+          {/* Add the ScrollToTopButton */}
+          <ScrollToTopButton
+            flatListRef={flatListRef}
+            visible={showScrollToTopButton}
+          />
+        </>
       )}
     </View>
   );
