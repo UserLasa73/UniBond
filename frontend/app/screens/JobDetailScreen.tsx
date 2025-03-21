@@ -130,14 +130,14 @@ const JobDetailScreen = () => {
           {job.job_phone && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Phone:</Text>
-              <Text style={styles.detailText} onPress={() => Linking.openURL(`tel:${job.job_phone}`)}>{job.job_phone}</Text>
+              <Text style={styles.phoneNumberText} onPress={() => Linking.openURL(`tel:${job.job_phone}`)}>{job.job_phone}</Text>
             </View>
           )}
 
           {job.job_email && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Email:</Text>
-              <Text style={styles.detailText} onPress={() => Linking.openURL(`mailto:${job.job_email}`)}>{job.job_email}</Text>
+              <Text style={styles.emailText} onPress={() => Linking.openURL(`mailto:${job.job_email}`)}>{job.job_email}</Text>
             </View>
           )}
 
@@ -155,7 +155,14 @@ const JobDetailScreen = () => {
         </View>
 
         {/* Job Description */}
-        <Text style={styles.description}>{job.description}</Text>
+
+        {job.description && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Description:</Text>
+            </View>
+          )}
+          <Text style={styles.description}>{job.description}</Text>
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -231,6 +238,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
+  },
+  phoneNumberText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#007BFF',
+  },
+  emailText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#007BFF',
   },
   link: {
     color: '#007BFF',

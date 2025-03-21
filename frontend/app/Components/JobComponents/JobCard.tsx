@@ -104,8 +104,8 @@ const JobCard: React.FC<JobCardProps> = ({
     >
       <View style={styles.container} accessible={true} accessibilityLabel={`Job posting for ${title} at ${company}`}>
         <View style={styles.headerContainer}>
+          <View style={styles.profileContainer}>
           <TouchableOpacity
-            style={styles.profileContainer}
             onPress={() => {
               router.push({
                 pathname: '/screens/ProfileScreen',
@@ -129,11 +129,13 @@ const JobCard: React.FC<JobCardProps> = ({
             ) : (
               <Ionicons name="person-circle" size={40} color="gray" />
             )}
+            </TouchableOpacity>
             <View>
               <Text style={styles.name}>{full_name}</Text>
               <Text style={styles.date}>{getRelativeTime(created_at)}</Text>
             </View>
-          </TouchableOpacity>
+            </View>
+          
 
           {isOwner && (
             <TouchableOpacity
