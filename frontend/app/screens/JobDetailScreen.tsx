@@ -95,12 +95,16 @@ const JobDetailScreen = () => {
       </TouchableOpacity>
 
       {/* Share image Button */}
-      <TouchableOpacity
+      {imageUrl &&(
+        <TouchableOpacity
         onPress={shareImage}
         style={styles.shareButton}
       >
         <Ionicons name="share-social" size={24} color="#000" />
       </TouchableOpacity>
+      )}
+
+      
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Job Title and Company */}
