@@ -190,7 +190,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                       <Text>{item.content}</Text>
                       <CommentActions
                         commentId={item.id}
-                        postId={postId}
                         userId={session?.user?.id}
                       />
                     </View>
