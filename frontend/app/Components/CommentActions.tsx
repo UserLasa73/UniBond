@@ -213,6 +213,11 @@ const CommentActions: React.FC<CommentActionsProps> = ({
     }
   };
 
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}`;
+  };
+
   return (
     <View style={{ marginTop: 10 }}>
       {/* Reaction and Reply Buttons */}
@@ -276,6 +281,9 @@ const CommentActions: React.FC<CommentActionsProps> = ({
                 </Text>
                 <Text style={{ fontSize: 14, color: "#333" }}>
                   {item.content}
+                </Text>
+                <Text style={{ fontSize: 12, color: "gray" }}>
+                  {formatTimestamp(item.created_at)}
                 </Text>
               </View>
               {item.user_id === userId && (
