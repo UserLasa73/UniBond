@@ -37,9 +37,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
   const storageUrl =
     "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
-  const imageUrl = profile.avatar_url
-    ? `${storageUrl}${profile.avatar_url}`
-    : null;
 
   // Fetch comments related to the current post
   const fetchComments = async () => {
@@ -47,14 +44,23 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
     try {
       const { data, error } = await supabase
         .from("comments")
-        .select("id, content, user_id, username, created_at")
+        .select(
+          "id, content, user_id, username, created_at,profiles(avatar_url)"
+        )
         .eq("post_id", postId);
 
       if (error) {
         throw error;
       }
 
-      setComments(data || []);
+      const formattedComments = data.map((comment) => ({
+        ...comment,
+        avatar_url: comment.profiles?.avatar_url
+          ? `${storageUrl}${comment.profiles.avatar_url}`
+          : null,
+      }));
+
+      setComments(formattedComments);
     } catch (error) {
       console.error("Error fetching comments:", error);
       Alert.alert("Error", "Failed to fetch comments.");
@@ -172,9 +178,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                   >
                     {/* User Avatar */}
                     <View style={styles.avatarContainer}>
-                      {imageUrl ? (
+                      {item.avatar_url ? (
                         <Image
-                          source={{ uri: imageUrl }}
+                          source={{ uri: item.avatar_url }}
                           style={{ width: 50, height: 50, borderRadius: 25 }}
                         />
                       ) : (
