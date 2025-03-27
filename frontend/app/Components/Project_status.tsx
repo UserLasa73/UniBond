@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Image, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, StyleSheet, Image, ActivityIndicator, FlatList, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router"; // Added missing import
 import supabase from "../../lib/supabse";
 
 // Interface for project data structure
@@ -8,6 +9,7 @@ interface ProjectData {
   project_id: number;
   user_id: string;
   user_name: string;
+  description: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -15,24 +17,29 @@ interface ProjectData {
   skills: string;
   is_saved: boolean;
   is_applied: boolean;
-  time_posted: string; // Add time_posted to the interface
-  avatar_url?: string; // Add avatar_url to the interface
+  time_posted: string;
+  avatar_url?: string;
 }
 
 interface ProfileData {
   id: string;
-  avatar_url: string;
+  avatar_url?: string;
+  username: string;
 }
 
 export default function ProjectStatus() {
   const [projectData, setProjectData] = useState<ProjectData[]>([]);
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null); // Added error state
 
   // Fetch project data and profiles from Supabase
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
         // Fetch projects
         const { data: projects, error: projectsError } = await supabase
           .from("projects")
@@ -40,76 +47,90 @@ export default function ProjectStatus() {
 
         if (projectsError) throw projectsError;
 
-        // Fetch profiles
+        // Fetch profiles with username
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, avatar_url");
+          .select("id, avatar_url, username");
 
         if (profilesError) throw profilesError;
 
-        // Map profiles to projects
-        const projectsWithProfiles = projects.map((project) => {
-          const profile = profiles.find((p) => p.id === project.user_id);
+        setProfiles(profiles || []);
+
+        // Map profiles to projects with proper error handling for avatar URLs
+        const projectsWithProfiles = (projects || []).map((project) => {
+          const profile = profiles?.find((p) => p.id === project.user_id);
           return {
             ...project,
             avatar_url: profile?.avatar_url
               ? `https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
-              : null,
+              : undefined,
+            user_name: profile?.username || project.user_name // Use profile username if available
           };
         });
 
         setProjectData(projectsWithProfiles);
-        setProfiles(profiles);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setError("Failed to load projects. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('projects')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
+        fetchData(); // Refresh data when projects change
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Function to calculate post duration
+  // Improved calculatePostDuration with better error handling
   const calculatePostDuration = (datePosted: string, timePosted: string) => {
-    const postDateTime = new Date(`${datePosted}T${timePosted}`); // Combine and parse
+    try {
+      const postDateTime = new Date(`${datePosted}T${timePosted}`);
+      
+      if (isNaN(postDateTime.getTime())) {
+        return "Recently";
+      }
 
-    // Check if the date is valid
-    if (isNaN(postDateTime.getTime())) {
-      throw new Error("Invalid date or time format");
-    }
+      const currentDate = new Date();
+      const timeDifference = currentDate.getTime() - postDateTime.getTime();
 
-    const currentDate = new Date();
-    const timeDifference = currentDate.getTime() - postDateTime.getTime();
+      if (timeDifference < 0) return "Just now";
 
-    // Handle case where the post date is in the future
-    if (timeDifference < 0) {
+      const seconds = Math.floor(timeDifference / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 7) {
+        return postDateTime.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      } else if (days > 0) {
+        return `${days} day${days > 1 ? "s" : ""} ago`;
+      } else if (hours > 0) {
+        return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+      } else if (minutes > 0) {
+        return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+      }
       return "Just now";
-    }
-
-    const seconds = Math.floor(timeDifference / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 7) {
-      return postDateTime.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-      });
-    } else if (days > 0) {
-      return `${days} day${days > 1 ? "s" : ""} ago`;
-    } else if (hours > 0) {
-      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    } else if (minutes > 0) {
-      return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    } else {
-      return "Just now";
+    } catch (e) {
+      console.error("Error calculating post duration:", e);
+      return "Recently";
     }
   };
 
-  // Loading state while fetching data
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -118,7 +139,17 @@ export default function ProjectStatus() {
     );
   }
 
-  // If no project data found
+  if (error) {
+    return (
+      <View style={styles.loader}>
+        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+        <TouchableOpacity onPress={() => setLoading(true)}>
+          <Text style={{ color: "blue", marginTop: 10 }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (projectData.length === 0) {
     return (
       <View style={styles.loader}>
@@ -127,23 +158,36 @@ export default function ProjectStatus() {
     );
   }
 
-  // Render a single project card
   const renderProjectCard = ({ item }: { item: ProjectData }) => (
     <View style={styles.card}>
-      {/* Title */}
       <Text style={styles.title}>{item.project_title}</Text>
 
-      {/* User Info */}
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }} // Use avatar_url or a fallback
-          style={styles.avatar}
-        />
+        <TouchableOpacity
+          onPress={() => {
+            router.push({
+              pathname: "/screens/ProfileScreen",
+              params: { userId: item.user_id },
+            });
+          }}
+        >
+          <Image
+            source={{ 
+              uri: item.avatar_url || "https://via.placeholder.com/40",
+              cache: 'force-cache' // Better performance
+            }}
+            style={styles.avatar}
+            onError={() => console.log("Failed to load avatar")}
+          />
+        </TouchableOpacity>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.user_name}</Text>
+          <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">
+            {item.description}
+          </Text>
           <Text style={styles.status}>Status: {item.project_status}</Text>
           <View style={styles.row}>
-            <Ionicons name="time-outline" size={16} color="black" style={{ marginRight: 4 }} />
+            <Ionicons name="time-outline" size={16} color="gray" style={{ marginRight: 4 }} />
             <Text style={styles.date}>
               {calculatePostDuration(item.date_posted, item.time_posted)}
             </Text>
@@ -154,11 +198,17 @@ export default function ProjectStatus() {
   );
 
   return (
-    <View>
+    <View style={styles.container}>
       <FlatList
         data={projectData}
         renderItem={renderProjectCard}
         keyExtractor={(item) => item.project_id.toString()}
+        contentContainerStyle={styles.flatListContent}
+        ListEmptyComponent={
+          <View style={styles.loader}>
+            <Text style={{ color: "gray", fontSize: 16 }}>No Projects Found</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -173,6 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   card: {
     backgroundColor: "white",
@@ -184,21 +235,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  description: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 12,
+    color: "#222",
   },
   userInfo: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    marginBottom: 0,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+    backgroundColor: "#eee",
   },
   textGroup: {
     flex: 1,
@@ -206,19 +265,22 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+    marginBottom: 4,
+    color: "#222",
   },
   status: {
     fontSize: 14,
-    color: "gray",
+    color: "#666",
+    marginBottom: 4,
   },
   date: {
     fontSize: 12,
-    color: "gray",
+    color: "#999",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginTop: 4,
   },
   flatListContent: {
     paddingBottom: 16,
