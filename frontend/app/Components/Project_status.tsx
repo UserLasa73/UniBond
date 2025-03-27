@@ -15,36 +15,99 @@ interface ProjectData {
   skills: string;
   is_saved: boolean;
   is_applied: boolean;
+  time_posted: string; // Add time_posted to the interface
+  avatar_url?: string; // Add avatar_url to the interface
+}
+
+interface ProfileData {
+  id: string;
+  avatar_url: string;
 }
 
 export default function ProjectStatus() {
   const [projectData, setProjectData] = useState<ProjectData[]>([]);
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch project data from Supabase
+  // Fetch project data and profiles from Supabase
   useEffect(() => {
-    const fetchProjectData = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from("projects") // Assuming your table name is 'projects'
-          .select("*")
-          //.eq("project_status", "In Progress"); // Filter by status "Pending"
-        
-        if (error) throw error;
-        setProjectData(data || []);
+        // Fetch projects
+        const { data: projects, error: projectsError } = await supabase
+          .from("projects")
+          .select("*");
+
+        if (projectsError) throw projectsError;
+
+        // Fetch profiles
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, avatar_url");
+
+        if (profilesError) throw profilesError;
+
+        // Map profiles to projects
+        const projectsWithProfiles = projects.map((project) => {
+          const profile = profiles.find((p) => p.id === project.user_id);
+          return {
+            ...project,
+            avatar_url: profile?.avatar_url
+              ? `https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
+              : null,
+          };
+        });
+
+        setProjectData(projectsWithProfiles);
+        setProfiles(profiles);
       } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching project data:", error.message);
-        } else {
-          console.error("Error fetching project data:", error);
-        }
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProjectData();
+    fetchData();
   }, []);
+
+  // Function to calculate post duration
+  const calculatePostDuration = (datePosted: string, timePosted: string) => {
+    const postDateTime = new Date(`${datePosted}T${timePosted}`); // Combine and parse
+
+    // Check if the date is valid
+    if (isNaN(postDateTime.getTime())) {
+      throw new Error("Invalid date or time format");
+    }
+
+    const currentDate = new Date();
+    const timeDifference = currentDate.getTime() - postDateTime.getTime();
+
+    // Handle case where the post date is in the future
+    if (timeDifference < 0) {
+      return "Just now";
+    }
+
+    const seconds = Math.floor(timeDifference / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 7) {
+      return postDateTime.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      });
+    } else if (days > 0) {
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    } else if (hours > 0) {
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (minutes > 0) {
+      return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    } else {
+      return "Just now";
+    }
+  };
 
   // Loading state while fetching data
   if (loading) {
@@ -73,15 +136,17 @@ export default function ProjectStatus() {
       {/* User Info */}
       <View style={styles.userInfo}>
         <Image
-          source={{ uri: "https://via.placeholder.com/40" }} // Replace with actual user image URL if available
+          source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }} // Use avatar_url or a fallback
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
-          <Text style={styles.name}>User : {item.user_name}</Text>
+          <Text style={styles.name}>{item.user_name}</Text>
           <Text style={styles.status}>Status: {item.project_status}</Text>
           <View style={styles.row}>
             <Ionicons name="time-outline" size={16} color="black" style={{ marginRight: 4 }} />
-            <Text style={styles.date}>{new Date(item.date_posted).toLocaleDateString()}</Text>
+            <Text style={styles.date}>
+              {calculatePostDuration(item.date_posted, item.time_posted)}
+            </Text>
           </View>
         </View>
       </View>
