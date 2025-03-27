@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  TextInput,
   Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -45,6 +46,21 @@ export default function ProjectTitleBox() {
   const [dropdownVisible, setDropdownVisible] = useState<{ [key: number]: boolean }>({});
   const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null);
   const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
+  const [filteredProjects, setFilteredProjects] = useState<ProjectData[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter projects based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredProjects(projectData);
+    } else {
+      const filtered = projectData.filter(project =>
+        project.project_title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProjects(filtered);
+    }
+  }, [searchQuery, projectData]);
+
 
   // Fetch current user ID
   useEffect(() => {
@@ -144,7 +160,7 @@ export default function ProjectTitleBox() {
       [projectId]: !prev[projectId],
     }));
   };
-  
+
   const handleEdit = (project: ProjectData) => {
     router.push({
       pathname: '/screens/EditProjectScreen', // Replace with your edit screen path
@@ -152,7 +168,7 @@ export default function ProjectTitleBox() {
     });
     //navigation.navigate("EditProjectScreen", { projectId: project.project_id }); // Pass the project object
   };
-  
+
   const handleDelete = async (projectId: number) => {
     Alert.alert(
       "Confirm Deletion",
@@ -331,7 +347,7 @@ export default function ProjectTitleBox() {
           </TouchableOpacity>
         </View>
       )}
-  
+
       <View style={styles.userInfo}>
         <TouchableOpacity
           onPress={() => {
@@ -389,11 +405,35 @@ export default function ProjectTitleBox() {
   );
 
   return (
-    <FlatList
-      data={projectData}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.project_id.toString()}
-    />
+    <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search projects..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery !== "" && (
+          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+            <Ionicons name="close-circle" size={20} color="gray" />
+          </TouchableOpacity>
+        )}
+      </View>
+  
+      <FlatList
+        data={filteredProjects}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.project_id.toString()}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No projects found matching your search</Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
@@ -509,5 +549,45 @@ const styles = StyleSheet.create({
   dropdownItem: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-  }
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    margin: 16,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    paddingLeft: 8,
+    fontSize: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    color: 'gray',
+    fontSize: 16,
+    textAlign: 'center',
+  },
 });
