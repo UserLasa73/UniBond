@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import supabase from "../../lib/supabse";
 
 interface ProjectData {
   project_id: number;
   user_id: string;
+  user_name: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -22,35 +25,60 @@ interface ProjectData {
   skills: string;
   is_saved: boolean;
   is_applied: boolean;
+  time_posted: string;
+  avatar_url?: string;
 }
 
 export default function Saved_project() {
   const [savedProjects, setSavedProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch saved projects
+  const fetchSavedProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("is_saved", true);
+
+      if (error) throw error;
+
+      setSavedProjects(data || []);
+    } catch (error) {
+      console.error("Error fetching saved projects:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSavedProjects();
+    }, [])
+  );
+
+  // Subscribe to real-time updates
   useEffect(() => {
-    const fetchSavedProjects = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("is_saved", true);
-
-        if (error) throw error;
-
-        setSavedProjects(data || []);
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching saved projects:", error.message);
-        } else {
-          console.error("Error fetching saved projects:", error);
+    const channel = supabase
+      .channel("public:projects")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "projects" },
+        (payload) => {
+          setSavedProjects((prevProjects) =>
+            prevProjects.map((project) =>
+              project.project_id === payload.new.project_id
+                ? { ...project, ...payload.new }
+                : project
+            )
+          );
         }
-      } finally {
-        setLoading(false);
-      }
-    };
+      )
+      .subscribe();
 
-    fetchSavedProjects();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUnsave = async (projectId: number) => {
@@ -69,12 +97,8 @@ export default function Saved_project() {
 
       Alert.alert("Success", "Project unsaved successfully!");
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("Error unsaving project:", error.message);
-        Alert.alert("Error", "Failed to unsave the project. Please try again.");
-      } else {
-        console.error("Error unsaving project:", error);
-      }
+      console.error("Error unsaving project:", error);
+      Alert.alert("Error", "Failed to unsave the project. Please try again.");
     }
   };
 
@@ -123,17 +147,14 @@ export default function Saved_project() {
 
   const renderItem = ({ item }: { item: ProjectData }) => (
     <View style={styles.card}>
-      {/* Title */}
       <Text style={styles.title}>{item.project_title}</Text>
-
-      {/* User Info */}
       <View style={styles.userInfo}>
         <Image
-          source={{ uri: "https://via.placeholder.com/40" }} // Replace with actual user image URL if available
+          source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }}
           style={styles.avatar}
         />
         <View style={styles.textGroup}>
-          <Text style={styles.name}>User ID: {item.user_id}</Text>
+          <Text style={styles.name}>{item.user_name}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
             {new Date(item.date_posted).toLocaleDateString()}
