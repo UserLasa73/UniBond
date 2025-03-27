@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 4,
+    marginBottom: 1,
   },
   date: {
     fontSize: 12,
