@@ -18,6 +18,7 @@ interface ProjectData {
   project_id: number;
   user_id: string;
   user_name: string;
+  description: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -29,23 +30,55 @@ interface ProjectData {
   avatar_url?: string;
 }
 
+interface ProfileData {
+  id: string;
+  avatar_url?: string;
+  username: string;
+}
+
 export default function Saved_project() {
   const [savedProjects, setSavedProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
 
   // Fetch saved projects
   const fetchSavedProjects = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      // Fetch saved projects
+      const { data: projects, error: projectsError } = await supabase
         .from("projects")
         .select("*")
         .eq("is_saved", true);
 
-      if (error) throw error;
+      if (projectsError) throw projectsError;
 
-      setSavedProjects(data || []);
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, avatar_url, username");
+
+      if (profilesError) throw profilesError;
+
+      setProfiles(profiles || []);
+
+      // Combine projects with profile data
+      const projectsWithProfiles = (projects || []).map(project => {
+        const profile = profiles?.find(p => p.id === project.user_id);
+        return {
+          ...project,
+          avatar_url: profile?.avatar_url 
+            ? `https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
+            : undefined,
+          user_name: profile?.username || project.user_name
+        };
+      });
+
+      setSavedProjects(projectsWithProfiles);
     } catch (error) {
-      console.error("Error fetching saved projects:", error);
+      console.error("Error fetching data:", error);
+      Alert.alert("Error", "Failed to load projects");
     } finally {
       setLoading(false);
     }
@@ -149,12 +182,22 @@ export default function Saved_project() {
     <View style={styles.card}>
       <Text style={styles.title}>{item.project_title}</Text>
       <View style={styles.userInfo}>
+      <TouchableOpacity 
+        onPress={() => {
+          router.push({
+            pathname: "/screens/ProfileScreen",
+            params: { userId: item.user_id },
+          });
+        }}
+      >
         <Image
           source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }}
           style={styles.avatar}
         />
+      </TouchableOpacity>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.user_name}</Text>
+          <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
             {new Date(item.date_posted).toLocaleDateString()}
@@ -239,6 +282,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: "400",
+    marginBottom: 5,
   },
   location: {
     fontSize: 14,
