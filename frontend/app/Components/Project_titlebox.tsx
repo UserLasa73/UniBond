@@ -21,6 +21,7 @@ interface ProjectData {
   project_id: number;
   user_id: string;
   user_name: string;
+  description: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -350,6 +351,7 @@ export default function ProjectTitleBox() {
         </TouchableOpacity>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.user_name}</Text>
+          <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
             {calculatePostDuration(item.date_posted, item.time_posted)}
@@ -433,6 +435,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: "400",
+    marginBottom: 5,
   },
   location: {
     fontSize: 14,
