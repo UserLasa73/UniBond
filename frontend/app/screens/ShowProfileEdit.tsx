@@ -39,6 +39,13 @@ type Event = {
   isInterestedByCurrentUser?: boolean; // Add this field
 };
 
+type Profile = {
+  id: string;
+  username: string;
+  full_name: string;
+  avatar_url: string;
+};
+
 export default function ShowProfileEdit() {
   const [fullname, setFullname] = useState("");
   const [username, setUsername] = useState("");
@@ -56,9 +63,13 @@ export default function ShowProfileEdit() {
   const [posts, setPosts] = useState<(Post | Event)[]>([]); // State for posts and events
   const { userId } = useLocalSearchParams();
   const [jobtitle, setJobtitle] = useState([]); // Store followers list
-  const [followersList, setFollowersList] = useState([]); // Store followers list
+  const [followersList, setFollowersList] = useState<
+    { follower_id: string; profiles: Profile }[]
+  >([]); // Store followers list
   const [followersCount, setFollowersCount] = useState(0); // Store number of followers
-  const [followingList, setFollowingList] = useState([]); // Store following list
+  const [followingList, setFollowingList] = useState<
+    { followed_id: string; profiles: Profile }[]
+  >([]); // Store following list
   const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
   const [postsCount, setPostsCount] = useState(0); // Store number of posts made by the user
   const [graduationyear, setgraduationyear] = useState(); // Store number of events created by the user
@@ -416,6 +427,34 @@ export default function ShowProfileEdit() {
     }
   };
 
+  const handleFollowersPress = () => {
+    router.push({
+      pathname: "/screens/FollowersList",
+      params: {
+        type: "followers",
+        userId: userId || session?.user?.id,
+      },
+    });
+  };
+
+  const handleFollowingPress = () => {
+    router.push({
+      pathname: "/screens/FollowList",
+      params: {
+        type: "following",
+        userId: userId || session?.user?.id,
+        following: JSON.stringify(
+          followingList.map((f) => ({
+            id: f.followed_id,
+            username: f.profiles.username,
+            full_name: f.profiles.full_name,
+            avatar_url: f.profiles.avatar_url,
+          }))
+        ),
+      },
+    });
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {/* Back Button */}
@@ -461,19 +500,25 @@ export default function ShowProfileEdit() {
               <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
             </View>
 
-            <View style={{ alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ alignItems: "center" }}
+              onPress={handleFollowersPress}
+            >
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followersCount}
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
-            </View>
+            </TouchableOpacity>
 
-            <View style={{ alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ alignItems: "center" }}
+              onPress={handleFollowingPress}
+            >
               <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                 {followingCount}
               </Text>
               <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
