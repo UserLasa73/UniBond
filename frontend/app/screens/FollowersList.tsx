@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ShowingAvatar from "../Components/ShowingAvatar";
 import { supabase } from "../lib/supabse";
 import { useEffect, useState } from "react";
 
@@ -26,6 +27,8 @@ export default function FollowersList() {
   const params = useLocalSearchParams();
   const type = params.type as "followers" | "following";
   const userId = params.userId as string;
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,7 @@ export default function FollowersList() {
       setLoading(true);
       setError(null);
 
-      // First get the relationship IDs
+      // First get the relationships
       const { data: relationships, error: relError } = await supabase
         .from("followers")
         .select(type === "followers" ? "follower_id" : "followed_id")
@@ -50,7 +53,6 @@ export default function FollowersList() {
 
       if (relError) throw relError;
 
-      // Extract user IDs from relationships
       const userIds =
         relationships?.map((r) =>
           type === "followers" ? r.follower_id : r.followed_id
@@ -61,11 +63,29 @@ export default function FollowersList() {
         return;
       }
 
-      // Then get the profile data for those IDs
+      // Then check which of these users are blocked
+      const { data: blockedUsers, error: blockedError } = await supabase
+        .from("blocked_users")
+        .select("blocked_id")
+        .eq("blocker_id", userId);
+
+      if (blockedError) throw blockedError;
+
+      const blockedIds = blockedUsers?.map((b) => b.blocked_id) || [];
+
+      // Filter out blocked users from the list
+      const filteredUserIds = userIds.filter((id) => !blockedIds.includes(id));
+
+      if (filteredUserIds.length === 0) {
+        setProfiles([]);
+        return;
+      }
+
+      // Get profile data for non-blocked users
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, username, full_name, avatar_url")
-        .in("id", userIds);
+        .in("id", filteredUserIds);
 
       if (profilesError) throw profilesError;
 
@@ -82,6 +102,88 @@ export default function FollowersList() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchProfiles();
+  };
+
+  const removeFollower = async (followerId: string) => {
+    try {
+      const { error } = await supabase
+        .from("followers")
+        .delete()
+        .eq("follower_id", followerId)
+        .eq("followed_id", userId);
+
+      if (error) throw error;
+
+      setProfiles(profiles.filter((profile) => profile.id !== followerId));
+      Alert.alert("Success", "Follower removed successfully");
+    } catch (error) {
+      console.error("Error removing follower:", error);
+      Alert.alert("Error", "Failed to remove follower");
+    }
+  };
+
+  const blockUser = async (userIdToBlock: string) => {
+    try {
+      // Remove follow relationships in both directions (if they exist)
+      const { error: deleteError } = await supabase
+        .from("followers")
+        .delete()
+        .or(
+          `and(follower_id.eq.${userId},followed_id.eq.${userIdToBlock}),and(follower_id.eq.${userIdToBlock},followed_id.eq.${userId})`
+        );
+
+      if (deleteError) throw deleteError;
+
+      // Add to blocked users table
+      const { error: blockError } = await supabase
+        .from("blocked_users")
+        .upsert({
+          blocker_id: userId,
+          blocked_id: userIdToBlock,
+          created_at: new Date().toISOString(),
+        });
+
+      if (blockError) throw blockError;
+
+      // Update local state
+      setProfiles(profiles.filter((profile) => profile.id !== userIdToBlock));
+      Alert.alert(
+        "User Blocked",
+        "This user can no longer follow you or see your profile."
+      );
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      Alert.alert(
+        "Error",
+        "Could not block user at this time. Please try again."
+      );
+    }
+  };
+
+  const confirmRemove = (followerId: string) => {
+    Alert.alert(
+      "Remove Follower",
+      "Are you sure you want to remove this follower?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", onPress: () => removeFollower(followerId) },
+      ]
+    );
+  };
+
+  const confirmBlock = (userIdToBlock: string) => {
+    Alert.alert(
+      "Block User",
+      "Blocking will prevent this user from following you or seeing your profile.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Block",
+          style: "destructive",
+          onPress: () => blockUser(userIdToBlock),
+        },
+      ]
+    );
   };
 
   if (!type || !userId) {
@@ -124,21 +226,48 @@ export default function FollowersList() {
         <FlatList
           data={profiles}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.itemContainer}
-              onPress={() =>
-                router.push({
-                  pathname: "/screens/ProfileScreen",
-                  params: { userId: item.id },
-                })
-              }
-            >
-              <ShowingAvatar url={item.avatar_url} size={50} />
-              <View style={styles.textContainer}>
-                <Text style={styles.name}>{item.full_name}</Text>
-                <Text style={styles.username}>@{item.username}</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.itemContainer}>
+              <TouchableOpacity
+                style={styles.profileInfo}
+                onPress={() =>
+                  router.push({
+                    pathname: "/screens/ProfileScreen",
+                    params: { userId: item.id },
+                  })
+                }
+              >
+                <View style={styles.profileImage}>
+                  {item.avatar_url ? (
+                    <Image
+                      source={{ uri: `${storageUrl}${item.avatar_url}` }}
+                      style={{ width: 50, height: 50, borderRadius: 25 }}
+                    />
+                  ) : (
+                    <MaterialIcons name="person" size={50} color="#ccc" />
+                  )}
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  <Text style={styles.username}>@{item.username}</Text>
+                </View>
+              </TouchableOpacity>
+              {type === "followers" && (
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => confirmRemove(item.id)}
+                  >
+                    <Feather name="user-minus" size={20} color="#ff4444" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => confirmBlock(item.id)}
+                  >
+                    <Feather name="slash" size={20} color="#ff4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -173,9 +302,24 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+  },
+  profileInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   textContainer: {
     marginLeft: 16,
@@ -215,5 +359,13 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: "white",
     textAlign: "center",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    marginLeft: 15,
+    padding: 8,
   },
 });

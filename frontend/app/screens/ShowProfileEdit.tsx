@@ -10,11 +10,12 @@ import {
   FlatList,
   StyleSheet,
   Modal,
+  Image,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { router, useLocalSearchParams } from "expo-router";
-import PostItem from "./PostItem"; // Import PostItem component
+import PostItem from "./PostItem";
 
 // Define the Post type
 type Post = {
@@ -33,10 +34,10 @@ type Event = {
   event_description: string;
   event_location: string;
   event_date: string;
-  uid: string; // User ID of the event creator
-  interested_count: number; // Add this field
-  is_event: boolean; // To differentiate between posts and events
-  isInterestedByCurrentUser?: boolean; // Add this field
+  uid: string;
+  interested_count: number;
+  is_event: boolean;
+  isInterestedByCurrentUser?: boolean;
 };
 
 type Profile = {
@@ -59,33 +60,110 @@ export default function ShowProfileEdit() {
   const [course, setCourse] = useState("");
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
-  const [role, setRole] = useState<boolean>(false); // State for role
-  const [posts, setPosts] = useState<(Post | Event)[]>([]); // State for posts and events
+  const [role, setRole] = useState<boolean>(false);
+  const [posts, setPosts] = useState<(Post | Event)[]>([]);
   const { userId } = useLocalSearchParams();
-  const [jobtitle, setJobtitle] = useState([]); // Store followers list
+  const [jobtitle, setJobtitle] = useState([]);
   const [followersList, setFollowersList] = useState<
     { follower_id: string; profiles: Profile }[]
-  >([]); // Store followers list
-  const [followersCount, setFollowersCount] = useState(0); // Store number of followers
+  >([]);
+  const [followersCount, setFollowersCount] = useState(0);
   const [followingList, setFollowingList] = useState<
     { followed_id: string; profiles: Profile }[]
-  >([]); // Store following list
-  const [followingCount, setFollowingCount] = useState(0); // Store number of users you are following
-  const [postsCount, setPostsCount] = useState(0); // Store number of posts made by the user
-  const [graduationyear, setgraduationyear] = useState(); // Store number of events created by the user
-  // State for dropdown menu
+  >([]);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [postsCount, setPostsCount] = useState(0);
+  const [graduationyear, setgraduationyear] = useState();
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Store selected event for dropdown
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<Profile[]>([]);
+  const [showBlockedList, setShowBlockedList] = useState(false);
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
 
   useEffect(() => {
     if (userId || session) {
       getProfile();
-      getFollowers(); // Fetch followers
-      getFollowing(); // Fetch following
+      getFollowers();
+      getFollowing();
       fetchPosts();
+      fetchBlockedUsers();
     }
   }, [userId, session]);
 
+  // Fetch blocked users - UPDATED TO FIX THE ERROR
+  const fetchBlockedUsers = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // First get the blocked user IDs
+      const { data: blockedData, error: blockedError } = await supabase
+        .from("blocked_users")
+        .select("blocked_id")
+        .eq("blocker_id", profileId);
+
+      if (blockedError) throw blockedError;
+
+      if (!blockedData || blockedData.length === 0) {
+        setBlockedUsers([]);
+        return;
+      }
+
+      // Then get the profiles for those IDs
+      const blockedIds = blockedData.map((item) => item.blocked_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", blockedIds);
+
+      if (profilesError) throw profilesError;
+
+      setBlockedUsers(profilesData || []);
+    } catch (error) {
+      console.error("Error fetching blocked users:", error);
+      Alert.alert("Error", "Could not fetch blocked users.");
+      setBlockedUsers([]);
+    }
+  };
+
+  // Unblock a user
+  const unblockUser = async (userIdToUnblock: string) => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { error } = await supabase
+        .from("blocked_users")
+        .delete()
+        .eq("blocker_id", profileId)
+        .eq("blocked_id", userIdToUnblock);
+
+      if (error) throw error;
+
+      setBlockedUsers(
+        blockedUsers.filter((user) => user.id !== userIdToUnblock)
+      );
+      Alert.alert("Success", "User unblocked successfully");
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+      Alert.alert("Error", "Could not unblock user.");
+    }
+  };
+
+  // Confirm unblock action
+  const confirmUnblock = (userIdToUnblock: string) => {
+    Alert.alert(
+      "Unblock User",
+      "Are you sure you want to unblock this user? They will be able to see your profile and interact with you.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Unblock", onPress: () => unblockUser(userIdToUnblock) },
+      ]
+    );
+  };
+
+  // [KEEP ALL OTHER EXISTING FUNCTIONS EXACTLY AS THEY WERE]
   // Fetch followers
   const getFollowers = async () => {
     try {
@@ -194,7 +272,6 @@ export default function ShowProfileEdit() {
         .eq("uid", profileId);
 
       if (eventsData) {
-        // Fetch interest status for each event
         const eventsWithInterest = await Promise.all(
           eventsData.map(async (event) => {
             const { data: interestData, error: interestError } = await supabase
@@ -547,7 +624,7 @@ export default function ShowProfileEdit() {
         </View>
       </View>
 
-      {/* Edit and Sign Out Buttons */}
+      {/* Edit, Blocked List, and Sign Out Buttons */}
       <View
         style={{
           flexDirection: "row",
@@ -555,6 +632,7 @@ export default function ShowProfileEdit() {
           alignItems: "center",
           marginHorizontal: 20,
           marginTop: 20,
+          gap: 10,
         }}
       >
         <TouchableOpacity
@@ -565,11 +643,11 @@ export default function ShowProfileEdit() {
             borderRadius: 25,
             flex: 1,
             alignItems: "center",
-            marginRight: 10,
           }}
         >
           <Text style={{ color: "#fff" }}>Edit</Text>
         </TouchableOpacity>
+
         {!userId && (
           <TouchableOpacity
             onPress={async () => {
@@ -596,7 +674,70 @@ export default function ShowProfileEdit() {
             <Text style={{ color: "#2C3036" }}>Sign Out</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          onPress={() => setShowBlockedList(!showBlockedList)}
+          style={{
+            backgroundColor: "#2C3036",
+            padding: 10,
+            borderRadius: 25,
+            alignItems: "center",
+            marginLeft: 10,
+          }}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
+      <Modal
+        visible={showBlockedList}
+        animationType="slide"
+        onRequestClose={() => setShowBlockedList(false)}
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowBlockedList(false)}>
+              <Ionicons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Blocked Users</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          {blockedUsers.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No blocked users</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={blockedUsers}
+              renderItem={({ item }) => (
+                <View style={styles.blockedUserItem}>
+                  <View style={styles.userInfo}>
+                    {item.avatar_url ? (
+                      <Image
+                        source={{ uri: `${storageUrl}${item.avatar_url}` }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <MaterialIcons name="person" size={40} color="#ccc" />
+                    )}
+                    <View style={styles.userText}>
+                      <Text style={styles.userName}>{item.full_name}</Text>
+                      <Text style={styles.userUsername}>{item.username}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.unblockButton}
+                    onPress={() => confirmUnblock(item.id)}
+                  >
+                    <Text style={styles.unblockButtonText}>Unblock</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.blockedListContent}
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
 
       {/* Posts Section */}
       <View style={{ marginTop: 30, flex: 1 }}>
@@ -742,5 +883,68 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#2C3036",
     marginVertical: 5,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  blockedUserItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  userText: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  userUsername: {
+    fontSize: 14,
+    color: "#666",
+  },
+  unblockButton: {
+    backgroundColor: "#2C3036",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  unblockButtonText: {
+    color: "white",
+  },
+  blockedListContent: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#888",
   },
 });
