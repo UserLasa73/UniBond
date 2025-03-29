@@ -6,11 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ShowingAvatar from "../Components/ShowingAvatar";
 import { supabase } from "../lib/supabse";
 import { useEffect, useState } from "react";
 
@@ -25,6 +25,8 @@ export default function FollowList() {
   const params = useLocalSearchParams();
   const type = params.type as "followers" | "following";
   const userId = params.userId as string;
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
 
   const [data, setData] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,19 +100,17 @@ export default function FollowList() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", padding: 16 }}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 16 }}>
+        <Text style={styles.headerText}>
           {type === "followers" ? "Followers" : "Following"} ({data.length})
         </Text>
       </View>
 
       {data.length === 0 ? (
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
+        <View style={styles.emptyContainer}>
           <Text>No {type === "followers" ? "followers" : "following"} yet</Text>
         </View>
       ) : (
@@ -123,7 +123,16 @@ export default function FollowList() {
                 router.push(`/screens/ProfileScreen?userId=${item.id}`)
               }
             >
-              <ShowingAvatar url={item.avatar_url} size={50} />
+              <View style={styles.profileImage}>
+                {item.avatar_url ? (
+                  <Image
+                    source={{ uri: `${storageUrl}${item.avatar_url}` }}
+                    style={{ width: 40, height: 40, borderRadius: 20 }}
+                  />
+                ) : (
+                  <MaterialIcons name="person" size={40} color="#ccc" />
+                )}
+              </View>
               <View style={styles.textContainer}>
                 <Text style={styles.name}>{item.full_name}</Text>
                 <Text style={styles.username}>@{item.username}</Text>
@@ -138,22 +147,49 @@ export default function FollowList() {
 }
 
 const styles = StyleSheet.create({
-  itemContainer: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  textContainer: {
+  headerText: {
+    fontSize: 18,
+    fontWeight: "bold",
     marginLeft: 16,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  itemContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  textContainer: {
+    marginLeft: 12,
+  },
   name: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "bold",
   },
   username: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
+    marginTop: 2,
   },
 });
