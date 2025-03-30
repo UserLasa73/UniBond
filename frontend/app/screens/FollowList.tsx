@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -30,8 +31,16 @@ export default function FollowList() {
 
   const [data, setData] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState("");
 
   useEffect(() => {
+    // Get the current user's ID
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setCurrentUserId(session.user.id);
+      }
+    });
+
     fetchData();
   }, [type, userId]);
 
@@ -77,6 +86,37 @@ export default function FollowList() {
     }
   };
 
+  const handleUnfollow = async (followedId: string) => {
+    try {
+      const { error } = await supabase
+        .from("followers")
+        .delete()
+        .eq("follower_id", userId)
+        .eq("followed_id", followedId);
+
+      if (error) throw error;
+
+      // Update the local state to remove the unfollowed user
+      setData(data.filter((user) => user.id !== followedId));
+
+      Alert.alert("Success", "User unfollowed successfully");
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      Alert.alert("Error", "Could not unfollow user.");
+    }
+  };
+
+  const confirmUnfollow = (followedId: string, username: string) => {
+    Alert.alert(
+      "Unfollow User",
+      `Are you sure you want to unfollow ${username}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Unfollow", onPress: () => handleUnfollow(followedId) },
+      ]
+    );
+  };
+
   // Handle missing params
   if (!type || !userId) {
     return (
@@ -117,27 +157,41 @@ export default function FollowList() {
         <FlatList
           data={data}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.itemContainer}
-              onPress={() =>
-                router.push(`/screens/ProfileScreen?userId=${item.id}`)
-              }
-            >
-              <View style={styles.profileImage}>
-                {item.avatar_url ? (
-                  <Image
-                    source={{ uri: `${storageUrl}${item.avatar_url}` }}
-                    style={{ width: 40, height: 40, borderRadius: 20 }}
-                  />
-                ) : (
-                  <MaterialIcons name="person" size={40} color="#ccc" />
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.name}>{item.full_name}</Text>
-                <Text style={styles.username}>@{item.username}</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.itemContainer}>
+              <TouchableOpacity
+                style={styles.profileInfo}
+                onPress={() =>
+                  router.push(`/screens/ProfileScreen?userId=${item.id}`)
+                }
+              >
+                <View style={styles.profileImage}>
+                  {item.avatar_url ? (
+                    <Image
+                      source={{ uri: `${storageUrl}${item.avatar_url}` }}
+                      style={{ width: 40, height: 40, borderRadius: 20 }}
+                    />
+                  ) : (
+                    <MaterialIcons name="person" size={40} color="#ccc" />
+                  )}
+                </View>
+                <View style={styles.textContainer}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  <Text style={styles.username}>@{item.username}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Show unfollow button only if:
+                  1. It's the following list (not followers)
+                  2. The current user is viewing their own following list */}
+              {type === "following" && userId === currentUserId && (
+                <TouchableOpacity
+                  style={styles.unfollowButton}
+                  onPress={() => confirmUnfollow(item.id, item.username)}
+                >
+                  <Text style={styles.unfollowButtonText}>Unfollow</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
           keyExtractor={(item) => item.id}
         />
@@ -167,9 +221,15 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+  },
+  profileInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   profileImage: {
     width: 40,
@@ -182,6 +242,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     marginLeft: 12,
+    flex: 1,
   },
   name: {
     fontSize: 15,
@@ -191,5 +252,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
     marginTop: 2,
+  },
+  unfollowButton: {
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  unfollowButtonText: {
+    color: "#333",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
