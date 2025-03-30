@@ -7,17 +7,22 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  TextInput,
   Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { supabase } from "../lib/supabse";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { PostStackParamList } from "../screens/PostNav";
 
 interface ProjectData {
   project_id: number;
   user_id: string;
   user_name: string;
+  description: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -26,7 +31,7 @@ interface ProjectData {
   is_saved: boolean;
   is_applied: boolean;
   time_posted: string;
-  avatar_url?: string; // Add avatar_url to the interface
+  avatar_url?: string;
 }
 
 interface ProfileData {
@@ -38,6 +43,40 @@ export default function ProjectTitleBox() {
   const [projectData, setProjectData] = useState<ProjectData[]>([]);
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dropdownVisible, setDropdownVisible] = useState<{ [key: number]: boolean }>({});
+  const [loggedInUserId, setLoggedInUserId] = useState<string | null>(null);
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList>>();
+  const [filteredProjects, setFilteredProjects] = useState<ProjectData[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter projects based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredProjects(projectData);
+    } else {
+      const filtered = projectData.filter(project =>
+        project.project_title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProjects(filtered);
+    }
+  }, [searchQuery, projectData]);
+
+
+  // Fetch current user ID
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setLoggedInUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   // Function to fetch project data and profiles
   const fetchData = async () => {
@@ -80,6 +119,90 @@ export default function ProjectTitleBox() {
       fetchData();
     }, [])
   );
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:projects")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "projects" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            // Remove deleted project from the local state
+            setProjectData((prevProjects) =>
+              prevProjects.filter((project) => project.project_id !== payload.old.project_id)
+            );
+          } else if (payload.eventType === "UPDATE") {
+            // Update the project in the local state
+            setProjectData((prevProjects) =>
+              prevProjects.map((project) =>
+                project.project_id === payload.new.project_id
+                  ? { ...project, ...payload.new }
+                  : project
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+
+  //Dropdown
+  const toggleDropdown = (projectId: number) => {
+    setDropdownVisible((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
+
+  const handleEdit = (project: ProjectData) => {
+    router.push({
+      pathname: '/screens/EditProjectScreen', // Replace with your edit screen path
+      params: { projectId: project.project_id }, // Pass the job ID to the edit screen
+    });
+    //navigation.navigate("EditProjectScreen", { projectId: project.project_id }); // Pass the project object
+  };
+
+  const handleDelete = async (projectId: number) => {
+    Alert.alert(
+      "Confirm Deletion",
+      "Are you sure you want to delete this project?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from("projects")
+                .delete()
+                .eq("project_id", projectId);
+
+              if (error) throw error;
+
+              // Remove the project from the local state
+              setProjectData((prev) =>
+                prev.filter((project) => project.project_id !== projectId)
+              );
+              Alert.alert("Success", "Project deleted successfully!");
+            } catch (error) {
+              console.error("Error deleting project:", error);
+              Alert.alert("Error", "Failed to delete the project.");
+            }
+          },
+        },
+      ]
+    );
+
+    setDropdownVisible((prev) => ({ ...prev, [projectId]: false }));
+  };
 
   const handleSave = async (projectId: number) => {
     try {
@@ -133,7 +256,10 @@ export default function ProjectTitleBox() {
       router.push(`../user?userId=${encodeURIComponent(user_id)}`);
     } catch (error) {
       console.error("Error applying to project:", error);
-      Alert.alert("Error", "Failed to apply for the project. Please try again.");
+      Alert.alert(
+        "Error",
+        "Failed to apply for the project. Please try again."
+      );
     }
   };
 
@@ -193,14 +319,55 @@ export default function ProjectTitleBox() {
 
   const renderItem = ({ item }: { item: ProjectData }) => (
     <View style={styles.card}>
-      <Text style={styles.title}>{item.project_title}</Text>
+      {/* Card Header */}
+      <View style={styles.cardHeader}>
+        <Text style={styles.title}>{item.project_title}</Text>
+        {/* Show three dots only if the current user is the project owner */}
+        {item.user_id === loggedInUserId && (
+          <TouchableOpacity onPress={() => toggleDropdown(item.project_id)}>
+            <MaterialIcons name="more-vert" size={24} color="black" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Dropdown Menu */}
+      {dropdownVisible[item.project_id] && item.user_id === loggedInUserId && (
+        <View style={styles.dropdown}>
+          <TouchableOpacity
+            style={styles.dropdownItem}
+            onPress={() => handleEdit(item)}
+          >
+            <Text>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dropdownItem}
+            onPress={() => handleDelete(item.project_id)}
+          >
+            <Text style={{ color: "red" }}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.userInfo}>
-        <Image
-          source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }} // Use avatar_url or a fallback
-          style={styles.avatar}
-        />
+        <TouchableOpacity
+          onPress={() => {
+            router.push({
+              pathname: "/screens/ProfileScreen",
+              params: { userId: item.user_id },
+            });
+          }}
+          accessible={true}
+          accessibilityLabel={`View profile of ${item.user_name}`}
+          accessibilityRole="button"
+        >
+          <Image
+            source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
         <View style={styles.textGroup}>
           <Text style={styles.name}>{item.user_name}</Text>
+          <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
             {calculatePostDuration(item.date_posted, item.time_posted)}
@@ -238,11 +405,35 @@ export default function ProjectTitleBox() {
   );
 
   return (
-    <FlatList
-      data={projectData}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.project_id.toString()}
-    />
+    <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search projects..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery !== "" && (
+          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
+            <Ionicons name="close-circle" size={20} color="gray" />
+          </TouchableOpacity>
+        )}
+      </View>
+  
+      <FlatList
+        data={filteredProjects}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.project_id.toString()}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No projects found matching your search</Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
@@ -284,6 +475,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: "400",
+    marginBottom: 5,
   },
   location: {
     fontSize: 14,
@@ -330,5 +526,68 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  dropdown: {
+    position: "absolute",
+    top: 40, // Adjust based on your layout
+    right: 0,
+    backgroundColor: "white",
+    borderRadius: 4,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    margin: 16,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    paddingLeft: 8,
+    fontSize: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    color: 'gray',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -19,7 +20,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EventItem from "@/app/Components/EventItem";
 import RandomUserCards from "@/app/Components/renderUserCard ";
-import EditPostScreen from "@/app/screens/EditPostScreen";
 
 type Post = {
   id: number;
@@ -32,6 +32,8 @@ type Post = {
   posted_date: string;
   avatar_url: string;
   role: boolean;
+  type: "post";
+  created_at: string;
 };
 
 type Event = {
@@ -47,6 +49,9 @@ type Event = {
   role: boolean;
   interested_count: number;
   isInterestedByCurrentUser: boolean;
+  type: "event";
+  uid: string;
+  created_at: string;
 };
 
 const HomeScreen: React.FC = () => {
@@ -55,29 +60,93 @@ const HomeScreen: React.FC = () => {
   const [username, setUsername] = useState<string>("");
   const [combinedData, setCombinedData] = useState<(Post | Event)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [filter, setFilter] = useState<"all" | "posts" | "events">("all");
   const [sortBy, setSortBy] = useState<"date" | "likes" | "interested">("date");
   const [isDateSorted, setIsDateSorted] = useState<boolean>(false);
-  const [menuVisiblePostId, setMenuVisiblePostId] = useState<string | null>(
+  const [menuVisiblePostId, setMenuVisiblePostId] = useState<number | null>(
     null
   );
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [refreshKey, setRefreshKey] = useState(0);
-  const [likeCount, setLikeCount] = useState<number>(0);
-  const [hasLiked, setHasLiked] = useState<boolean>(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState<string>("");
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = (array: any[]) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  const fetchBlockedUsers = async () => {
+    try {
+      if (!session?.user?.id) return [];
+
+      const { data, error } = await supabase
+        .from("blocked_users")
+        .select("blocked_id")
+        .eq("blocker_id", session.user.id);
+
+      if (error) throw error;
+      return data.map((item) => item.blocked_id);
+    } catch (error) {
+      console.error("Error fetching blocked users:", error);
+      Alert.alert("Error", "Failed to load blocked users");
+      return [];
+    }
+  };
+
+  const blockUser = async (userIdToBlock: string) => {
+    try {
+      const { error } = await supabase.from("blocked_users").insert([
+        {
+          blocker_id: session?.user?.id,
+          blocked_id: userIdToBlock,
+        },
+      ]);
+
+      if (error) throw error;
+
+      setRefreshKey((prev) => prev + 1);
+      Alert.alert("Success", "User blocked successfully");
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      Alert.alert("Error", "Failed to block user");
+    }
+  };
+
+  const unblockUser = async (userIdToUnblock: string) => {
+    try {
+      const { error } = await supabase
+        .from("blocked_users")
+        .delete()
+        .eq("blocker_id", session?.user?.id)
+        .eq("blocked_id", userIdToUnblock);
+
+      if (error) throw error;
+
+      setRefreshKey((prev) => prev + 1);
+      Alert.alert("Success", "User unblocked successfully");
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+      Alert.alert("Error", "Failed to unblock user");
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchCombinedData().finally(() => setRefreshing(false));
+  }, []);
 
   useEffect(() => {
     if (session) {
       getProfile();
       fetchCombinedData();
     }
-  }, [session]);
-
-  useEffect(() => {
-    fetchCombinedData();
-  }, [refreshKey]);
+  }, [session, refreshKey]);
 
   const getProfile = async () => {
     try {
@@ -117,7 +186,11 @@ const HomeScreen: React.FC = () => {
   const fetchCombinedData = async () => {
     setLoading(true);
     try {
-      // Fetch posts
+      // Fetch blocked users first
+      const blockedIds = await fetchBlockedUsers();
+      setBlockedUserIds(blockedIds);
+
+      // Fetch posts (using RPC function that checks visibility)
       const { data: postsData, error: postsError } = await supabase.rpc(
         "get_visible_posts",
         { current_user_id: session?.user?.id }
@@ -134,50 +207,59 @@ const HomeScreen: React.FC = () => {
 
       if (eventsError) throw eventsError;
 
-      // Fetch user profile data for each post
+      // Process posts and filter blocked users
       const postsWithUserData = await Promise.all(
-        postsData.map(async (post: Post) => {
-          const userProfile = await fetchUserProfile(post.user_id);
-          return {
-            ...post,
-            type: "post",
-            username: userProfile.username,
-            avatar_url: userProfile.avatar_url,
-            role: userProfile.role,
-            posted_date: new Date(post.created_at).toISOString(),
-          };
-        })
+        postsData
+          .filter((post: Post) => !blockedIds.includes(post.user_id))
+          .map(async (post: Post) => {
+            const userProfile = await fetchUserProfile(post.user_id);
+            return {
+              ...post,
+              type: "post",
+              username: userProfile.username,
+              avatar_url: userProfile.avatar_url,
+              role: userProfile.role,
+              posted_date: new Date(post.created_at).toISOString(),
+            };
+          })
       );
 
-      // Fetch user profile data and interest status for each event
+      // Process events and filter blocked users
       const eventsWithUserData = await Promise.all(
-        eventsData.map(async (event: Event) => {
-          const userProfile = await fetchUserProfile(event.uid);
+        eventsData
+          .filter((event: Event) => !blockedIds.includes(event.uid))
+          .map(async (event: Event) => {
+            const userProfile = await fetchUserProfile(event.uid);
 
-          // Check if the current user is interested in this event
-          const { data: interestData, error: interestError } = await supabase
-            .from("event_interests")
-            .select("*")
-            .eq("event_id", event.id)
-            .eq("user_id", session?.user?.id);
+            // Check if current user is interested
+            const { data: interestData, error: interestError } = await supabase
+              .from("event_interests")
+              .select("*")
+              .eq("event_id", event.id)
+              .eq("user_id", session?.user?.id);
 
-          if (interestError) throw interestError;
+            if (interestError) throw interestError;
 
-          const isInterestedByCurrentUser = interestData.length > 0;
+            const isInterestedByCurrentUser = interestData.length > 0;
 
-          return {
-            ...event,
-            type: "event",
-            username: userProfile.username,
-            avatar_url: userProfile.avatar_url,
-            role: userProfile.role,
-            posted_date: new Date(event.created_at).toISOString(),
-            isInterestedByCurrentUser,
-          };
-        })
+            return {
+              ...event,
+              type: "event",
+              username: userProfile.username,
+              avatar_url: userProfile.avatar_url,
+              role: userProfile.role,
+              posted_date: new Date(event.created_at).toISOString(),
+              isInterestedByCurrentUser,
+              user_id: event.uid,
+            };
+          })
       );
 
-      setCombinedData([...eventsWithUserData, ...postsWithUserData]);
+      // Combine and shuffle the data
+      const combined = [...eventsWithUserData, ...postsWithUserData];
+      const shuffledData = shuffleArray(combined);
+
+      setCombinedData(shuffledData);
     } catch (error) {
       console.error("Error fetching data:", error);
       Alert.alert("Error", "Could not fetch data.");
@@ -276,6 +358,9 @@ const HomeScreen: React.FC = () => {
         : null;
 
       const isOwner = post.user_id === session?.user?.id;
+      const isBlocked = blockedUserIds.includes(post.user_id);
+
+      if (isBlocked) return null; // Don't render posts from blocked users
 
       return (
         <View style={styles.postItem}>
@@ -315,25 +400,28 @@ const HomeScreen: React.FC = () => {
             onProfilePress={() =>
               router.push(`/screens/ProfileScreen?userId=${post.user_id}`)
             }
+            onBlockUser={() => blockUser(post.user_id)}
           />
 
           {/* Post Menu Button */}
-          <TouchableOpacity
-            onPress={(event) => {
-              if (menuVisiblePostId === post.id) {
-                setMenuVisiblePostId(null); // Close if already open
-              } else {
-                setMenuVisiblePostId(post.id);
-                setMenuPosition({
-                  x: event.nativeEvent.pageX - 110, // Shift menu left
-                  y: event.nativeEvent.pageY - 5,
-                });
-              }
-            }}
-            style={styles.menuButton}
-          >
-            <MaterialIcons name="more-vert" size={24} color="black" />
-          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity
+              onPress={(event) => {
+                if (menuVisiblePostId === post.id) {
+                  setMenuVisiblePostId(null);
+                } else {
+                  setMenuVisiblePostId(post.id);
+                  setMenuPosition({
+                    x: event.nativeEvent.pageX - 110,
+                    y: event.nativeEvent.pageY - 5,
+                  });
+                }
+              }}
+              style={styles.menuButton}
+            >
+              <MaterialIcons name="more-vert" size={24} color="black" />
+            </TouchableOpacity>
+          )}
 
           {/* Post Menu */}
           {menuVisiblePostId === post.id && (
@@ -341,56 +429,48 @@ const HomeScreen: React.FC = () => {
               visible={true}
               onClose={() => setMenuVisiblePostId(null)}
               onEdit={() => {
-                if (isOwner) {
-                  setMenuVisiblePostId(null);
-                  router.push({
-                    pathname: "/screens/EditPostScreen",
-                    params: {
-                      postId: post.id,
-                    },
-                  });
-                }
+                setMenuVisiblePostId(null);
+                router.push({
+                  pathname: "/screens/EditPostScreen",
+                  params: {
+                    postId: post.id,
+                  },
+                });
               }}
               onDelete={async () => {
-                if (isOwner) {
-                  Alert.alert(
-                    "Delete Post",
-                    "Are you sure you want to delete this post?",
-                    [
-                      {
-                        text: "Cancel",
-                        style: "cancel",
-                      },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                          try {
-                            const { error } = await supabase
-                              .from("posts")
-                              .delete()
-                              .eq("id", post.id);
+                Alert.alert(
+                  "Delete Post",
+                  "Are you sure you want to delete this post?",
+                  [
+                    {
+                      text: "Cancel",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: async () => {
+                        try {
+                          const { error } = await supabase
+                            .from("posts")
+                            .delete()
+                            .eq("id", post.id);
 
-                            if (error) {
-                              console.error("Error deleting post:", error);
-                              Alert.alert("Error", "Failed to delete post.");
-                            } else {
-                              console.log("Post deleted successfully");
-                              setRefreshKey((prevKey) => prevKey + 1);
-                              setMenuVisiblePostId(null);
-                            }
-                          } catch (err) {
-                            console.error("Unexpected error:", err);
-                            Alert.alert(
-                              "Error",
-                              "An unexpected error occurred."
-                            );
+                          if (error) {
+                            console.error("Error deleting post:", error);
+                            Alert.alert("Error", "Failed to delete post.");
+                          } else {
+                            setRefreshKey((prevKey) => prevKey + 1);
+                            setMenuVisiblePostId(null);
                           }
-                        },
+                        } catch (err) {
+                          console.error("Unexpected error:", err);
+                          Alert.alert("Error", "An unexpected error occurred.");
+                        }
                       },
-                    ]
-                  );
-                }
+                    },
+                  ]
+                );
               }}
               onShare={() => {
                 setMenuVisiblePostId(null);
@@ -426,21 +506,18 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleLike = async (postId: string, hasLiked: boolean) => {
+  const handleLike = async (postId: number, hasLiked: boolean) => {
     try {
-      // Find the post in combinedData
       const postIndex = combinedData.findIndex(
         (item) => item.type === "post" && item.id === postId
       );
 
       if (postIndex === -1) throw new Error("Post not found");
 
-      // Update like count
       const updatedLikeCount = hasLiked
         ? combinedData[postIndex].likes - 1
         : combinedData[postIndex].likes + 1;
 
-      // Update the like count in the database
       const { error: updateError } = await supabase
         .from("posts")
         .update({ likes: updatedLikeCount })
@@ -448,41 +525,38 @@ const HomeScreen: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      // Update combinedData to persist the like state
-      combinedData[postIndex] = {
-        ...combinedData[postIndex],
-        likes: updatedLikeCount,
-      };
-
-      // Ensure the UI re-renders with the updated data
-      setCombinedData([...combinedData]);
+      setCombinedData((prev) =>
+        prev.map((item) =>
+          item.type === "post" && item.id === postId
+            ? { ...item, likes: updatedLikeCount }
+            : item
+        )
+      );
     } catch (error) {
       console.error("Error updating like:", error);
     }
   };
 
-  const handleCommentSubmit = async (postId: string, commentText: string) => {
+  const handleCommentSubmit = async (postId: number, commentText: string) => {
     if (!commentText.trim()) {
       alert("Please enter a comment!");
       return;
     }
 
     try {
-      // Insert new comment into the database
       const { data, error } = await supabase.from("comments").insert([
         {
           post_id: postId,
           comment: commentText,
-          user_id: userId,
+          user_id: session?.user?.id,
           timestamp: new Date(),
         },
       ]);
 
       if (error) throw error;
 
-      // Update the UI by adding the new comment
-      setComments((prevComments) => [...prevComments, data[0]]); // Assuming `data[0]` is the new comment
-      setNewComment(""); // Reset the input field after submission
+      // Refresh the data to show new comment
+      setRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.error("Error submitting comment:", error);
     }
@@ -502,29 +576,37 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const filteredData = combinedData.filter((item) => {
-    if (filter === "posts") return item.type === "post";
-    if (filter === "events") return item.type === "event";
-    return true; // 'all'
-  });
+  const filteredData = useMemo(() => {
+    return combinedData.filter((item) => {
+      if (filter === "posts") return item.type === "post";
+      if (filter === "events") return item.type === "event";
+      return true; // 'all'
+    });
+  }, [combinedData, filter]);
 
   const sortedData = useMemo(() => {
-    return filteredData.sort((a, b) => {
-      if (sortBy === "date" && isDateSorted) {
+    if (sortBy === "date" && isDateSorted) {
+      return [...filteredData].sort((a, b) => {
         return (
           new Date(b.posted_date).getTime() - new Date(a.posted_date).getTime()
         );
-      } else if (sortBy === "likes" && a.type === "post" && b.type === "post") {
-        return b.likes - a.likes;
-      } else if (
-        sortBy === "interested" &&
-        a.type === "event" &&
-        b.type === "event"
-      ) {
-        return b.interested_count - a.interested_count;
-      }
-      return 0; // No sorting
-    });
+      });
+    } else if (sortBy === "likes") {
+      return [...filteredData].sort((a, b) => {
+        if (a.type === "post" && b.type === "post") {
+          return b.likes - a.likes;
+        }
+        return 0;
+      });
+    } else if (sortBy === "interested") {
+      return [...filteredData].sort((a, b) => {
+        if (a.type === "event" && b.type === "event") {
+          return b.interested_count - a.interested_count;
+        }
+        return 0;
+      });
+    }
+    return filteredData; // Return shuffled data when no sort is applied
   }, [filteredData, sortBy, isDateSorted]);
 
   const renderHeader = useCallback(
@@ -536,7 +618,7 @@ const HomeScreen: React.FC = () => {
     [session?.user?.id]
   );
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -580,11 +662,14 @@ const HomeScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.sortButton, isDateSorted && styles.activeSort]}
+          style={[
+            styles.sortButton,
+            sortBy === "date" && isDateSorted && styles.activeSort,
+          ]}
           onPress={() => handleSortChange("date")}
         >
           <Text style={styles.sortButtonText}>
-            {isDateSorted ? "Remove Sort by Date" : "Sort by Date"}
+            {isDateSorted ? "Newest First" : "Sort by Date"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -595,8 +680,16 @@ const HomeScreen: React.FC = () => {
         keyExtractor={(item) =>
           `${item.type === "event" ? "event" : "post"}-${item.id}`
         }
-        ListHeaderComponent={renderHeader} // Include RandomUserCards here
+        ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.combinedList}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#2C3036"]}
+            tintColor="#2C3036"
+          />
+        }
       />
 
       <TouchableOpacity
@@ -639,18 +732,19 @@ const styles = StyleSheet.create({
   },
   combinedList: {
     padding: 16,
-    paddingBottom: 100, // Add padding to ensure the last item is visible
+    paddingBottom: 100,
   },
   postItem: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: "#fff", // Ensures posts have a distinct background
+    backgroundColor: "#fff",
     borderRadius: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    position: "relative",
   },
   userInfoContainer: {
     flexDirection: "row",
@@ -706,7 +800,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#ddd",
     margin: 5,
-    marginRight: 20,
   },
   activeSort: {
     backgroundColor: "#2C3036",

@@ -15,6 +15,18 @@ const Layout = () => {
         }}
       />
       <Stack.Screen
+        name="FollowersList"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="FollowList"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="AddProjectScreen"
         options={{
           headerShown: false,

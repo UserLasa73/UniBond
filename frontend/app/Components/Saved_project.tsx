@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,15 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import supabase from "../../lib/supabse";
 
 interface ProjectData {
   project_id: number;
   user_id: string;
+  user_name: string;
+  description: string;
   project_title: string;
   location: string;
   date_posted: string;
@@ -22,35 +26,92 @@ interface ProjectData {
   skills: string;
   is_saved: boolean;
   is_applied: boolean;
+  time_posted: string;
+  avatar_url?: string;
+}
+
+interface ProfileData {
+  id: string;
+  avatar_url?: string;
+  username: string;
 }
 
 export default function Saved_project() {
   const [savedProjects, setSavedProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<ProfileData[]>([]);
 
+  // Fetch saved projects
+  const fetchSavedProjects = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch saved projects
+      const { data: projects, error: projectsError } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("is_saved", true);
+
+      if (projectsError) throw projectsError;
+
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, avatar_url, username");
+
+      if (profilesError) throw profilesError;
+
+      setProfiles(profiles || []);
+
+      // Combine projects with profile data
+      const projectsWithProfiles = (projects || []).map(project => {
+        const profile = profiles?.find(p => p.id === project.user_id);
+        return {
+          ...project,
+          avatar_url: profile?.avatar_url 
+            ? `https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/${profile.avatar_url}`
+            : undefined,
+          user_name: profile?.username || project.user_name
+        };
+      });
+
+      setSavedProjects(projectsWithProfiles);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      Alert.alert("Error", "Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSavedProjects();
+    }, [])
+  );
+
+  // Subscribe to real-time updates
   useEffect(() => {
-    const fetchSavedProjects = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("is_saved", true);
-
-        if (error) throw error;
-
-        setSavedProjects(data || []);
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error("Error fetching saved projects:", error.message);
-        } else {
-          console.error("Error fetching saved projects:", error);
+    const channel = supabase
+      .channel("public:projects")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "projects" },
+        (payload) => {
+          setSavedProjects((prevProjects) =>
+            prevProjects.map((project) =>
+              project.project_id === payload.new.project_id
+                ? { ...project, ...payload.new }
+                : project
+            )
+          );
         }
-      } finally {
-        setLoading(false);
-      }
-    };
+      )
+      .subscribe();
 
-    fetchSavedProjects();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleUnsave = async (projectId: number) => {
@@ -69,12 +130,8 @@ export default function Saved_project() {
 
       Alert.alert("Success", "Project unsaved successfully!");
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("Error unsaving project:", error.message);
-        Alert.alert("Error", "Failed to unsave the project. Please try again.");
-      } else {
-        console.error("Error unsaving project:", error);
-      }
+      console.error("Error unsaving project:", error);
+      Alert.alert("Error", "Failed to unsave the project. Please try again.");
     }
   };
 
@@ -105,6 +162,44 @@ export default function Saved_project() {
     }
   };
 
+  const calculatePostDuration = (datePosted: string, timePosted: string) => {
+    const postDateTime = new Date(`${datePosted}T${timePosted}`); // Combine and parse
+
+    // Check if the date is valid
+    if (isNaN(postDateTime.getTime())) {
+      throw new Error("Invalid date or time format");
+    }
+
+    const currentDate = new Date();
+    const timeDifference = currentDate.getTime() - postDateTime.getTime();
+
+    // Handle case where the post date is in the future
+    if (timeDifference < 0) {
+      return "Just now";
+    }
+
+    const seconds = Math.floor(timeDifference / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 7) {
+      return postDateTime.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      });
+    } else if (days > 0) {
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    } else if (hours > 0) {
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (minutes > 0) {
+      return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    } else {
+      return "Just now";
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -123,20 +218,27 @@ export default function Saved_project() {
 
   const renderItem = ({ item }: { item: ProjectData }) => (
     <View style={styles.card}>
-      {/* Title */}
       <Text style={styles.title}>{item.project_title}</Text>
-
-      {/* User Info */}
       <View style={styles.userInfo}>
+      <TouchableOpacity 
+        onPress={() => {
+          router.push({
+            pathname: "/screens/ProfileScreen",
+            params: { userId: item.user_id },
+          });
+        }}
+      >
         <Image
-          source={{ uri: "https://via.placeholder.com/40" }} // Replace with actual user image URL if available
+          source={{ uri: item.avatar_url || "https://via.placeholder.com/40" }}
           style={styles.avatar}
         />
+      </TouchableOpacity>
         <View style={styles.textGroup}>
-          <Text style={styles.name}>User ID: {item.user_id}</Text>
+          <Text style={styles.name}>{item.user_name}</Text>
+          <Text style={styles.description}>{item.description}</Text>
           <Text style={styles.location}>{item.location}</Text>
           <Text style={styles.date}>
-            {new Date(item.date_posted).toLocaleDateString()}
+          {calculatePostDuration(item.date_posted, item.time_posted)}
           </Text>
         </View>
       </View>
@@ -218,6 +320,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: "400",
+    marginBottom: 5,
   },
   location: {
     fontSize: 14,
