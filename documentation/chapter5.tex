@@ -1,41 +1,106 @@
-\documentclass{article}
-\usepackage{geometry}
-\usepackage{graphicx}
-\usepackage{amsmath}
-\geometry{a4paper}
+\chapter{Presentation of Results}
+\section{Introduction}
+This chapter presents screenshots of the system interfaces and explains the programming environment.
 
-\begin{document}
+\subsection{Authentication Pages}
+The home page of the system is shown in Figure~\ref{fig:start-page}.
 
-\maketitle
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{StartPage.png}
+        \caption{System Start Page}
+        \label{fig:start-page}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{LandingPage.png}
+        \caption{System Landing Page}
+        \label{fig:landing-page}
+    \end{minipage}
+    \vspace{1em}
+    
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{SignupPageForStudent.png}
+        \caption{Student Signup Page}
+        \label{fig:student-signup}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{SignupForAlumni.png}
+        \caption{Alumni Signup Page}
+        \label{fig:alumni-signup}
+    \end{minipage}
+\end{figure}
 
-\section*{Limitations}
+\subsection{Main Application Pages}
+The profile page of the system is shown in Figure~\ref{fig:home-feed}.
 
-\subsection*{1. Lack of User Verification Mechanism}
-The app currently does not have any form of user verification for both students and alumni. This creates a potential security risk, as there is no way to ensure that users are legitimate members of the university community, which may lead to unauthorized access.
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{HomeFeed.png}
+        \caption{Home Feed Page}
+        \label{fig:home-feed}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{Notifications.png}
+        \caption{Notification Page}
+        \label{fig:notifications}
+    \end{minipage}
+    \vspace{1em}
 
-\subsection*{Recommendation}
-Implement a user verification process for both **students** and **alumni**. For **students**, a QR code scanning method can be implemented, where students can scan a QR code linked to their university student ID. Upon scanning, they should enter the password of their university VLE account to verify their identity. For **alumni**, verification can be done using email-based verification or by linking the user’s **LinkedIn** or **GitHub** profiles to confirm their alumni status.
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{AddScreen.png}
+        \caption{Add Content Screen}
+        \label{fig:add-screen}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{AddPostScreen.png}
+        \caption{Add Post Screen}
+        \label{fig:add-post}
+    \end{minipage}
+\end{figure}
 
-\subsection*{2. Scalability Issues}
-As the number of users grows, the app may experience performance degradation. Currently, there are concerns regarding slow load times, crashes, and inefficient data handling, especially as more content is added to the platform. Since the app is using **Supabase**, which provides a free tier for cloud-based services, there is a limitation in terms of long-term scalability. Supabase offers a 30-day free trial, after which a paid subscription or a transition to a more scalable database service will be necessary to maintain performance and reliability as the user base grows.
-
-\subsection*{Recommendation}
-Ensure the backend is optimized for scalability. This can be achieved by continuing to use cloud services like Supabase for the short term, while preparing to transition to a more robust solution that accommodates larger user volumes. Consider upgrading to a paid Supabase plan or evaluating other scalable backend solutions such as Firebase or AWS for long-term growth. Additionally, optimizing the app’s performance through proper indexing, query optimization, and caching mechanisms will help manage a growing user base and prevent performance bottlenecks.
-
-
-\subsection*{3. Insufficient Data Security and Privacy Measures}
-The app does not currently have robust data security protocols, making it vulnerable to security breaches, especially when dealing with sensitive personal data such as student IDs, alumni records, and other private details.
-
-\subsection*{Recommendation}
-Implement **data encryption** for both storage and transmission to ensure the safety of personal data. The app should also comply with **data protection regulations** like **GDPR** and **data privacy laws** to protect users' personal information.
-
-\subsection*{4. Lack of Content Moderation and Reporting Features}
-The app lacks mechanisms to moderate user-generated content, making it vulnerable to the posting of inappropriate, irrelevant, or harmful content. There is no current way to report such issues, leading to potential abuse or misuse of the platform.
-
-\subsection*{Recommendation}
-Integrate a content moderation system that allows users to flag inappropriate content. A **reporting mechanism** should also be implemented to ensure that any offensive or harmful posts are swiftly addressed by the system administrators.
-
-\section*{Conclusion}
-The **UniBond app** holds significant potential for fostering strong connections and collaborations between students and alumni. However, the lack of **user verification**, scalability issues, weak data security, and absence of content moderation tools are notable limitations that must be addressed. Implementing a user verification process, improving scalability, enhancing security measures, and introducing moderation features will greatly improve the app’s usability, security, and effectiveness. By addressing these limitations, UniBond can provide a secure, efficient, and reliable platform for the university community.
-
-\end{document}
+\subsection{Content Creation Pages}
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{AddProjectScreen.png}
+        \caption{Add Project Screen}
+        \label{fig:add-project}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{AddJobScreen.png}
+        \caption{Add Job Screen}
+        \label{fig:add-job}
+    \end{minipage}
+    \vspace{1em}
+    
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{AddEventScreen.png}
+        \caption{Add Event Screen}
+        \label{fig:add-event}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{JobPage.png}
+        \caption{Job Page}
+        \label{fig:job-page}
+    \end{minipage}
+\end{figure}
