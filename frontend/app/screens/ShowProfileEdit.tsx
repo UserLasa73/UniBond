@@ -91,7 +91,6 @@ export default function ShowProfileEdit() {
     }
   }, [userId, session]);
 
-  // Fetch blocked users - UPDATED TO FIX THE ERROR
   const fetchBlockedUsers = async () => {
     try {
       const profileId = userId || session?.user?.id;

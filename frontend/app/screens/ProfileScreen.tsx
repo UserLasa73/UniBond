@@ -21,6 +21,7 @@ import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
 
 export default function ProfileScreen() {
+  // Profile states
   const [fullname, setFullname] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -35,6 +36,8 @@ export default function ProfileScreen() {
   const [role, setRole] = useState<boolean>(false);
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
+
+  // Social states
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
@@ -43,16 +46,73 @@ export default function ProfileScreen() {
   const [events, setEvents] = useState([]);
   const [postCount, setPostCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+
+  // Contact info
   const [email, setEmail] = useState("");
   const [github, setGithub] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
+
+  // UI states
   const [showDropdown, setShowDropdown] = useState(false);
   const [jobtitle, setJobtitle] = useState([]);
   const [graduationyear, setgraduationyear] = useState();
 
+  // Blocking states
+  const [isBlockedByThem, setIsBlockedByThem] = useState(false);
+  const [isBlockedByMe, setIsBlockedByMe] = useState(false);
+  const [blockCheckComplete, setBlockCheckComplete] = useState(false);
+
+  // Check block status when component mounts
   useEffect(() => {
-    if (userId || session) {
+    const checkBlockStatus = async () => {
+      try {
+        const currentUserId = session?.user?.id;
+        const profileUserId = userId;
+
+        if (!currentUserId || !profileUserId) {
+          setBlockCheckComplete(true);
+          return;
+        }
+
+        // Check both directions of blocking
+        const { data: blockData, error: blockError } = await supabase
+          .from("blocked_users")
+          .select()
+          .or(
+            `and(blocker_id.eq.${currentUserId},blocked_id.eq.${profileUserId}),and(blocker_id.eq.${profileUserId},blocked_id.eq.${currentUserId})`
+          );
+
+        if (blockError) throw blockError;
+
+        setIsBlockedByThem(
+          blockData?.some(
+            (block) =>
+              block.blocker_id === profileUserId &&
+              block.blocked_id === currentUserId
+          ) ?? false
+        );
+
+        setIsBlockedByMe(
+          blockData?.some(
+            (block) =>
+              block.blocker_id === currentUserId &&
+              block.blocked_id === profileUserId
+          ) ?? false
+        );
+      } catch (error) {
+        console.error("Error checking block status:", error);
+      } finally {
+        setBlockCheckComplete(true);
+      }
+    };
+
+    checkBlockStatus();
+  }, [userId, session]);
+
+  // Load profile data if not blocked
+  useEffect(() => {
+    if (blockCheckComplete && !isBlockedByThem && !isBlockedByMe) {
       getProfile();
       checkFollowingStatus();
       getFollowing();
@@ -62,178 +122,93 @@ export default function ProfileScreen() {
       if (isFollowing) {
         fetchPostsAndEvents();
       }
+    } else if (blockCheckComplete) {
+      // Clear data if blocked
+      setPosts([]);
+      setEvents([]);
+      setIsFollowing(false);
+      setFullname("");
+      setUsername("");
+      setAvatarUrl(null);
+      setContactNumber("");
+      setGender("");
+      setDepartment("");
+      setFaculty("");
+      setCourse("");
+      setSkills("");
+      setInterests("");
+      setEmail("");
+      setGithub("");
+      setLinkedin("");
+      setPortfolio("");
     }
-  }, [userId, session, isFollowing]);
+  }, [blockCheckComplete, isBlockedByThem, isBlockedByMe, isFollowing]);
 
-  const fetchPostCount = async () => {
+  // Blocking functions
+  const handleBlock = async () => {
     try {
-      const profileId = userId || session?.user?.id;
+      const profileId = session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      const { data, error } = await supabase
-        .from("posts")
-        .select("id")
-        .eq("user_id", profileId);
+      const { error } = await supabase
+        .from("blocked_users")
+        .insert([{ blocker_id: profileId, blocked_id: userId }]);
 
       if (error) throw error;
 
-      setPostCount(data.length);
-    } catch (error) {
-      console.error("Error fetching post count:", error);
-    }
-  };
-
-  const fetchFollowingCount = async () => {
-    try {
-      const profileId = userId || session?.user?.id;
-      if (!profileId) throw new Error("No user on the session!");
-
-      const { data, error } = await supabase
-        .from("followers")
-        .select("followed_id")
-        .eq("follower_id", profileId);
-
-      if (error) throw error;
-
-      setFollowingCount(data.length);
-    } catch (error) {
-      console.error("Error fetching following count:", error);
-    }
-  };
-
-  const fetchPostsAndEvents = async () => {
-    try {
-      const profileId = userId || session?.user?.id;
-      if (!profileId) throw new Error("No user on the session!");
-
-      const { data: postsData, error: postsError } = await supabase
-        .from("posts")
-        .select("*")
-        .eq("user_id", profileId);
-
-      if (postsError) throw postsError;
-
-      const { data: eventsData, error: eventsError } = await supabase
-        .from("events")
-        .select("*")
-        .eq("uid", profileId);
-
-      if (eventsError) throw eventsError;
-
-      const eventsWithInterestStatus = await Promise.all(
-        eventsData.map(async (event) => {
-          const { data: interestData, error: interestError } = await supabase
-            .from("event_interests")
-            .select("*")
-            .eq("event_id", event.id)
-            .eq("user_id", session?.user?.id);
-
-          if (interestError) throw interestError;
-
-          return {
-            ...event,
-            isInterestedByCurrentUser: interestData.length > 0,
-          };
-        })
+      setIsBlockedByMe(true);
+      Alert.alert(
+        "Success",
+        "User has been blocked. They can no longer see your profile or interact with you."
       );
-
-      setPosts(postsData || []);
-      setEvents(eventsWithInterestStatus || []);
-
-      const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
-      setPostCount(totalCount);
     } catch (error) {
-      console.error("Error fetching posts and events:", error);
-      Alert.alert("Error", "Unable to load posts and events.");
+      console.error("Error blocking user:", error);
+      Alert.alert("Error", "Failed to block user");
     }
   };
 
-  const getFollowerCount = async () => {
+  const handleUnblock = async () => {
     try {
-      const { data, error } = await supabase
-        .from("followers")
-        .select("follower_id")
-        .eq("followed_id", userId);
+      const profileId = session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { error } = await supabase
+        .from("blocked_users")
+        .delete()
+        .eq("blocker_id", profileId)
+        .eq("blocked_id", userId);
 
       if (error) throw error;
 
-      setFollowerCount(data.length);
+      setIsBlockedByMe(false);
+      Alert.alert("Success", "User has been unblocked");
+      getProfile();
     } catch (error) {
-      console.error("Error fetching follower count:", error);
+      console.error("Error unblocking user:", error);
+      Alert.alert("Error", "Failed to unblock user");
     }
   };
 
-  const checkFollowingStatus = async () => {
-    const profileId = session?.user?.id;
-    const { data, error } = await supabase
-      .from("followers")
-      .select("follower_id")
-      .eq("follower_id", profileId)
-      .eq("followed_id", userId);
-
-    if (error) {
-      console.error("Error fetching following status:", error);
-    } else {
-      setIsFollowing(data.length > 0);
-    }
-  };
-
-  const getFollowing = async () => {
-    const profileId = session?.user?.id;
-    const { data, error } = await supabase
-      .from("followers")
-      .select("followed_id, profiles(*)")
-      .eq("follower_id", profileId);
-
-    if (error) {
-      console.error("Error fetching following list:", error);
-    } else {
-      setFollowingList(data);
-    }
-  };
-
-  const toggleFollow = async (followedId) => {
-    setLoading(true);
-    try {
-      const action = isFollowing ? unfollowUser : followUser;
-      await action(followedId);
-      setIsFollowing((prev) => !prev);
-      getFollowing();
-      getFollowerCount();
-      if (!isFollowing) {
-        fetchPostsAndEvents();
-      }
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const followUser = async (followedId) => {
-    const profileId = session?.user?.id;
-    const { error } = await supabase
-      .from("followers")
-      .insert([{ follower_id: profileId, followed_id: followedId }]);
-
-    if (error) throw new Error("Error following user.");
-  };
-
-  const unfollowUser = async (followedId) => {
-    const profileId = session?.user?.id;
-    const { error } = await supabase
-      .from("followers")
-      .delete()
-      .eq("follower_id", profileId)
-      .eq("followed_id", followedId);
-
-    if (error) throw new Error("Error unfollowing user.");
-  };
-
+  // Profile data functions
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
+
+      // First check if there's any blocking relationship
+      const { data: blockCheck, error: blockError } = await supabase
+        .from("blocked_users")
+        .select()
+        .or(
+          `and(blocker_id.eq.${session?.user?.id},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${session?.user?.id})`
+        );
+
+      if (blockError) throw blockError;
+
+      if (blockCheck && blockCheck.length > 0) {
+        // If there's any blocking relationship, don't show the profile
+        return;
+      }
 
       const { data, error } = await supabase
         .from("profiles")
@@ -271,106 +246,236 @@ export default function ProfileScreen() {
     }
   }
 
+  // Social interaction functions
+  const fetchPostCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id")
+        .eq("user_id", profileId);
+
+      if (error) throw error;
+
+      setPostCount(data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching post count:", error);
+    }
+  };
+
+  const fetchFollowingCount = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      const { data, error } = await supabase
+        .from("followers")
+        .select("followed_id")
+        .eq("follower_id", profileId);
+
+      if (error) throw error;
+
+      setFollowingCount(data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching following count:", error);
+    }
+  };
+
+  const fetchPostsAndEvents = async () => {
+    try {
+      const profileId = userId || session?.user?.id;
+      if (!profileId) throw new Error("No user on the session!");
+
+      // Don't fetch if blocked
+      if (isBlockedByThem || isBlockedByMe) {
+        setPosts([]);
+        setEvents([]);
+        return;
+      }
+
+      const { data: postsData, error: postsError } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("user_id", profileId);
+
+      if (postsError) throw postsError;
+
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("uid", profileId);
+
+      if (eventsError) throw eventsError;
+
+      const eventsWithInterestStatus = await Promise.all(
+        eventsData?.map(async (event) => {
+          const { data: interestData, error: interestError } = await supabase
+            .from("event_interests")
+            .select("*")
+            .eq("event_id", event.id)
+            .eq("user_id", session?.user?.id);
+
+          if (interestError) throw interestError;
+
+          return {
+            ...event,
+            isInterestedByCurrentUser: interestData?.length > 0,
+          };
+        }) || []
+      );
+
+      setPosts(postsData || []);
+      setEvents(eventsWithInterestStatus || []);
+
+      const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
+      setPostCount(totalCount);
+    } catch (error) {
+      console.error("Error fetching posts and events:", error);
+      Alert.alert("Error", "Unable to load posts and events.");
+    }
+  };
+
+  const getFollowerCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("followed_id", userId);
+
+      if (error) throw error;
+
+      setFollowerCount(data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching follower count:", error);
+    }
+  };
+
+  const checkFollowingStatus = async () => {
+    if (!blockCheckComplete || isBlockedByThem || isBlockedByMe) {
+      setIsFollowing(false);
+      return;
+    }
+
+    const profileId = session?.user?.id;
+    const { data, error } = await supabase
+      .from("followers")
+      .select("follower_id")
+      .eq("follower_id", profileId)
+      .eq("followed_id", userId);
+
+    if (error) {
+      console.error("Error fetching following status:", error);
+    } else {
+      setIsFollowing(data?.length > 0);
+    }
+  };
+
+  const getFollowing = async () => {
+    const profileId = session?.user?.id;
+    const { data, error } = await supabase
+      .from("followers")
+      .select("followed_id, profiles(*)")
+      .eq("follower_id", profileId);
+
+    if (error) {
+      console.error("Error fetching following list:", error);
+    } else {
+      setFollowingList(data || []);
+    }
+  };
+
+  const toggleFollow = async (followedId) => {
+    if (isBlockedByThem || isBlockedByMe) {
+      Alert.alert(
+        "Error",
+        "You cannot follow this user due to blocking restrictions"
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const action = isFollowing ? unfollowUser : followUser;
+      await action(followedId);
+      setIsFollowing((prev) => !prev);
+      getFollowing();
+      getFollowerCount();
+      if (!isFollowing) {
+        fetchPostsAndEvents();
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const followUser = async (followedId) => {
+    if (isBlockedByThem || isBlockedByMe) {
+      throw new Error("Cannot follow due to blocking restrictions");
+    }
+
+    const profileId = session?.user?.id;
+    const { error } = await supabase
+      .from("followers")
+      .insert([{ follower_id: profileId, followed_id: followedId }]);
+
+    if (error) throw new Error("Error following user.");
+  };
+
+  const unfollowUser = async (followedId) => {
+    const profileId = session?.user?.id;
+    const { error } = await supabase
+      .from("followers")
+      .delete()
+      .eq("follower_id", profileId)
+      .eq("followed_id", followedId);
+
+    if (error) throw new Error("Error unfollowing user.");
+  };
+
+  const handleInterestToggle = async (eventId) => {
+    try {
+      const { data, error } = await supabase
+        .from("event_interests")
+        .select("*")
+        .eq("event_id", eventId)
+        .eq("user_id", session?.user?.id);
+
+      if (error) throw error;
+
+      if (data?.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("event_interests")
+          .delete()
+          .eq("event_id", eventId)
+          .eq("user_id", session?.user?.id);
+
+        if (deleteError) throw deleteError;
+      } else {
+        const { error: insertError } = await supabase
+          .from("event_interests")
+          .insert([{ event_id: eventId, user_id: session?.user?.id }]);
+
+        if (insertError) throw insertError;
+      }
+
+      fetchPostsAndEvents();
+    } catch (error) {
+      console.error("Error toggling interest:", error);
+      Alert.alert("Error", "Failed to update interest status");
+    }
+  };
+
+  // Render functions
   const renderPost = ({ item }) => (
     <View style={styles.postContainer}>
       <Text style={styles.postContent}>{item.content}</Text>
       <Text style={styles.postLikes}>Likes: {item.likes}</Text>
     </View>
   );
-
-  const handleInterestToggle = async (eventId: number) => {
-    try {
-      const profileId = session?.user?.id;
-      if (!profileId) throw new Error("No user on the session!");
-
-      const { data: interestData, error: interestError } = await supabase
-        .from("event_interests")
-        .select("*")
-        .eq("event_id", eventId)
-        .eq("user_id", profileId);
-
-      if (interestError) throw interestError;
-
-      const isInterested = interestData.length > 0;
-
-      if (isInterested) {
-        const { error: removeError } = await supabase
-          .from("event_interests")
-          .delete()
-          .eq("event_id", eventId)
-          .eq("user_id", profileId);
-
-        if (removeError) throw removeError;
-
-        const { data: eventData, error: fetchError } = await supabase
-          .from("events")
-          .select("interested_count")
-          .eq("id", eventId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const newInterestedCount = eventData.interested_count - 1;
-
-        const { error: updateError } = await supabase
-          .from("events")
-          .update({ interested_count: newInterestedCount })
-          .eq("id", eventId);
-
-        if (updateError) throw updateError;
-
-        setEvents((prevEvents) =>
-          prevEvents.map((event) =>
-            event.id === eventId
-              ? {
-                  ...event,
-                  interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: false,
-                }
-              : event
-          )
-        );
-      } else {
-        const { error: addError } = await supabase
-          .from("event_interests")
-          .insert([{ event_id: eventId, user_id: profileId }]);
-
-        if (addError) throw addError;
-
-        const { data: eventData, error: fetchError } = await supabase
-          .from("events")
-          .select("interested_count")
-          .eq("id", eventId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        const newInterestedCount = eventData.interested_count + 1;
-
-        const { error: updateError } = await supabase
-          .from("events")
-          .update({ interested_count: newInterestedCount })
-          .eq("id", eventId);
-
-        if (updateError) throw updateError;
-
-        setEvents((prevEvents) =>
-          prevEvents.map((event) =>
-            event.id === eventId
-              ? {
-                  ...event,
-                  interested_count: newInterestedCount,
-                  isInterestedByCurrentUser: true,
-                }
-              : event
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error toggling interest:", error);
-      Alert.alert("Error", "Could not toggle interest.");
-    }
-  };
 
   const renderEvent = ({ item }) => (
     <View style={styles.eventItem}>
@@ -412,6 +517,34 @@ export default function ProfileScreen() {
       <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
         <View style={styles.dropdownOverlay}>
           <View style={styles.dropdownMenu}>
+            <Text style={styles.dropdownHeader}>Options</Text>
+
+            {!isBlockedByMe ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDropdown(false);
+                  Alert.alert(
+                    "Block User",
+                    "Are you sure you want to block this user? They won't be able to see your profile or interact with you.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Block", onPress: handleBlock },
+                    ]
+                  );
+                }}
+              >
+                <Text style={[styles.dropdownItem, { color: "red" }]}>
+                  Block User
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={handleUnblock}>
+                <Text style={[styles.dropdownItem, { color: "green" }]}>
+                  Unblock User
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <Text style={styles.dropdownHeader}>Contact Info</Text>
             <Text style={styles.dropdownItem}>Email: {email}</Text>
             <Text style={styles.dropdownItem}>Contact: {contactNumber}</Text>
@@ -465,6 +598,48 @@ export default function ProfileScreen() {
       </TouchableWithoutFeedback>
     </Modal>
   );
+
+  // Main render
+  if (!blockCheckComplete) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2C3036" />
+      </SafeAreaView>
+    );
+  }
+
+  if (isBlockedByThem) {
+    return (
+      <SafeAreaView style={styles.blockedContainer}>
+        <Text style={styles.blockedText}>This profile is private</Text>
+        <Text style={styles.blockedSubtext}>
+          You can't view this profile because the account owner has restricted
+          access
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (isBlockedByMe) {
+    return (
+      <SafeAreaView style={styles.blockedContainer}>
+        <Text style={styles.blockedText}>You've blocked this account</Text>
+        <Text style={styles.blockedSubtext}>
+          You won't see their profile, posts, or events, and they won't see
+          yours
+        </Text>
+        <TouchableOpacity style={styles.unblockButton} onPress={handleUnblock}>
+          <Text style={styles.unblockButtonText}>Unblock</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.goBackButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.goBackButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -574,7 +749,7 @@ export default function ProfileScreen() {
         {userId !== session?.user?.id && (
           <TouchableOpacity
             onPress={() => toggleFollow(userId)}
-            disabled={loading}
+            disabled={loading || isBlockedByThem || isBlockedByMe}
             style={{
               backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
               padding: 10,
@@ -582,6 +757,7 @@ export default function ProfileScreen() {
               marginRight: 10,
               flex: 1,
               alignItems: "center",
+              opacity: isBlockedByThem || isBlockedByMe ? 0.5 : 1,
             }}
           >
             {loading ? (
@@ -709,6 +885,56 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  blockedContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  blockedText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  blockedSubtext: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  unblockButton: {
+    marginTop: 10,
+    backgroundColor: "#2C3036",
+    padding: 10,
+    borderRadius: 5,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  unblockButtonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  goBackButton: {
+    marginTop: 20,
+    backgroundColor: "transparent",
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#2C3036",
+    minWidth: 120,
+    alignItems: "center",
+  },
+  goBackButtonText: {
+    color: "#2C3036",
+    fontWeight: "bold",
+  },
   postContainer: {
     padding: 15,
     backgroundColor: "#f0f0f0",
