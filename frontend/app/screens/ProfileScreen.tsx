@@ -7,6 +7,9 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Linking,
+  ScrollView,
+  RefreshControl,
+  Image,
 } from "react-native";
 import {
   TouchableOpacity,
@@ -21,7 +24,6 @@ import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
 
 export default function ProfileScreen() {
-  // Profile states
   const [fullname, setFullname] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -36,8 +38,6 @@ export default function ProfileScreen() {
   const [role, setRole] = useState<boolean>(false);
   const { userId } = useLocalSearchParams();
   const { session } = useAuth();
-
-  // Social states
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followingList, setFollowingList] = useState([]);
@@ -46,24 +46,20 @@ export default function ProfileScreen() {
   const [events, setEvents] = useState([]);
   const [postCount, setPostCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-
-  // Contact info
   const [email, setEmail] = useState("");
   const [github, setGithub] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
-
-  // UI states
   const [showDropdown, setShowDropdown] = useState(false);
   const [jobtitle, setJobtitle] = useState([]);
   const [graduationyear, setgraduationyear] = useState();
-
-  // Blocking states
   const [isBlockedByThem, setIsBlockedByThem] = useState(false);
   const [isBlockedByMe, setIsBlockedByMe] = useState(false);
   const [blockCheckComplete, setBlockCheckComplete] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const storageUrl =
+    "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
 
-  // Check block status when component mounts
   useEffect(() => {
     const checkBlockStatus = async () => {
       try {
@@ -75,7 +71,6 @@ export default function ProfileScreen() {
           return;
         }
 
-        // Check both directions of blocking
         const { data: blockData, error: blockError } = await supabase
           .from("blocked_users")
           .select()
@@ -110,41 +105,35 @@ export default function ProfileScreen() {
     checkBlockStatus();
   }, [userId, session]);
 
-  // Load profile data if not blocked
-  useEffect(() => {
-    if (blockCheckComplete && !isBlockedByThem && !isBlockedByMe) {
-      getProfile();
-      checkFollowingStatus();
-      getFollowing();
-      getFollowerCount();
-      fetchPostCount();
-      fetchFollowingCount();
-      if (isFollowing) {
-        fetchPostsAndEvents();
+  const fetchData = async () => {
+    try {
+      setRefreshing(true);
+      if (blockCheckComplete && !isBlockedByThem && !isBlockedByMe) {
+        await getProfile();
+        await checkFollowingStatus();
+        await getFollowing();
+        await getFollowerCount();
+        await fetchPostCount();
+        await fetchFollowingCount();
+        if (isFollowing) {
+          await fetchPostsAndEvents();
+        }
       }
-    } else if (blockCheckComplete) {
-      // Clear data if blocked
-      setPosts([]);
-      setEvents([]);
-      setIsFollowing(false);
-      setFullname("");
-      setUsername("");
-      setAvatarUrl(null);
-      setContactNumber("");
-      setGender("");
-      setDepartment("");
-      setFaculty("");
-      setCourse("");
-      setSkills("");
-      setInterests("");
-      setEmail("");
-      setGithub("");
-      setLinkedin("");
-      setPortfolio("");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [blockCheckComplete, isBlockedByThem, isBlockedByMe, isFollowing]);
 
-  // Blocking functions
+  const onRefresh = () => {
+    fetchData();
+  };
+
   const handleBlock = async () => {
     try {
       const profileId = session?.user?.id;
@@ -189,13 +178,11 @@ export default function ProfileScreen() {
     }
   };
 
-  // Profile data functions
   async function getProfile() {
     try {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      // First check if there's any blocking relationship
       const { data: blockCheck, error: blockError } = await supabase
         .from("blocked_users")
         .select()
@@ -206,7 +193,6 @@ export default function ProfileScreen() {
       if (blockError) throw blockError;
 
       if (blockCheck && blockCheck.length > 0) {
-        // If there's any blocking relationship, don't show the profile
         return;
       }
 
@@ -246,20 +232,26 @@ export default function ProfileScreen() {
     }
   }
 
-  // Social interaction functions
   const fetchPostCount = async () => {
     try {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      const { data, error } = await supabase
+      const { data: postsData, error: postsError } = await supabase
         .from("posts")
         .select("id")
         .eq("user_id", profileId);
 
-      if (error) throw error;
+      if (postsError) throw postsError;
 
-      setPostCount(data?.length || 0);
+      const { data: eventsData, error: eventsError } = await supabase
+        .from("events")
+        .select("id")
+        .eq("uid", profileId);
+
+      if (eventsError) throw eventsError;
+
+      setPostCount((postsData?.length || 0) + (eventsData?.length || 0));
     } catch (error) {
       console.error("Error fetching post count:", error);
     }
@@ -288,7 +280,6 @@ export default function ProfileScreen() {
       const profileId = userId || session?.user?.id;
       if (!profileId) throw new Error("No user on the session!");
 
-      // Don't fetch if blocked
       if (isBlockedByThem || isBlockedByMe) {
         setPosts([]);
         setEvents([]);
@@ -328,9 +319,6 @@ export default function ProfileScreen() {
 
       setPosts(postsData || []);
       setEvents(eventsWithInterestStatus || []);
-
-      const totalCount = (postsData?.length || 0) + (eventsData?.length || 0);
-      setPostCount(totalCount);
     } catch (error) {
       console.error("Error fetching posts and events:", error);
       Alert.alert("Error", "Unable to load posts and events.");
@@ -469,7 +457,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Render functions
   const renderPost = ({ item }) => (
     <View style={styles.postContainer}>
       <Text style={styles.postContent}>{item.content}</Text>
@@ -599,7 +586,6 @@ export default function ProfileScreen() {
     </Modal>
   );
 
-  // Main render
   if (!blockCheckComplete) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -643,64 +629,54 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flexDirection: "row", justifyContent: "center" }}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Back Button */}
         <TouchableOpacity
-          style={{ position: "absolute", left: 0, top: 20 }}
+          style={{ position: "absolute", left: 20, top: 20, zIndex: 1 }}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-      </View>
 
-      <View
-        style={{
-          alignItems: "flex-start",
-          marginTop: 40,
-          marginHorizontal: 20,
-        }}
-      >
-        <View style={{ flexDirection: "row", marginTop: 20 }}>
-          <ShowingAvatar
-            url={avatarUrl}
-            size={150}
-            onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              marginBottom: 20,
-              marginRight: 10,
-              marginLeft: 10,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+        {/* Profile Header */}
+        <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {/* Profile Picture */}
+            <ShowingAvatar
+              url={avatarUrl}
+              size={80}
+              onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+            />
+
+            {/* Followers, Following, and Posts Count */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flex: 1,
+                marginLeft: 20,
+              }}
+            >
+              <View style={{ alignItems: "center" }}>
                 <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                   {postCount}
                 </Text>
                 <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
               </View>
 
-              <Text
-                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
-              >
-                |
-              </Text>
-
-              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <View style={{ alignItems: "center" }}>
                 <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                   {followerCount}
                 </Text>
                 <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
               </View>
 
-              <Text
-                style={{ fontSize: 20, color: "#666", marginHorizontal: 5 }}
-              >
-                |
-              </Text>
-
-              <View style={{ alignItems: "center", marginHorizontal: 5 }}>
+              <View style={{ alignItems: "center" }}>
                 <Text style={{ fontSize: 16, fontWeight: "bold" }}>
                   {followingCount}
                 </Text>
@@ -708,87 +684,77 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-        </View>
-        <Text style={{ fontSize: 20, fontWeight: "bold" }}>
-          {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
-        </Text>
-        {role && (
-          <View>
-            <Text style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}>
-              {jobtitle}
-            </Text>
-            <Text style={{ fontSize: 16, color: "#666" }}>
-              Graduated Year:{" "}
-              {new Date(graduationyear).toLocaleString("default", {
-                year: "numeric",
-              })}
-            </Text>
-          </View>
-        )}
-        <Text style={{ fontSize: 16, color: "#555" }}>
-          {username} | {faculty}
-        </Text>
-        <Text style={{ fontSize: 16, color: "#555" }}>
-          {department} | {course}
-        </Text>
-        <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
-          Skills :
-        </Text>
-        <Text style={{ fontSize: 14 }}>{skills}</Text>
-      </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginHorizontal: 20,
-          marginTop: 20,
-        }}
-      >
-        {userId !== session?.user?.id && (
-          <TouchableOpacity
-            onPress={() => toggleFollow(userId)}
-            disabled={loading || isBlockedByThem || isBlockedByMe}
-            style={{
-              backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
-              padding: 10,
-              borderRadius: 25,
-              marginRight: 10,
-              flex: 1,
-              alignItems: "center",
-              opacity: isBlockedByThem || isBlockedByMe ? 0.5 : 1,
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff" }}>
-                {isFollowing ? "Unfollow" : "Follow"}
-              </Text>
+          {/* Profile Details */}
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+              {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
+            </Text>
+            {role && (
+              <View>
+                <Text
+                  style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}
+                >
+                  {jobtitle}
+                </Text>
+                <Text style={{ fontSize: 16, color: "#666" }}>
+                  Graduated Year:{" "}
+                  {new Date(graduationyear).toLocaleString("default", {
+                    year: "numeric",
+                  })}
+                </Text>
+              </View>
             )}
-          </TouchableOpacity>
-        )}
+            <Text style={{ fontSize: 16, color: "#555" }}>
+              {username} | {faculty}
+            </Text>
+            <Text style={{ fontSize: 16, color: "#555" }}>
+              {department} | {course}
+            </Text>
+            <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
+              Skills:
+            </Text>
+            <Text style={{ fontSize: 14 }}>{skills}</Text>
+          </View>
+        </View>
 
-        {!userId && (
-          <TouchableOpacity
-            onPress={() => router.push("/screens/DetailsForStudents")}
-            style={{
-              backgroundColor: "#2C3036",
-              padding: 10,
-              borderRadius: 25,
-              marginLeft: 5,
-              flex: 1,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#fff" }}>Edit</Text>
-          </TouchableOpacity>
-        )}
-
-        {userId !== session?.user?.id && isFollowing && (
-          <>
+        {/* Action Buttons */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginHorizontal: 20,
+            marginTop: 20,
+            gap: 10,
+          }}
+        >
+          {userId !== session?.user?.id && (
             <TouchableOpacity
+              onPress={() => toggleFollow(userId)}
+              disabled={loading || isBlockedByThem || isBlockedByMe}
+              style={{
+                backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
+                padding: 10,
+                borderRadius: 25,
+                flex: 1,
+                alignItems: "center",
+                opacity: isBlockedByThem || isBlockedByMe ? 0.5 : 1,
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff" }}>
+                  {isFollowing ? "Unfollow" : "Follow"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {!userId && (
+            <TouchableOpacity
+              onPress={() => router.push("/screens/DetailsForStudents")}
               style={{
                 backgroundColor: "#2C3036",
                 padding: 10,
@@ -797,15 +763,27 @@ export default function ProfileScreen() {
                 alignItems: "center",
               }}
             >
+              <Text style={{ color: "#fff" }}>Edit</Text>
+            </TouchableOpacity>
+          )}
+
+          {userId !== session?.user?.id && isFollowing && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#2C3036",
+                padding: 10,
+                borderRadius: 25,
+                alignItems: "center",
+                marginLeft: 10,
+              }}
+            >
               <Link href={`../user?userId=${userId}`} asChild>
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={{ color: "#fff" }}>Message</Text>
-                )}
+                <Text style={{ color: "#fff" }}>Message</Text>
               </Link>
             </TouchableOpacity>
+          )}
 
+          {userId !== session?.user?.id && (
             <TouchableOpacity
               onPress={toggleDropdown}
               style={{
@@ -818,68 +796,79 @@ export default function ProfileScreen() {
             >
               <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
             </TouchableOpacity>
-          </>
-        )}
+          )}
 
-        {!userId && (
-          <TouchableOpacity
-            onPress={async () => {
-              try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
-                router.push("../(auth)/login");
-              } catch (error) {
-                if (error instanceof Error) {
-                  Alert.alert("Error", error.message);
+          {!userId && (
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) throw error;
+                  router.push("../(auth)/login");
+                } catch (error) {
+                  if (error instanceof Error) {
+                    Alert.alert("Error", error.message);
+                  }
                 }
-              }
-            }}
-            style={{
-              borderWidth: 2,
-              borderColor: "#2C3036",
-              backgroundColor: "transparent",
-              padding: 10,
-              borderRadius: 40,
-              flex: 1,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#2C3036" }}>Sign Out</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      {renderDropdown()}
-      {isFollowing && (
-        <>
+              }}
+              style={{
+                borderWidth: 2,
+                borderColor: "#2C3036",
+                backgroundColor: "transparent",
+                padding: 10,
+                borderRadius: 40,
+                flex: 1,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#2C3036" }}>Sign Out</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Posts Section */}
+        {isFollowing && (
           <View style={{ marginTop: 30, marginHorizontal: 20 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
-            <FlatList
-              data={posts}
-              renderItem={renderPost}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text style={{ textAlign: "center", marginTop: 10 }}>
-                  No posts found.
-                </Text>
-              }
-            />
+            {posts.length > 0 ? (
+              <FlatList
+                data={posts}
+                renderItem={renderPost}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={{ textAlign: "center", marginTop: 10 }}>
+                No posts found.
+              </Text>
+            )}
           </View>
+        )}
 
-          <View style={{ marginTop: 30, marginHorizontal: 20, flex: 1 }}>
+        {/* Events Section */}
+        {isFollowing && (
+          <View
+            style={{ marginTop: 30, marginHorizontal: 20, marginBottom: 30 }}
+          >
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
-            <FlatList
-              data={events}
-              renderItem={renderEvent}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text style={{ textAlign: "center", marginTop: 10 }}>
-                  No events found.
-                </Text>
-              }
-            />
+            {events.length > 0 ? (
+              <FlatList
+                data={events}
+                renderItem={renderEvent}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={{ textAlign: "center", marginTop: 10 }}>
+                No events found.
+              </Text>
+            )}
           </View>
-        </>
-      )}
+        )}
+      </ScrollView>
+
+      {/* Dropdown Menu */}
+      {renderDropdown()}
     </SafeAreaView>
   );
 }
