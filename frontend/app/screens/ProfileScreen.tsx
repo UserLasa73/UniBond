@@ -783,7 +783,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          {userId !== session?.user?.id && (
+          {userId !== session?.user?.id && isFollowing && (
             <TouchableOpacity
               onPress={toggleDropdown}
               style={{
@@ -797,7 +797,6 @@ export default function ProfileScreen() {
               <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
             </TouchableOpacity>
           )}
-
           {!userId && (
             <TouchableOpacity
               onPress={async () => {
