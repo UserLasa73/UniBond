@@ -22,6 +22,8 @@ import {
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { Link, router, useLocalSearchParams } from "expo-router";
+import PostItem from "./PostItem";
+
 
 export default function ProfileScreen() {
   const [fullname, setFullname] = useState("");
@@ -59,6 +61,8 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const storageUrl =
     "https://jnqvgrycauzjnvepqorq.supabase.co/storage/v1/object/public/avatars/";
+
+    const [selectedTab, setSelectedTab] = useState("posts");
 
   useEffect(() => {
     const checkBlockStatus = async () => {
@@ -457,11 +461,94 @@ export default function ProfileScreen() {
     }
   };
 
+  // const renderPost = ({ item }) => (
+  //   <View style={styles.postContainer}>
+  //     <Text style={styles.postContent}>{item.content}</Text>
+  //     <Text style={styles.postLikes}>Likes: {item.likes}</Text>
+  //   </View>
+  // );
   const renderPost = ({ item }) => (
-    <View style={styles.postContainer}>
-      <Text style={styles.postContent}>{item.content}</Text>
-      <Text style={styles.postLikes}>Likes: {item.likes}</Text>
-    </View>
+    <PostItem
+      post={item}
+      username={username}
+      onLike={async (postId, hasLiked) => {
+        try {
+          const { error } = await supabase
+            .from("posts")
+            .update({ likes: hasLiked ? item.likes + 1 : item.likes - 1 })
+            .eq("id", postId);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error("Error updating like count:", error);
+        }
+      }}
+      onCommentSubmit={async (postId, commentText) => {
+        try {
+          const { data, error } = await supabase
+            .from("comments")
+            .insert([
+              {
+                post_id: postId,
+                user_id: session?.user?.id,
+                content: commentText,
+                username: username,
+              },
+            ])
+            .select();
+
+          if (error) throw error;
+
+          setPosts(prevPosts =>
+            prevPosts.map(post =>
+              post.id === postId
+                ? {
+                    ...post,
+                    comments: [...(post.comments || []), data[0]],
+                  }
+                : post
+            )
+          );
+        } catch (error) {
+          console.error("Error submitting comment:", error);
+        }
+      }}
+      onLikeComment={async (commentId, hasLiked) => {
+        try {
+          const { error } = await supabase
+            .from("comments")
+            .update({ likes: hasLiked ? item.likes + 1 : item.likes - 1 })
+            .eq("id", commentId);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error("Error updating comment like:", error);
+        }
+      }}
+      onDeleteComment={async (postId, commentId) => {
+        try {
+          const { error } = await supabase
+            .from("comments")
+            .delete()
+            .eq("id", commentId);
+
+          if (error) throw error;
+
+          setPosts(prevPosts =>
+            prevPosts.map(post =>
+              post.id === postId
+                ? {
+                    ...post,
+                    comments: post.comments.filter(c => c.id !== commentId),
+                  }
+                : post
+            )
+          );
+        } catch (error) {
+          console.error("Error deleting comment:", error);
+        }
+      }}
+    />
   );
 
   const renderEvent = ({ item }) => (
@@ -629,243 +716,250 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView
+      {/* Back Button - moved outside the list */}
+      <TouchableOpacity
+        style={{ position: "absolute", left: 20, top: 20, zIndex: 1 }}
+        onPress={() => router.back()}
+      >
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
+  
+      <FlatList
+        data={selectedTab === "posts" ? posts : events}
+        renderItem={selectedTab === "posts" ? renderPost : renderEvent}
+        keyExtractor={(item) => item.id.toString()}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        {/* Back Button */}
-        <TouchableOpacity
-          style={{ position: "absolute", left: 20, top: 20, zIndex: 1 }}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-
-        {/* Profile Header */}
-        <View style={{ marginTop: 30, marginHorizontal: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {/* Profile Picture */}
-            <ShowingAvatar
-              url={avatarUrl}
-              size={80}
-              onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-            />
-
-            {/* Followers, Following, and Posts Count */}
+        ListHeaderComponent={
+          <>
+            {/* Profile Header */}
+            <View style={{ marginTop: 30, marginHorizontal: 20 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {/* Profile Picture */}
+                <ShowingAvatar
+                  url={avatarUrl}
+                  size={80}
+                  onUpload={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+                />
+  
+                {/* Followers, Following, and Posts Count */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flex: 1,
+                    marginLeft: 20,
+                  }}
+                >
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                      {postCount}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
+                  </View>
+  
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                      {followerCount}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
+                  </View>
+  
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                      {followingCount}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
+                  </View>
+                </View>
+              </View>
+  
+              {/* Profile Details */}
+              <View style={{ marginTop: 20 }}>
+                <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+                  {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
+                </Text>
+                {role && (
+                  <View>
+                    <Text
+                      style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}
+                    >
+                      {jobtitle}
+                    </Text>
+                    <Text style={{ fontSize: 16, color: "#666" }}>
+                      Graduated Year:{" "}
+                      {new Date(graduationyear).toLocaleString("default", {
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                )}
+                <Text style={{ fontSize: 16, color: "#555" }}>
+                  {username} | {faculty}
+                </Text>
+                <Text style={{ fontSize: 16, color: "#555" }}>
+                  {department} | {course}
+                </Text>
+                <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
+                  Skills:
+                </Text>
+                <Text style={{ fontSize: 14 }}>{skills}</Text>
+              </View>
+            </View>
+  
+            {/* Action Buttons */}
             <View
               style={{
                 flexDirection: "row",
-                alignItems: "center",
                 justifyContent: "space-between",
-                flex: 1,
-                marginLeft: 20,
+                alignItems: "center",
+                marginHorizontal: 20,
+                marginTop: 20,
+                gap: 10,
               }}
             >
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                  {postCount}
-                </Text>
-                <Text style={{ fontSize: 14, color: "#666" }}>Posts</Text>
-              </View>
-
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                  {followerCount}
-                </Text>
-                <Text style={{ fontSize: 14, color: "#666" }}>Followers</Text>
-              </View>
-
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                  {followingCount}
-                </Text>
-                <Text style={{ fontSize: 14, color: "#666" }}>Following</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Profile Details */}
-          <View style={{ marginTop: 20 }}>
-            <Text style={{ fontSize: 20, fontWeight: "bold" }}>
-              {fullname || "Profile"} {role ? "(Alumni)" : "(Student)"}
-            </Text>
-            {role && (
-              <View>
-                <Text
-                  style={{ fontSize: 16, color: "#666", fontWeight: "bold" }}
+              {userId !== session?.user?.id && (
+                <TouchableOpacity
+                  onPress={() => toggleFollow(userId)}
+                  disabled={loading || isBlockedByThem || isBlockedByMe}
+                  style={{
+                    backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
+                    padding: 10,
+                    borderRadius: 25,
+                    flex: 1,
+                    alignItems: "center",
+                    opacity: isBlockedByThem || isBlockedByMe ? 0.5 : 1,
+                  }}
                 >
-                  {jobtitle}
-                </Text>
-                <Text style={{ fontSize: 16, color: "#666" }}>
-                  Graduated Year:{" "}
-                  {new Date(graduationyear).toLocaleString("default", {
-                    year: "numeric",
-                  })}
-                </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={{ color: "#fff" }}>
+                      {isFollowing ? "Unfollow" : "Follow"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+  
+              {!userId && (
+                <TouchableOpacity
+                  onPress={() => router.push("/screens/DetailsForStudents")}
+                  style={{
+                    backgroundColor: "#2C3036",
+                    padding: 10,
+                    borderRadius: 25,
+                    flex: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#fff" }}>Edit</Text>
+                </TouchableOpacity>
+              )}
+  
+              {userId !== session?.user?.id && isFollowing && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#2C3036",
+                    padding: 10,
+                    borderRadius: 25,
+                    alignItems: "center",
+                    marginLeft: 10,
+                  }}
+                >
+                  <Link href={`../user?userId=${userId}`} asChild>
+                    <Text style={{ color: "#fff" }}>Message</Text>
+                  </Link>
+                </TouchableOpacity>
+              )}
+  
+              {userId !== session?.user?.id && isFollowing && (
+                <TouchableOpacity
+                  onPress={toggleDropdown}
+                  style={{
+                    backgroundColor: "#2C3036",
+                    padding: 10,
+                    borderRadius: 25,
+                    alignItems: "center",
+                    marginLeft: 10,
+                  }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {!userId && (
+                <TouchableOpacity
+                  onPress={async () => {
+                    try {
+                      const { error } = await supabase.auth.signOut();
+                      if (error) throw error;
+                      router.push("../(auth)/login");
+                    } catch (error) {
+                      if (error instanceof Error) {
+                        Alert.alert("Error", error.message);
+                      }
+                    }
+                  }}
+                  style={{
+                    borderWidth: 2,
+                    borderColor: "#2C3036",
+                    backgroundColor: "transparent",
+                    padding: 10,
+                    borderRadius: 40,
+                    flex: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#2C3036" }}>Sign Out</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+  
+            {/* Filter Buttons */}
+            {isFollowing && (
+              <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+                <TouchableOpacity
+                  onPress={() => setSelectedTab("posts")}
+                  style={{
+                    backgroundColor: selectedTab === "posts" ? "#2C3036" : "#ccc",
+                    padding: 10,
+                    borderRadius: 25,
+                    marginHorizontal: 5,
+                    flex: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: selectedTab === "posts" ? "#fff" : "#000" }}>Posts</Text>
+                </TouchableOpacity>
+  
+                <TouchableOpacity
+                  onPress={() => setSelectedTab("events")}
+                  style={{
+                    backgroundColor: selectedTab === "events" ? "#2C3036" : "#ccc",
+                    padding: 10,
+                    borderRadius: 25,
+                    marginHorizontal: 5,
+                    flex: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: selectedTab === "events" ? "#fff" : "#000" }}>Events</Text>
+                </TouchableOpacity>
               </View>
             )}
-            <Text style={{ fontSize: 16, color: "#555" }}>
-              {username} | {faculty}
+          </>
+        }
+        ListEmptyComponent={
+          isFollowing ? (
+            <Text style={{ textAlign: "center", marginTop: 10 }}>
+              No {selectedTab === "posts" ? "posts" : "events"} found.
             </Text>
-            <Text style={{ fontSize: 16, color: "#555" }}>
-              {department} | {course}
-            </Text>
-            <Text style={{ fontSize: 16, marginTop: 10, fontWeight: "bold" }}>
-              Skills:
-            </Text>
-            <Text style={{ fontSize: 14 }}>{skills}</Text>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginHorizontal: 20,
-            marginTop: 20,
-            gap: 10,
-          }}
-        >
-          {userId !== session?.user?.id && (
-            <TouchableOpacity
-              onPress={() => toggleFollow(userId)}
-              disabled={loading || isBlockedByThem || isBlockedByMe}
-              style={{
-                backgroundColor: isFollowing ? "#FF3B30" : "#2C3036",
-                padding: 10,
-                borderRadius: 25,
-                flex: 1,
-                alignItems: "center",
-                opacity: isBlockedByThem || isBlockedByMe ? 0.5 : 1,
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff" }}>
-                  {isFollowing ? "Unfollow" : "Follow"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {!userId && (
-            <TouchableOpacity
-              onPress={() => router.push("/screens/DetailsForStudents")}
-              style={{
-                backgroundColor: "#2C3036",
-                padding: 10,
-                borderRadius: 25,
-                flex: 1,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#fff" }}>Edit</Text>
-            </TouchableOpacity>
-          )}
-
-          {userId !== session?.user?.id && isFollowing && (
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#2C3036",
-                padding: 10,
-                borderRadius: 25,
-                alignItems: "center",
-                marginLeft: 10,
-              }}
-            >
-              <Link href={`../user?userId=${userId}`} asChild>
-                <Text style={{ color: "#fff" }}>Message</Text>
-              </Link>
-            </TouchableOpacity>
-          )}
-
-          {userId !== session?.user?.id && isFollowing && (
-            <TouchableOpacity
-              onPress={toggleDropdown}
-              style={{
-                backgroundColor: "#2C3036",
-                padding: 10,
-                borderRadius: 25,
-                alignItems: "center",
-                marginLeft: 10,
-              }}
-            >
-              <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {!userId && (
-            <TouchableOpacity
-              onPress={async () => {
-                try {
-                  const { error } = await supabase.auth.signOut();
-                  if (error) throw error;
-                  router.push("../(auth)/login");
-                } catch (error) {
-                  if (error instanceof Error) {
-                    Alert.alert("Error", error.message);
-                  }
-                }
-              }}
-              style={{
-                borderWidth: 2,
-                borderColor: "#2C3036",
-                backgroundColor: "transparent",
-                padding: 10,
-                borderRadius: 40,
-                flex: 1,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#2C3036" }}>Sign Out</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Posts Section */}
-        {isFollowing && (
-          <View style={{ marginTop: 30, marginHorizontal: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Posts</Text>
-            {posts.length > 0 ? (
-              <FlatList
-                data={posts}
-                renderItem={renderPost}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={false}
-              />
-            ) : (
-              <Text style={{ textAlign: "center", marginTop: 10 }}>
-                No posts found.
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Events Section */}
-        {isFollowing && (
-          <View
-            style={{ marginTop: 30, marginHorizontal: 20, marginBottom: 30 }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Events</Text>
-            {events.length > 0 ? (
-              <FlatList
-                data={events}
-                renderItem={renderEvent}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={false}
-              />
-            ) : (
-              <Text style={{ textAlign: "center", marginTop: 10 }}>
-                No events found.
-              </Text>
-            )}
-          </View>
-        )}
-      </ScrollView>
-
+          ) : null
+        }
+        contentContainerStyle={{ paddingBottom: 20 }}
+      />
+  
       {/* Dropdown Menu */}
       {renderDropdown()}
     </SafeAreaView>
