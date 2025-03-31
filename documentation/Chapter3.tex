@@ -1,0 +1,59 @@
+
+\begin{document}
+
+\chapter{Methodology}
+
+\section{Introduction}
+This chapter contains a description of the techniques used in developing the UniBond application. The methodology followed a systematic approach to ensure the creation of a well-structured alumni and student connection app.
+
+This is a method of citing a book \cite{landau}.
+
+This is the method to cite a URL \cite{pseudocode}.
+
+\section{User Roles}
+The system incorporates role differentiation between students and alumni, with specific features tailored to each group.
+
+\section{Development Approach}
+The development of the UniBond app follows a systematic approach, employing modern technologies and methodologies to create a platform that connects university students and alumni. The methodology includes the following phases:
+
+\subsection{Requirement Analysis}
+The first step in the development of the UniBond app was identifying the core requirements for the platform. These requirements were gathered through discussions with university faculty, students, and alumni. The primary goal was to build a secure and efficient platform for networking, project collaboration, and job opportunities for students and alumni.
+
+\subsection{System Design}
+In this phase, the overall system architecture was designed to ensure it meets the identified requirements. The design includes the following key aspects:
+
+\begin{itemize}
+    \item \textbf{User Roles:} The system does not incorporate role differentiation between students and alumni.
+    \item \textbf{Database Design:} The database schema was designed to store user data, including profiles, posts, job opportunities, and interactions. The app uses \textbf{Supabase} as the backend, which provides a real-time database.
+    \item \textbf{User Interface (UI) Design:} The UI was designed using \textbf{React Native with Expo}, focusing on ease of use and a clean, modern interface. Multiple screens were created to handle tasks such as posting content, viewing job opportunities, and managing user profiles.
+\end{itemize}
+
+\subsection{Development Process}
+The app was developed using \textbf{React Native} with \textbf{Expo} for mobile app development. The following steps outline the core development process:
+
+\begin{itemize}
+    \item \textbf{Frontend Development:} The frontend was built using React Native, enabling the app to run on both Android and iOS platforms. The screens for posting content, viewing posts, chats, project collaboration, job opportunities, and profile management were developed.
+    \item \textbf{Backend Development:} The backend uses \textbf{Supabase}, which provides a Postgres database, authentication, and real-time capabilities. Supabase handles user authentication, data storage, and real-time data synchronization between users.
+    \item \textbf{User Authentication:} It uses email and password authentication for logging in.
+\end{itemize}
+
+\subsection{Testing and Debugging}
+After development, thorough testing was conducted to ensure the functionality and stability of the app. The following testing methods were used:
+
+\begin{itemize}
+    \item \textbf{Unit Testing:} Individual components and functions were tested to ensure they work correctly in isolation.
+    \item \textbf{Integration Testing:} The integration of the frontend with the backend, as well as the communication between different app screens, was tested to ensure smooth transitions and data flow.
+    \item \textbf{User Acceptance Testing (UAT):} A group of target users (students and alumni) tested the app to ensure it meets their needs and expectations. Feedback was gathered and used to refine features and fix any bugs.
+\end{itemize}
+
+\subsection{Deployment}
+Once the app passed the testing phase, it was deployed to the respective app stores. The app is available for download on both \textbf{Google Play Store} and \textbf{Apple App Store}, making it accessible to students and alumni for use.
+
+\subsection{Future Enhancements}
+While the initial version of the app provides basic functionalities for students and alumni, several future enhancements are planned. These include:
+
+\begin{itemize}
+    \item \textbf{Improved Security:} Enhanced security measures, including encryption of user data and implementation of security protocols for data protection.
+\end{itemize}
+
+\end{document}
