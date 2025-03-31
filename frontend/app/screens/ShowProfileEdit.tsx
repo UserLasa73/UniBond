@@ -11,11 +11,13 @@ import {
   StyleSheet,
   Modal,
   Image,
+  GestureResponderEvent,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import ShowingAvatar from "../Components/ShowingAvatar";
 import { router, useLocalSearchParams } from "expo-router";
 import PostItem from "./PostItem";
+import PostMenu from "../Components/PostMenu";
 
 // Define the Post type
 type Post = {
@@ -75,7 +77,9 @@ export default function ShowProfileEdit() {
   const [postsCount, setPostsCount] = useState(0);
   const [graduationyear, setgraduationyear] = useState();
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [blockedUsers, setBlockedUsers] = useState<Profile[]>([]);
   const [showBlockedList, setShowBlockedList] = useState(false);
   const storageUrl =
@@ -354,6 +358,7 @@ export default function ShowProfileEdit() {
     try {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
       if (error) throw error;
+      setDropdownVisible(false);
       fetchPosts();
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -363,7 +368,7 @@ export default function ShowProfileEdit() {
 
   // Function to handle editing a post
   const handleEditPost = (postId: number) => {
-    router.push(`/screens/EditPost?postId=${postId}`);
+    router.push(`/screens/EditPostScreen?postId=${postId}`);
   };
 
   // Function to handle deleting an event
@@ -399,6 +404,15 @@ export default function ShowProfileEdit() {
   const openDropdown = (event: Event) => {
     setSelectedEvent(event);
     setDropdownVisible(true);
+  };
+
+  const openDropdownPost = (post: Post, event: GestureResponderEvent) => {
+    setSelectedPost(post);
+    setDropdownPosition({
+      x: event.nativeEvent.pageX - 110,
+      y: event.nativeEvent.pageY - 5,
+    });
+    setDropdownVisible(true); // Show dropdown
   };
 
   // Function to handle toggling interest in an event
@@ -790,14 +804,24 @@ export default function ShowProfileEdit() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <PostItem
-                  post={item}
-                  username={username || "Anonymous"}
-                  onLike={handleLike}
-                  onCommentSubmit={handleCommentSubmit}
-                  onDelete={handleDeletePost}
-                  onEdit={handleEditPost}
-                />
+                <View>
+                  <PostItem
+                    post={item}
+                    username={username || "Anonymous"}
+                    onLike={handleLike}
+                    onCommentSubmit={handleCommentSubmit}
+                  />
+                  <TouchableOpacity
+                    style={{ position: "absolute", right: 10, top: 10 }}
+                    onPress={(event) => openDropdownPost(item, event)}
+                  >
+                    <Ionicons
+                      name="ellipsis-vertical"
+                      size={24}
+                      color="black"
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           )}
@@ -813,18 +837,29 @@ export default function ShowProfileEdit() {
       >
         <View style={styles.dropdownContainer}>
           <View style={styles.dropdownMenu}>
+            {/* Edit Button */}
             <TouchableOpacity
               onPress={() => {
-                handleEditEvent(selectedEvent!);
+                if (selectedEvent) {
+                  handleEditEvent(selectedEvent);
+                } else if (selectedPost) {
+                  handleEditPost(selectedPost.id);
+                }
                 setDropdownVisible(false);
               }}
               style={styles.dropdownItem}
             >
               <Text>Edit</Text>
             </TouchableOpacity>
+
+            {/* Delete Button */}
             <TouchableOpacity
               onPress={() => {
-                handleDeleteEvent(selectedEvent!.id);
+                if (selectedEvent) {
+                  handleDeleteEvent(selectedEvent.id);
+                } else if (selectedPost) {
+                  handleDeletePost(selectedPost.id);
+                }
                 setDropdownVisible(false);
               }}
               style={styles.dropdownItem}
