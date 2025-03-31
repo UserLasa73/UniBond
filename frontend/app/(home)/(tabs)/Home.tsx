@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  Share,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -20,6 +22,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EventItem from "@/app/Components/EventItem";
 import RandomUserCards from "@/app/Components/renderUserCard ";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 
 type Post = {
   id: number;
@@ -341,6 +345,34 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const sharePost = async (post) => {
+    if (!post) return;
+
+    try {
+      const postUrl = `myapp://post/${post.id}`;
+      let message = `${post.content}\nCheck it out here: ${postUrl}`;
+
+      if (post.imageUrl) {
+        const fileUri = `${FileSystem.cacheDirectory}shared_image.jpg`;
+        const { uri } = await FileSystem.downloadAsync(post.imageUrl, fileUri);
+
+        if (Platform.OS === "ios" || Platform.OS === "android") {
+          await Sharing.shareAsync(uri, {
+            dialogTitle: "Share Post",
+            mimeType: "image/jpeg",
+          });
+        }
+
+        await Share.share({ message });
+      } else {
+        await Share.share({ message });
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to share the post.");
+      console.error("Sharing error:", error);
+    }
+  };
+
   const renderItem = ({ item }: { item: Post | Event }) => {
     if (item.type === "event") {
       return (
@@ -474,7 +506,7 @@ const HomeScreen: React.FC = () => {
               }}
               onShare={() => {
                 setMenuVisiblePostId(null);
-                // Handle Share logic
+                sharePost(post);
               }}
               isOwner={isOwner}
               position={menuPosition}
