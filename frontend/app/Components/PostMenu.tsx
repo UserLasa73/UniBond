@@ -43,16 +43,16 @@ const PostMenu = ({
       >
         {isOwner && (
           <TouchableOpacity onPress={onEdit} style={styles.menuItem}>
-            <Text style={styles.menuText}>Edit</Text>
+            <Text style={styles.editText}>Edit</Text>
           </TouchableOpacity>
         )}
         {isOwner && (
           <TouchableOpacity onPress={onDelete} style={styles.menuItem}>
-            <Text style={styles.menuText}>Delete</Text>
+            <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity onPress={onShare} style={styles.menuItem}>
-          <Text style={styles.menuText}>Share</Text>
+          <Text style={styles.shareText}>Share</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -73,17 +73,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
     elevation: 5,
   },
   menuItem: {
-    paddingVertical: 8,
+    paddingVertical: 5,
     paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 2,
   },
-  menuText: {
+  editText: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "500",
+    color: "#007AFF",
+  },
+  deleteText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FF3B30",
+  },
+  shareText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#000",
   },
 });
 
