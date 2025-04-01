@@ -436,24 +436,22 @@ const HomeScreen: React.FC = () => {
           />
 
           {/* Post Menu Button */}
-          {isOwner && (
-            <TouchableOpacity
-              onPress={(event) => {
-                if (menuVisiblePostId === post.id) {
-                  setMenuVisiblePostId(null);
-                } else {
-                  setMenuVisiblePostId(post.id);
-                  setMenuPosition({
-                    x: event.nativeEvent.pageX - 110,
-                    y: event.nativeEvent.pageY - 5,
-                  });
-                }
-              }}
-              style={styles.menuButton}
-            >
-              <MaterialIcons name="more-vert" size={24} color="black" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={(event) => {
+              if (menuVisiblePostId === post.id) {
+                setMenuVisiblePostId(null);
+              } else {
+                setMenuVisiblePostId(post.id);
+                setMenuPosition({
+                  x: event.nativeEvent.pageX - 110,
+                  y: event.nativeEvent.pageY,
+                });
+              }
+            }}
+            style={styles.menuButton}
+          >
+            <MaterialIcons name="more-vert" size={24} color="black" />
+          </TouchableOpacity>
 
           {/* Post Menu */}
           {menuVisiblePostId === post.id && (
@@ -461,48 +459,56 @@ const HomeScreen: React.FC = () => {
               visible={true}
               onClose={() => setMenuVisiblePostId(null)}
               onEdit={() => {
-                setMenuVisiblePostId(null);
-                router.push({
-                  pathname: "/screens/EditPostScreen",
-                  params: {
-                    postId: post.id,
-                  },
-                });
+                if (isOwner) {
+                  setMenuVisiblePostId(null);
+                  router.push({
+                    pathname: "/screens/EditPostScreen",
+                    params: {
+                      postId: post.id,
+                    },
+                  });
+                }
               }}
               onDelete={async () => {
-                Alert.alert(
-                  "Delete Post",
-                  "Are you sure you want to delete this post?",
-                  [
-                    {
-                      text: "Cancel",
-                      style: "cancel",
-                    },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: async () => {
-                        try {
-                          const { error } = await supabase
-                            .from("posts")
-                            .delete()
-                            .eq("id", post.id);
-
-                          if (error) {
-                            console.error("Error deleting post:", error);
-                            Alert.alert("Error", "Failed to delete post.");
-                          } else {
-                            setRefreshKey((prevKey) => prevKey + 1);
-                            setMenuVisiblePostId(null);
-                          }
-                        } catch (err) {
-                          console.error("Unexpected error:", err);
-                          Alert.alert("Error", "An unexpected error occurred.");
-                        }
+                if (isOwner) {
+                  Alert.alert(
+                    "Delete Post",
+                    "Are you sure you want to delete this post?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
                       },
-                    },
-                  ]
-                );
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            const { error } = await supabase
+                              .from("posts")
+                              .delete()
+                              .eq("id", post.id);
+
+                            if (error) {
+                              console.error("Error deleting post:", error);
+                              Alert.alert("Error", "Failed to delete post.");
+                            } else {
+                              console.log("Post deleted successfully");
+                              setRefreshKey((prevKey) => prevKey + 1);
+                              setMenuVisiblePostId(null);
+                            }
+                          } catch (err) {
+                            console.error("Unexpected error:", err);
+                            Alert.alert(
+                              "Error",
+                              "An unexpected error occurred."
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }
               }}
               onShare={() => {
                 setMenuVisiblePostId(null);
@@ -538,7 +544,7 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleLike = async (postId: number, hasLiked: boolean) => {
+  const handleLike = async (postId: string, hasLiked: boolean) => {
     try {
       const postIndex = combinedData.findIndex(
         (item) => item.type === "post" && item.id === postId
@@ -557,13 +563,12 @@ const HomeScreen: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      setCombinedData((prev) =>
-        prev.map((item) =>
-          item.type === "post" && item.id === postId
-            ? { ...item, likes: updatedLikeCount }
-            : item
-        )
-      );
+      combinedData[postIndex] = {
+        ...combinedData[postIndex],
+        likes: updatedLikeCount,
+      };
+
+      setCombinedData([...combinedData]);
     } catch (error) {
       console.error("Error updating like:", error);
     }
@@ -849,6 +854,7 @@ const styles = StyleSheet.create({
     right: 10,
     padding: 5,
     borderRadius: 5,
+    zIndex: 10,
   },
 });
 
